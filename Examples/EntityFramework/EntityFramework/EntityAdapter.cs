@@ -47,7 +47,9 @@ namespace EntityFramework
 		public static object GetReference(IEntityType instance, string property)
 		{
 			// Return the property reference
-			return ((EntityReference<IEntityType>)getRelatedEnd.Invoke(instance.RelationshipManager, new object[] { property })).Value;
+			var reference = ((IRelatedEnd)getRelatedEnd.Invoke(instance.RelationshipManager, new object[] { property })).GetEnumerator();
+			reference.MoveNext();
+			return reference.Current;
 		}
 
 		/// <summary>
@@ -83,14 +85,21 @@ namespace EntityFramework
 				return;
 
 			// Get the entity reference
-			var reference = (EntityReference<IEntityType>)getRelatedEnd.Invoke(instance.RelationshipManager, new object[] { property });
+			var reference = (IRelatedEnd)getRelatedEnd.Invoke(instance.RelationshipManager, new object[] { property });
 
 			// Track the current value
-			var oldValue = reference.Value;
+			var set = reference.GetEnumerator();
+			set.MoveNext();
+			var oldValue = set.Current;
 
 			// Update the reference if it is being assigned a different value
 			if ((oldValue == null ^ value == null) || (oldValue != null && !oldValue.Equals(value)))
-				reference.Value = (IEntityType)value;
+			{
+				if (oldValue != null)
+					reference.Remove((IEntityType)oldValue);
+				if (value != null)
+					reference.Add((IEntityType)value);
+			}
 		}
 
 		/// <summary>

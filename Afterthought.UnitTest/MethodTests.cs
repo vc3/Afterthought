@@ -175,5 +175,42 @@ namespace Afterthought.UnitTest
 			// Verify that the execution time was measured and saved to result
 			Assert.IsTrue(Calculator.Result >= 100);
 		}
+
+		[TestMethod]
+		public void TestSomeOtherClass()
+		{
+			new SomeOtherClass().ResponseToSomeEvent();
+		}
+	}
+
+	public class SomeOtherClass
+	{
+		public void ResponseToSomeEvent()
+		{
+			var proxy = new Proxy();
+
+			// Assign the lambda to a local variable
+			EventHandler doSomething = (sender, e) => Console.WriteLine("Just Once");
+
+			proxy.SomeEvent += doSomething;
+
+			proxy.Raise();
+
+			proxy.SomeEvent -= doSomething;
+			proxy.SomeEvent += doSomething;
+
+			proxy.Raise();
+		}
+	}
+
+	public class Proxy
+	{
+		public event EventHandler SomeEvent;
+
+		public void Raise()
+		{
+			Console.WriteLine("Raise");
+			SomeEvent(this, EventArgs.Empty);
+		}
 	}
 }
