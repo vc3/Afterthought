@@ -10,7 +10,7 @@
 # Get the current Post Build Event cmds
 $currentPostBuildCmds = $project.Properties.Item("PostBuildEvent").Value
 
-$buildCmd = '"$(SolutionDir)packages\Afterthought.{0}\Afterthought.Amender.exe" "$(TargetPath)"' -f $package.Version
+$buildCmd = '"$(SolutionDir)packages\Afterthought.{0}\tools\Afterthought.Amender.exe" "$(TargetPath)"' -f $package.Version
 
 # Append our post build command if it's not already there
 if (!$currentPostBuildCmds.Contains($buildCmd))
