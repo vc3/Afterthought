@@ -82,20 +82,13 @@ namespace Afterthought.Amender
 			// Register an assembly resolver to look in backup folders when resolving assemblies
 			AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
 			{
-				try
+				foreach (var directory in directories)
 				{
-					return System.Reflection.Assembly.Load(e.Name);
+					var dependency = Path.Combine(directory.BackupPath, e.Name.Substring(0, e.Name.IndexOf(',')) + ".dll");
+					if (File.Exists(dependency))
+						return System.Reflection.Assembly.LoadFrom(dependency);
 				}
-				catch
-				{
-					foreach (var directory in directories)
-					{
-						var dependency = Path.Combine(directory.BackupPath, e.Name.Substring(0, e.Name.IndexOf(',')) + ".dll");
-						if (File.Exists(dependency))
-							return System.Reflection.Assembly.LoadFrom(dependency);
-					}
-					return null;
-				}
+				return null;
 			};
 
 			// Get the set of amendments to apply from all of the specified assemblies
