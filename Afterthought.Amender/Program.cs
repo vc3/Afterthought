@@ -77,7 +77,8 @@ namespace Afterthought.Amender
 					if (file.ToLower().EndsWith("exe") || file.ToLower().EndsWith("dll") || file.ToLower().EndsWith("pdb"))
 					{
 						var backupPath = Path.Combine(directory.BackupPath, Path.GetFileName(file));
-						File.SetAttributes(backupPath, File.GetAttributes(backupPath) & ~FileAttributes.ReadOnly);
+						if (File.Exists(backupPath))
+							File.SetAttributes(backupPath, File.GetAttributes(backupPath) & ~FileAttributes.ReadOnly);
 						File.Copy(file, backupPath, true);
 					}
 				}
