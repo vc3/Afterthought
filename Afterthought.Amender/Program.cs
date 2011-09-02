@@ -75,7 +75,11 @@ namespace Afterthought.Amender
 				foreach (var file in Directory.GetFiles(directory.SourcePath))
 				{
 					if (file.ToLower().EndsWith("exe") || file.ToLower().EndsWith("dll") || file.ToLower().EndsWith("pdb"))
-						File.Copy(file, Path.Combine(directory.BackupPath, Path.GetFileName(file)), true);
+					{
+						var backupPath = Path.Combine(directory.BackupPath, Path.GetFileName(file));
+						File.SetAttributes(backupPath, File.GetAttributes(backupPath) & ~FileAttributes.ReadOnly);
+						File.Copy(file, backupPath, true);
+					}
 				}
 			}
 
