@@ -2182,10 +2182,8 @@ namespace Afterthought.Amender
 		/// <returns></returns>
 		internal bool AreEquivalent(IMethodDefinition methodDef, System.Reflection.MethodBase method)
 		{
-			bool genericTest = true;
-			bool generalTest = true;
+			return
 
-			generalTest =
 				// Ensure method names match
 				methodDef.Name.Value == method.Name &&
 
@@ -2193,19 +2191,22 @@ namespace Afterthought.Amender
 				methodDef.ParameterCount == method.GetParameters().Length &&
 
 				// Ensure parameter types match
-				method.GetParameters().Select(p => ResolveType(p.ParameterType)).Cast<ITypeDefinition>().SequenceEqual(methodDef.Parameters.Select(p => p.Type.ResolvedType));
+				method.GetParameters().Select(p => ResolveType(p.ParameterType)).Cast<ITypeDefinition>().SequenceEqual(methodDef.Parameters.Select(p => p.Type.ResolvedType)) &&
 
-			if (!(method is System.Reflection.ConstructorInfo))
-			{
-				genericTest =
-					// Ensure generic parameter types match
-					method.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeDefinition>().SequenceEqual(methodDef.GenericParameters.Cast<IGenericParameterReference>().Select(p => p.ResolvedType)) &&
+				(
+					// Method specific tests
+					!(method is System.Reflection.MethodInfo) ||
+					(
+						// Ensure return types match
+						TypeHelper.TypesAreEquivalent(methodDef.Type, ResolveType(((System.Reflection.MethodInfo)method).ReturnType)) &&
 
-					// Ensure generic type parameter counts match
-					methodDef.GenericParameterCount == method.GetGenericArguments().Length;
-			}
+						// Ensure generic parameter types match
+						method.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeDefinition>().SequenceEqual(methodDef.GenericParameters.Cast<IGenericParameterReference>().Select(p => p.ResolvedType)) &&
 
-			return generalTest && genericTest;
+						// Ensure generic type parameter counts match
+						methodDef.GenericParameterCount == method.GetGenericArguments().Length
+					)
+				);
 		}
 
 		/// <summary>
