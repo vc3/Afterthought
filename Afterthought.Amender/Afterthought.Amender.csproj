@@ -14,6 +14,10 @@
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -121,7 +125,40 @@
     <None Include="NuGet\Install.ps1" />
     <None Include="NuGet\Uninstall.ps1" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="..\Microsoft.CCI\MetadataHelper\bin\Debug\Microsoft.Cci.MetadataHelper.dll">
+      <Link>Dependencies\Microsoft.Cci.MetadataHelper.dll</Link>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\Microsoft.CCI\ILGenerator\bin\Debug\Microsoft.Cci.ILGenerator.dll">
+      <Link>Dependencies\Microsoft.Cci.ILGenerator.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\MetadataModel\bin\Debug\Microsoft.Cci.MetadataModel.dll">
+      <Link>Dependencies\Microsoft.Cci.MetadataModel.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\Microsoft.Contracts\bin\Debug\Microsoft.Contracts.dll">
+      <Link>Dependencies\Microsoft.Contracts.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\MutableMetadataModel\bin\Debug\Microsoft.Cci.MutableMetadataModel.dll">
+      <Link>Dependencies\Microsoft.Cci.MutableMetadataModel.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\PdbReader\bin\Debug\Microsoft.Cci.PdbReader.dll">
+      <Link>Dependencies\Microsoft.Cci.PdbReader.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\PdbWriter\bin\Debug\Microsoft.Cci.PdbWriter.dll">
+      <Link>Dependencies\Microsoft.Cci.PdbWriter.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\PeReader\bin\Debug\Microsoft.Cci.PeReader.dll">
+      <Link>Dependencies\Microsoft.Cci.PeReader.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\PeWriter\bin\Debug\Microsoft.Cci.PeWriter.dll">
+      <Link>Dependencies\Microsoft.Cci.PeWriter.dll</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Microsoft.CCI\SourceModel\bin\Debug\Microsoft.Cci.SourceModel.dll">
+      <Link>Dependencies\Microsoft.Cci.SourceModel.dll</Link>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

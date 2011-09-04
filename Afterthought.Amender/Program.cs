@@ -27,6 +27,23 @@ namespace Afterthought.Amender
 	{
 		static int Main(string[] args)
 		{
+			// Register an assembly resolver to load embedded CCI assemblies
+			AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+			{
+				var assemblyName = "Afterthought.Amender.Dependencies." + new AssemblyName(e.Name).Name + ".dll";
+				if (System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceInfo(assemblyName) != null)
+				{
+					using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(assemblyName))
+					{
+						var assemblyData = new Byte[stream.Length];
+						stream.Read(assemblyData, 0, assemblyData.Length);
+						return System.Reflection.Assembly.Load(assemblyData);
+					}
+				}
+
+				return null;
+			};
+
 			try
 			{
 				Amend(args);
@@ -87,12 +104,16 @@ namespace Afterthought.Amender
 			// Register an assembly resolver to look in backup folders when resolving assemblies
 			AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
 			{
+				var assemblyName = new AssemblyName(e.Name).Name + ".dll";
+
+				// First see if the assembly is located in one of the target backup directories
 				foreach (var directory in directories)
 				{
-					var dependency = Path.Combine(directory.BackupPath, e.Name.Substring(0, e.Name.IndexOf(',')) + ".dll");
+					var dependency = Path.Combine(directory.BackupPath, assemblyName);
 					if (File.Exists(dependency))
 						return System.Reflection.Assembly.LoadFrom(dependency);
 				}
+
 				return null;
 			};
 
