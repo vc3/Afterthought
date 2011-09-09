@@ -949,12 +949,19 @@ namespace Microsoft.Cci.Immutable {
     /// <value></value>
     public IGenericMethodParameter ResolvedType {
       get {
-        IMethodDefinition definingMethodDef = this.DefiningMethod.ResolvedMethod;
-        if (!definingMethodDef.IsGeneric) return Dummy.GenericMethodParameter;
-        foreach (IGenericMethodParameter genericParameter in definingMethodDef.GenericParameters) {
-          if (genericParameter.Index == this.index) return genericParameter;
-        }
-        return Dummy.GenericMethodParameter;
+        if (this.resolvedType == null)
+          this.Resolve();
+        return this.resolvedType;
+      }
+    }
+    IGenericMethodParameter/*?*/ resolvedType;
+
+    private void Resolve() {
+      this.resolvedType = Dummy.GenericMethodParameter;
+      var definingMethodDefinition = this.DefiningMethod.ResolvedMethod;
+      if (!definingMethodDefinition.IsGeneric || this.index >= definingMethodDefinition.GenericParameterCount) return;
+      foreach (var genericParameter in definingMethodDefinition.GenericParameters) {
+        if (genericParameter.Index == this.index) { this.resolvedType = genericParameter; return; }
       }
     }
 
@@ -1618,7 +1625,7 @@ namespace Microsoft.Cci.Immutable {
     public IFieldDefinition ResolvedField {
       get {
         if (this.resolvedField == null)
-          this.resolvedField = TypeHelper.GetField(this.ContainingType.ResolvedType, this);
+          this.resolvedField = TypeHelper.GetField(this.ContainingType.ResolvedType, this, true);
         return this.resolvedField;
       }
     }
@@ -1817,22 +1824,21 @@ namespace Microsoft.Cci.Immutable {
     public IGenericMethodParameter ResolvedType {
       get {
         if (this.resolvedType == null)
-          this.resolvedType = this.Resolve();
+          this.Resolve();
         return this.resolvedType;
       }
     }
     IGenericMethodParameter/*?*/ resolvedType;
 
-    IGenericMethodParameter Resolve() {
+    private void Resolve() {
+      this.resolvedType = Dummy.GenericMethodParameter;
       var definingMethodDefinition = this.DefiningMethod.ResolvedMethod;
-      if (definingMethodDefinition.IsGeneric) {
-        int index = this.Index;
-        int i = 0;
-        foreach (var parameter in definingMethodDefinition.GenericParameters)
-          if (index == i++) return parameter;
+      var definingMethodDef = this.DefiningMethod.ResolvedMethod;
+      int index = this.Index;
+      if (!definingMethodDef.IsGeneric || index >= definingMethodDef.GenericParameterCount) return;
+      foreach (IGenericMethodParameter genericParameter in definingMethodDef.GenericParameters) {
+        if (genericParameter.Index == index) { this.resolvedType = genericParameter; return; }
       }
-      return Dummy.GenericMethodParameter;
-
     }
 
     #endregion
@@ -2092,13 +2098,15 @@ namespace Microsoft.Cci.Immutable {
         specialized = TypeHelper.SpecializeTypeReference(typeReference, this.containingMethod, this.internFactory);
       else {
         var fieldReference = unspecialized as IFieldReference;
-        if (fieldReference != null)
-          specialized = new SpecializedFieldReference(this.containingMethod.ContainingType, fieldReference, this.internFactory);
-        else {
+        if (fieldReference != null) {
+          var specializedContainingType = TypeHelper.SpecializeTypeReference(fieldReference.ContainingType, this.containingMethod, this.internFactory);
+          specialized = new SpecializedFieldReference(specializedContainingType, fieldReference, this.internFactory);
+        } else {
           var methodReference = unspecialized as IMethodReference;
-          if (methodReference != null)
-            specialized = new SpecializedMethodReference(this.containingMethod.ContainingType, methodReference, this.internFactory);
-          else
+          if (methodReference != null) {
+            var specializedContainingType = TypeHelper.SpecializeTypeReference(fieldReference.ContainingType, this.containingMethod, this.internFactory);
+            specialized = new SpecializedMethodReference(specializedContainingType, methodReference, this.internFactory);
+          } else
             return unspecialized;
         }
       }
@@ -2706,8 +2714,11 @@ namespace Microsoft.Cci.Immutable {
       get {
         if (this.implementedMethod == null) {
           var containingTypeForImplemented = 
-            TypeHelper.SpecializeTypeReference(this.unspecializedVersion.ImplementedMethod.ContainingType, this.containingType, this.internFactory);
-          this.implementedMethod = new SpecializedMethodReference(containingTypeForImplemented, this.unspecializedVersion.ImplementedMethod, this.internFactory);
+            TypeHelper.SpecializeTypeReference(this.unspecializedVersion.ImplementedMethod.ContainingType, this.ContainingType, this.internFactory);
+          var unspecializedImplemented = this.unspecializedVersion.ImplementedMethod;
+          var specializedImplemented = unspecializedImplemented as ISpecializedMethodReference;
+          if (specializedImplemented != null) unspecializedImplemented = specializedImplemented.UnspecializedVersion;
+          this.implementedMethod = new SpecializedMethodReference(containingTypeForImplemented, unspecializedImplemented, this.internFactory);
         }
         return this.implementedMethod;
       }
@@ -2720,9 +2731,10 @@ namespace Microsoft.Cci.Immutable {
     public IMethodReference ImplementingMethod {
       get {
         if (this.implementingMethod == null) {
-          var containingTypeForImplementing = 
-            TypeHelper.SpecializeTypeReference(this.unspecializedVersion.ImplementingMethod.ContainingType, this.containingType, this.internFactory);
-          this.implementingMethod = new SpecializedMethodReference(this.ContainingType, this.unspecializedVersion.ImplementingMethod, this.internFactory);
+          var unspecializedImplemented = this.unspecializedVersion.ImplementingMethod;
+          var specializedImplemented = unspecializedImplemented as ISpecializedMethodReference;
+          if (specializedImplemented != null) unspecializedImplemented = specializedImplemented.UnspecializedVersion;
+          this.implementingMethod = new SpecializedMethodReference(this.ContainingType, unspecializedImplemented, this.internFactory);
         }
         return this.implementingMethod;
       }
@@ -2833,7 +2845,7 @@ namespace Microsoft.Cci.Immutable {
     public IMethodDefinition ResolvedMethod {
       get {
         if (this.resolvedMethod == null)
-          this.resolvedMethod = TypeHelper.GetMethod(this.ContainingType.ResolvedType, this);
+          this.resolvedMethod = TypeHelper.GetMethod(this.ContainingType.ResolvedType, this, true);
         return this.resolvedMethod;
       }
     }
@@ -3769,14 +3781,6 @@ namespace Microsoft.Cci.Immutable {
     /// </summary>
     public bool IsStatic {
       get { return (this.CallingConvention & CallingConvention.HasThis) == 0; }
-    }
-
-    /// <summary>
-    /// Custom attributes associated with the property's return value.
-    /// </summary>
-    /// <value></value>
-    public IEnumerable<ICustomAttribute> ReturnValueAttributes {
-      get { return this.UnspecializedVersion.ReturnValueAttributes; }
     }
 
     /// <summary>

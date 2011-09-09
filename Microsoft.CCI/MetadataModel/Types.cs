@@ -2284,6 +2284,11 @@ namespace Microsoft.Cci {
     INamespaceTypeReference SystemDateTime { get; }
 
     /// <summary>
+    /// System.DateTimeOffset
+    /// </summary>
+    INamespaceTypeReference SystemDateTimeOffset { get; }
+
+    /// <summary>
     /// System.Decimal
     /// </summary>
     INamespaceTypeReference SystemDecimal { get; }
@@ -2304,6 +2309,11 @@ namespace Microsoft.Cci {
     INamespaceTypeReference SystemEnum { get; }
 
     /// <summary>
+    /// System.Exception
+    /// </summary>
+    INamespaceTypeReference SystemException { get; }
+
+    /// <summary>
     /// System.Float32
     /// </summary>
     INamespaceTypeReference SystemFloat32 { get; }
@@ -2314,6 +2324,11 @@ namespace Microsoft.Cci {
     INamespaceTypeReference SystemFloat64 { get; }
 
     /// <summary>
+    /// System.Globalization.CultureInfo
+    /// </summary>
+    INamespaceTypeReference SystemGlobalizationCultureInfo { get; }
+
+    /// <summary>
     /// System.IAsyncResult
     /// </summary>
     INamespaceTypeReference SystemIAsyncResult { get; }
@@ -2322,6 +2337,11 @@ namespace Microsoft.Cci {
     /// System.ICloneable
     /// </summary>
     INamespaceTypeReference SystemICloneable { get; }
+
+    /// <summary>
+    /// System.ContextStaticAttribute
+    /// </summary>
+    INamespaceTypeReference SystemContextStaticAttribute { get; }
 
     /// <summary>
     /// System.Int16
@@ -2447,6 +2467,11 @@ namespace Microsoft.Cci {
     /// System.String
     /// </summary>
     INamespaceTypeReference SystemString { get; }
+
+    /// <summary>
+    /// System.ThreadStaticAttribute
+    /// </summary>
+    INamespaceTypeReference SystemThreadStaticAttribute { get; }
 
     /// <summary>
     /// System.Type
@@ -2650,6 +2675,13 @@ namespace Microsoft.Cci {
       }
     }
 
+    public INamespaceTypeReference SystemDateTimeOffset {
+      get {
+        Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
     public INamespaceTypeReference SystemDecimal {
       get {
         Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
@@ -2678,6 +2710,13 @@ namespace Microsoft.Cci {
       }
     }
 
+    public INamespaceTypeReference SystemException {
+      get {
+        Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
     public INamespaceTypeReference SystemFloat32 {
       get {
         Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
@@ -2686,6 +2725,13 @@ namespace Microsoft.Cci {
     }
 
     public INamespaceTypeReference SystemFloat64 {
+      get {
+        Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
+    public INamespaceTypeReference SystemGlobalizationCultureInfo {
       get {
         Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
         throw new NotImplementedException();
@@ -2948,6 +2994,21 @@ namespace Microsoft.Cci {
       Contract.Requires(typeCode != PrimitiveTypeCode.Pointer && typeCode != PrimitiveTypeCode.Reference && typeCode != PrimitiveTypeCode.NotPrimitive);
       Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
       throw new NotImplementedException();
+    }
+
+
+    public INamespaceTypeReference SystemContextStaticAttribute {
+      get {
+        Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public INamespaceTypeReference SystemThreadStaticAttribute {
+      get {
+        Contract.Ensures(Contract.Result<INamespaceTypeReference>() != null);
+        throw new NotImplementedException(); 
+      }
     }
   }
 

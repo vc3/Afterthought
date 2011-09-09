@@ -48,7 +48,7 @@ namespace Microsoft.Cci.MetadataReader {
     CoreTypes CoreTypes {
       get {
         if (this.coreTypes == null) {
-          lock (this) {
+          lock (GlobalLock.LockingObject) {
             if (this.coreTypes == null)
               this.coreTypes = new CoreTypes(this);
           }
@@ -58,60 +58,6 @@ namespace Microsoft.Cci.MetadataReader {
     }
     CoreTypes/*?*/ coreTypes;
 
-    internal IMetadataReaderNamedTypeReference SystemVoid {
-      get { return this.CoreTypes.SystemVoid; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemBoolean {
-      get { return this.CoreTypes.SystemBoolean; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemChar {
-      get { return this.CoreTypes.SystemChar; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemByte {
-      get { return this.CoreTypes.SystemByte; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemSByte {
-      get { return this.CoreTypes.SystemSByte; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemInt16 {
-      get { return this.CoreTypes.SystemInt16; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemUInt16 {
-      get { return this.CoreTypes.SystemUInt16; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemInt32 {
-      get { return this.CoreTypes.SystemInt32; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemUInt32 {
-      get { return this.CoreTypes.SystemUInt32; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemInt64 {
-      get { return this.CoreTypes.SystemInt64; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemUInt64 {
-      get { return this.CoreTypes.SystemUInt64; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemString {
-      get { return this.CoreTypes.SystemString; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemIntPtr {
-      get { return this.CoreTypes.SystemIntPtr; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemUIntPtr {
-      get { return this.CoreTypes.SystemUIntPtr; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemObject {
-      get { return this.CoreTypes.SystemObject; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemSingle {
-      get { return this.CoreTypes.SystemSingle; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemDouble {
-      get { return this.CoreTypes.SystemDouble; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemTypedReference {
-      get { return this.CoreTypes.SystemTypedReference; }
-    }
     internal IMetadataReaderNamedTypeReference SystemEnum {
       get { return this.CoreTypes.SystemEnum; }
     }
@@ -123,9 +69,6 @@ namespace Microsoft.Cci.MetadataReader {
     }
     internal IMetadataReaderNamedTypeReference SystemType {
       get { return this.CoreTypes.SystemType; }
-    }
-    internal IMetadataReaderNamedTypeReference SystemArray {
-      get { return this.CoreTypes.SystemArray; }
     }
     internal IMetadataReaderNamedTypeReference SystemParamArrayAttribute {
       get { return this.CoreTypes.SystemParamArrayAttribute; }
@@ -585,23 +528,21 @@ namespace Microsoft.Cci.MetadataReader {
     }
 
     //  Caller should lock this.
-    internal Module/*?*/ ResolveModuleRefReference(
-      ModuleReference moduleReference
-    ) {
+    internal IModule/*?*/ ResolveModuleRefReference(ModuleReference moduleReference) {
       //  If this is an assembly try to find in referred modules
       if (this.PEFileReader.IsAssembly) {
         Assembly/*?*/ assem = this.Module as Assembly;
         //^ assert assem != null;
         int moduleKey = moduleReference.ModuleIdentity.Name.UniqueKeyIgnoringCase;
-        Module[] containigModules = assem.MemberModules.RawArray;
-        for (int i = 0; i < containigModules.Length; ++i) {
-          Module mod = containigModules[i];
-          if (mod.ModuleName.UniqueKeyIgnoringCase == moduleKey)
-            return mod;
+        IModule[] containigModules = assem.MemberModules;
+        var n = containigModules == null ? 0 : containigModules.Length;
+        for (int i = 0; i < n; i++) {
+          IModule mod = containigModules[i];
+          if (mod.ModuleName.UniqueKeyIgnoringCase == moduleKey) return mod;
         }
       }
       //  If not found or its not an assembly look else where...
-      Module/*?*/ module = this.ModuleReader.LookupModule(this.Module, moduleReference.ModuleIdentity);
+      var module = this.ModuleReader.LookupModule(this.Module, moduleReference.ModuleIdentity);
       return module;
     }
 
@@ -611,12 +552,13 @@ namespace Microsoft.Cci.MetadataReader {
     /// <param name="assemblyIdentity"></param>
     /// <returns></returns>
     internal AssemblyReference/*?*/ FindAssemblyReference(AssemblyIdentity assemblyIdentity) {
-      uint assemblyInteredId = (uint)this.ModuleReader.metadataReaderHost.InternFactory.GetAssemblyInternedKey(assemblyIdentity);
+      uint assemblyInternedId = (uint)this.ModuleReader.metadataReaderHost.InternFactory.GetAssemblyInternedKey(assemblyIdentity);
       AssemblyReference[] assemblyRefList = this.AssemblyReferenceArray;
       int numberOfAssemblyReferences = assemblyRefList.Length;
       for (int i = 1; i < numberOfAssemblyReferences; ++i) {
         AssemblyReference assemblyRef = assemblyRefList[i];
-        if (assemblyRef.InternedId == assemblyInteredId) {
+        uint refInternedId = (uint)this.ModuleReader.metadataReaderHost.InternFactory.GetAssemblyInternedKey(assemblyRef.AssemblyIdentity);
+        if (refInternedId == assemblyInternedId) {
           return assemblyRef;
         }
       }
@@ -637,6 +579,23 @@ namespace Microsoft.Cci.MetadataReader {
     /// </summary>
     ResourceReference[]/*?*/ ResourceReferenceArray;
 
+    internal IEnumerable<IPESection> GetUninterpretedPESections() {
+      for (int i = 0, n = this.PEFileReader.SectionHeaders.Length; i < n; i++) {
+        var nameStr = this.PEFileReader.SectionHeaders[i].Name;
+        switch (nameStr) {
+          case ".text":
+          case ".sdata":
+          case ".tls":
+          case ".rdata":
+          case ".cover":
+          case ".rsrc":
+          case ".reloc": continue;
+        }
+        var name = this.ModuleReader.metadataReaderHost.NameTable.GetNameFor(nameStr);
+        yield return new PESection(this.PEFileReader.SectionHeaders, i, name, this);
+      }
+    }
+
     internal string GetWin32ResourceName(
       int idOrName
     ) {
@@ -646,18 +605,18 @@ namespace Microsoft.Cci.MetadataReader {
       return this.PEFileReader.Win32ResourceMemoryReader.PeekUTF16WithShortSize(idOrName & 0x7FFFFFFF, out numBytes);
     }
 
-    internal EnumberableMemoryBlockWrapper GetWin32ResourceBytes(
+    internal EnumerableMemoryBlockWrapper GetWin32ResourceBytes(
       int dataRVA,
       int size
     ) {
-      return new EnumberableMemoryBlockWrapper(this.PEFileReader.RVAToMemoryBlockWithSize(dataRVA, size));
+      return new EnumerableMemoryBlockWrapper(this.PEFileReader.RVAToMemoryBlockWithSize(dataRVA, size));
     }
 
-    internal EnumberableMemoryBlockWrapper GetWin32ResourceBytes(
+    internal EnumerableMemoryBlockWrapper GetWin32ResourceBytes(
       uint dataRVA,
       uint size
     ) {
-      return new EnumberableMemoryBlockWrapper(this.PEFileReader.RVAToMemoryBlockWithSize((int)dataRVA, (int)size));
+      return new EnumerableMemoryBlockWrapper(this.PEFileReader.RVAToMemoryBlockWithSize((int)dataRVA, (int)size));
     }
 
     internal IEnumerable<IWin32Resource> GetWin32Resources() {
@@ -703,11 +662,11 @@ namespace Microsoft.Cci.MetadataReader {
       }
     }
 
-    internal EnumberableMemoryBlockWrapper GetFileHash(
+    internal EnumerableMemoryBlockWrapper GetFileHash(
       uint fileRowId
     ) {
       uint blobOffset = this.PEFileReader.FileTable.GetHashValue(fileRowId);
-      return new EnumberableMemoryBlockWrapper(this.PEFileReader.BlobStream.GetMemoryBlockAt(blobOffset));
+      return new EnumerableMemoryBlockWrapper(this.PEFileReader.BlobStream.GetMemoryBlockAt(blobOffset));
     }
 
     /// <summary>
@@ -873,7 +832,7 @@ namespace Microsoft.Cci.MetadataReader {
           //  MDError:
           return TypeCache.EmptyByteArray;
         }
-        return new EnumberableMemoryBlockWrapper(this.PEFileReader.ResourceMemoryReader.GetMemoryBlockAt(resOffset + sizeof(Int32), len));
+        return new EnumerableMemoryBlockWrapper(this.PEFileReader.ResourceMemoryReader.GetMemoryBlockAt(resOffset + sizeof(Int32), len));
       }
     }
 
@@ -886,6 +845,10 @@ namespace Microsoft.Cci.MetadataReader {
       for (int i = 1; i < resRefArr.Length; ++i) {
         yield return resRefArr[i];
       }
+    }
+
+    internal string GetDebugInformationLocation() {
+      return this.PEFileReader.DebugInformationLocation;
     }
 
     internal DllCharacteristics GetDllCharacteristics() {
@@ -902,7 +865,7 @@ namespace Microsoft.Cci.MetadataReader {
         FileReference/*?*/ file = this.GetFileReferenceAt(this.PEFileReader.COR20Header.EntryPointTokenOrRVA & TokenTypeIds.RIDMask);
         if (assem == null || file == null)
           return Dummy.MethodReference;
-        Module/*?*/ mod = assem.FindMemberModuleNamed(file.Name);
+        var mod = assem.FindMemberModuleNamed(file.Name) as Module;
         if (mod == null)
           return Dummy.MethodReference;
         return mod.PEFileToObjectModel.GetEntryPointMethod();
@@ -1853,7 +1816,7 @@ namespace Microsoft.Cci.MetadataReader {
         case TokenTypeIds.ModuleRef: {
             ModuleReference/*?*/ modRef = this.GetModuleReferenceAt(rowId);
             if (modRef != null) {
-              Module/*?*/ module = this.ResolveModuleRefReference(modRef);
+              var module = this.ResolveModuleRefReference(modRef) as Module;
               if (module != null) {
                 PEFileToObjectModel modulePEFileToObjectModel = module.PEFileToObjectModel;
                 retModuleType = modulePEFileToObjectModel.ResolveNamespaceTypeDefinition(namespaceName, typeName);
@@ -1961,7 +1924,7 @@ namespace Microsoft.Cci.MetadataReader {
             if (fileRef == null) {
               return null;
             }
-            Module/*?*/ module =thisAssembly.FindMemberModuleNamed(fileRef.Name);
+            var module = thisAssembly.FindMemberModuleNamed(fileRef.Name) as Module;
             if (module == null) {
               return null;
             }
@@ -2788,30 +2751,30 @@ namespace Microsoft.Cci.MetadataReader {
       switch (constRow.Type) {
         case ElementType.Boolean: {
             byte val = memoryReader.ReadByte();
-            return new ConstantExpression(this.SystemBoolean, val != 0);
+            return new ConstantExpression(this.PlatformType.SystemBoolean, val != 0);
           }
         case ElementType.Char:
-          return new ConstantExpression(this.SystemChar, memoryReader.ReadChar());
+          return new ConstantExpression(this.PlatformType.SystemChar, memoryReader.ReadChar());
         case ElementType.Int8:
-          return new ConstantExpression(this.SystemSByte, memoryReader.ReadSByte());
+          return new ConstantExpression(this.PlatformType.SystemInt8, memoryReader.ReadSByte());
         case ElementType.Int16:
-          return new ConstantExpression(this.SystemInt16, memoryReader.ReadInt16());
+          return new ConstantExpression(this.PlatformType.SystemInt16, memoryReader.ReadInt16());
         case ElementType.Int32:
-          return new ConstantExpression(this.SystemInt32, memoryReader.ReadInt32());
+          return new ConstantExpression(this.PlatformType.SystemInt32, memoryReader.ReadInt32());
         case ElementType.Int64:
-          return new ConstantExpression(this.SystemInt64, memoryReader.ReadInt64());
+          return new ConstantExpression(this.PlatformType.SystemInt64, memoryReader.ReadInt64());
         case ElementType.UInt8:
-          return new ConstantExpression(this.SystemByte, memoryReader.ReadByte());
+          return new ConstantExpression(this.PlatformType.SystemUInt8, memoryReader.ReadByte());
         case ElementType.UInt16:
-          return new ConstantExpression(this.SystemUInt16, memoryReader.ReadUInt16());
+          return new ConstantExpression(this.PlatformType.SystemUInt16, memoryReader.ReadUInt16());
         case ElementType.UInt32:
-          return new ConstantExpression(this.SystemUInt32, memoryReader.ReadUInt32());
+          return new ConstantExpression(this.PlatformType.SystemUInt32, memoryReader.ReadUInt32());
         case ElementType.UInt64:
-          return new ConstantExpression(this.SystemUInt64, memoryReader.ReadUInt64());
+          return new ConstantExpression(this.PlatformType.SystemUInt64, memoryReader.ReadUInt64());
         case ElementType.Single:
-          return new ConstantExpression(this.SystemSingle, memoryReader.ReadSingle());
+          return new ConstantExpression(this.PlatformType.SystemFloat32, memoryReader.ReadSingle());
         case ElementType.Double:
-          return new ConstantExpression(this.SystemDouble, memoryReader.ReadDouble());
+          return new ConstantExpression(this.PlatformType.SystemFloat64, memoryReader.ReadDouble());
         case ElementType.String: {
             int byteLen = memoryReader.Length;
             string/*?*/ value;
@@ -2822,10 +2785,10 @@ namespace Microsoft.Cci.MetadataReader {
             } else {
               value = memoryReader.ReadUTF16WithSize(byteLen);
             }
-            return new ConstantExpression(this.SystemString, value);
+            return new ConstantExpression(this.PlatformType.SystemString, value);
           }
         case ElementType.Class:
-          return new ConstantExpression(this.SystemObject, null);
+          return new ConstantExpression(this.PlatformType.SystemObject, null);
       }
       //  MDError...
       return Dummy.Constant;
@@ -2974,7 +2937,7 @@ namespace Microsoft.Cci.MetadataReader {
                 //  MDError
                 return null;
               }
-              Module/*?*/ module = this.ResolveModuleRefReference(modRef);
+              var module = this.ResolveModuleRefReference(modRef) as Module;
               if (module == null) {
                 //TODO: MDError...
                 return null;
@@ -3332,8 +3295,7 @@ namespace Microsoft.Cci.MetadataReader {
               this.currentOwningObject = owningObject;
               if (customAttribute.Value == 0) {
                 this.CustomAttributeArray[customAttributeRowId] = 
-                  this.ModuleReader.metadataReaderHost.Rewrite(this.Module,
-                  new CustomAttribute(this, customAttributeRowId, moduleMethodReference, TypeCache.EmptyExpressionList, TypeCache.EmptyNamedArgumentList));
+                  this.ModuleReader.metadataReaderHost.Rewrite(this.Module, new CustomAttribute(this, customAttributeRowId, moduleMethodReference, null, null));
               } else {
                 //  TODO: Check if customAttribute.Value is within the range
                 MemoryBlock signatureMemoryBlock = this.PEFileReader.BlobStream.GetMemoryBlockAt(customAttribute.Value);
@@ -3435,6 +3397,7 @@ namespace Microsoft.Cci.MetadataReader {
     }
     #endregion Attribute Information
 
+
   }
 
   #region Signature Converters
@@ -3512,8 +3475,10 @@ namespace Microsoft.Cci.MetadataReader {
           //  Error...
           continue;
         }
-        if (customModifier != null && customModifierList == null)
+        if (customModifier != null && customModifierList == null) {
           customModifierList = new List<ICustomModifier>(4);
+          customModifierList.Add(customModifier);
+        }
         customModifier = new CustomModifier(header == ElementType.OptionalModifier, typeRef);
         if (customModifierList != null) customModifierList.Add(customModifier);
       }
@@ -3623,10 +3588,10 @@ namespace Microsoft.Cci.MetadataReader {
       bool isReturnByReference = false;
       byte retByte = this.SignatureMemoryReader.PeekByte(0);
       if (retByte == ElementType.Void) {
-        returnTypeReference = this.PEFileToObjectModel.SystemVoid;
+        returnTypeReference = this.PEFileToObjectModel.PlatformType.SystemVoid;
         this.SignatureMemoryReader.SkipBytes(1);
       } else if (retByte == ElementType.TypedReference) {
-        returnTypeReference = this.PEFileToObjectModel.SystemTypedReference;
+        returnTypeReference = this.PEFileToObjectModel.PlatformType.SystemTypedReference;
         this.SignatureMemoryReader.SkipBytes(1);
       } else {
         if (retByte == ElementType.ByReference) {
@@ -3656,39 +3621,39 @@ namespace Microsoft.Cci.MetadataReader {
       byte headByte = this.SignatureMemoryReader.ReadByte();
       switch (headByte) {
         case ElementType.Void:
-          return this.PEFileToObjectModel.SystemVoid;
+          return this.PEFileToObjectModel.PlatformType.SystemVoid;
         case ElementType.Boolean:
-          return this.PEFileToObjectModel.SystemBoolean;
+          return this.PEFileToObjectModel.PlatformType.SystemBoolean;
         case ElementType.Char:
-          return this.PEFileToObjectModel.SystemChar;
+          return this.PEFileToObjectModel.PlatformType.SystemChar;
         case ElementType.Int8:
-          return this.PEFileToObjectModel.SystemSByte;
+          return this.PEFileToObjectModel.PlatformType.SystemInt8;
         case ElementType.Int16:
-          return this.PEFileToObjectModel.SystemInt16;
+          return this.PEFileToObjectModel.PlatformType.SystemInt16;
         case ElementType.Int32:
-          return this.PEFileToObjectModel.SystemInt32;
+          return this.PEFileToObjectModel.PlatformType.SystemInt32;
         case ElementType.Int64:
-          return this.PEFileToObjectModel.SystemInt64;
+          return this.PEFileToObjectModel.PlatformType.SystemInt64;
         case ElementType.UInt8:
-          return this.PEFileToObjectModel.SystemByte;
+          return this.PEFileToObjectModel.PlatformType.SystemUInt8;
         case ElementType.UInt16:
-          return this.PEFileToObjectModel.SystemUInt16;
+          return this.PEFileToObjectModel.PlatformType.SystemUInt16;
         case ElementType.UInt32:
-          return this.PEFileToObjectModel.SystemUInt32;
+          return this.PEFileToObjectModel.PlatformType.SystemUInt32;
         case ElementType.UInt64:
-          return this.PEFileToObjectModel.SystemUInt64;
+          return this.PEFileToObjectModel.PlatformType.SystemUInt64;
         case ElementType.Single:
-          return this.PEFileToObjectModel.SystemSingle;
+          return this.PEFileToObjectModel.PlatformType.SystemFloat32;
         case ElementType.Double:
-          return this.PEFileToObjectModel.SystemDouble;
+          return this.PEFileToObjectModel.PlatformType.SystemFloat64;
         case ElementType.IntPtr:
-          return this.PEFileToObjectModel.SystemIntPtr;
+          return this.PEFileToObjectModel.PlatformType.SystemIntPtr;
         case ElementType.UIntPtr:
-          return this.PEFileToObjectModel.SystemUIntPtr;
+          return this.PEFileToObjectModel.PlatformType.SystemUIntPtr;
         case ElementType.Object:
-          return this.PEFileToObjectModel.SystemObject;
+          return this.PEFileToObjectModel.PlatformType.SystemObject;
         case ElementType.String:
-          return this.PEFileToObjectModel.SystemString;
+          return this.PEFileToObjectModel.PlatformType.SystemString;
         case ElementType.ByReference:
           return this.GetModuleManagedPointerType(0xFFFFFFFF);
         case ElementType.Pointer:
@@ -3797,7 +3762,7 @@ namespace Microsoft.Cci.MetadataReader {
         ITypeReference/*?*/ typeReference;
         if (currByte == ElementType.TypedReference) {
           this.SignatureMemoryReader.SkipBytes(1);
-          typeReference = this.PEFileToObjectModel.SystemTypedReference;
+          typeReference = this.PEFileToObjectModel.PlatformType.SystemTypedReference;
         } else {
           if (currByte == ElementType.ByReference) {
             this.SignatureMemoryReader.SkipBytes(1);
@@ -3826,14 +3791,14 @@ namespace Microsoft.Cci.MetadataReader {
         byte currByte = this.SignatureMemoryReader.PeekByte(0);
         if (currByte == ElementType.Sentinel) {
           this.SignatureMemoryReader.SkipBytes(1);
-          if (index+1 < paramCount) Array.Resize(ref parameterTypes, index+1);
+          if (index < paramCount) Array.Resize(ref parameterTypes, index);
           break;
         }
         bool isByReference = false;
         ITypeReference/*?*/ typeReference;
         if (currByte == ElementType.TypedReference) {
           this.SignatureMemoryReader.SkipBytes(1);
-          typeReference = this.PEFileToObjectModel.SystemTypedReference;
+          typeReference = this.PEFileToObjectModel.PlatformType.SystemTypedReference;
         } else {
           if (currByte == ElementType.ByReference) {
             this.SignatureMemoryReader.SkipBytes(1);
@@ -3924,10 +3889,10 @@ namespace Microsoft.Cci.MetadataReader {
       byte retByte = this.SignatureMemoryReader.PeekByte(0);
       bool isReturnByReference = false;
       if (retByte == ElementType.Void) {
-        this.ReturnTypeReference = peFileToObjectModel.SystemVoid;
+        this.ReturnTypeReference = peFileToObjectModel.PlatformType.SystemVoid;
         this.SignatureMemoryReader.SkipBytes(1);
       } else if (retByte == ElementType.TypedReference) {
-        this.ReturnTypeReference = peFileToObjectModel.SystemTypedReference;
+        this.ReturnTypeReference = peFileToObjectModel.PlatformType.SystemTypedReference;
         this.SignatureMemoryReader.SkipBytes(1);
       } else {
         if (retByte == ElementType.ByReference) {
@@ -4052,55 +4017,55 @@ namespace Microsoft.Cci.MetadataReader {
             break;
           }
         case ElementType.Boolean:
-          this.TypeReference = this.PEFileToObjectModel.SystemBoolean;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemBoolean;
           break;
         case ElementType.Char:
-          this.TypeReference = this.PEFileToObjectModel.SystemChar;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemChar;
           break;
         case ElementType.Double:
-          this.TypeReference = this.PEFileToObjectModel.SystemDouble;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemFloat64;
           break;
         case ElementType.Int16:
-          this.TypeReference = this.PEFileToObjectModel.SystemInt16;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemInt16;
           break;
         case ElementType.Int32:
-          this.TypeReference = this.PEFileToObjectModel.SystemInt32;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemInt32;
           break;
         case ElementType.Int64:
-          this.TypeReference = this.PEFileToObjectModel.SystemInt64;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemInt64;
           break;
         case ElementType.Int8:
-          this.TypeReference = this.PEFileToObjectModel.SystemSByte;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemInt8;
           break;
         case ElementType.IntPtr:
-          this.TypeReference = this.PEFileToObjectModel.SystemIntPtr;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemIntPtr;
           break;
         case ElementType.Object:
-          this.TypeReference = this.PEFileToObjectModel.SystemObject;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemObject;
           break;
         case ElementType.Single:
-          this.TypeReference = this.PEFileToObjectModel.SystemSingle;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemFloat32;
           break;
         case ElementType.String:
-          this.TypeReference = this.PEFileToObjectModel.SystemString;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemString;
           break;
         case ElementType.UInt16:
-          this.TypeReference = this.PEFileToObjectModel.SystemUInt16;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemUInt16;
           break;
         case ElementType.UInt32:
-          this.TypeReference = this.PEFileToObjectModel.SystemUInt32;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemUInt32;
           break;
         case ElementType.UInt64:
-          this.TypeReference = this.PEFileToObjectModel.SystemUInt64;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemUInt64;
           break;
         case ElementType.UInt8:
-          this.TypeReference = this.PEFileToObjectModel.SystemByte;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemUInt8;
           break;
         case ElementType.UIntPtr:
-          this.TypeReference = this.PEFileToObjectModel.SystemUIntPtr;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemUIntPtr;
           break;
         case ElementType.Void:
-          this.TypeReference = this.PEFileToObjectModel.SystemVoid;
+          this.TypeReference = this.PEFileToObjectModel.PlatformType.SystemVoid;
           break;
         default:
           //  Error...
@@ -4115,13 +4080,11 @@ namespace Microsoft.Cci.MetadataReader {
     internal readonly IEnumerable<ICustomModifier>/*?*/ ReturnCustomModifiers;
     internal readonly ITypeReference/*?*/ ReturnTypeReference;
     internal readonly bool IsReturnByReference;
-    internal readonly EnumerableArrayWrapper<IParameterTypeInformation, IParameterTypeInformation> RequiredParameters;
-    internal readonly EnumerableArrayWrapper<IParameterTypeInformation, IParameterTypeInformation> VarArgParameters;
+    internal readonly IParameterTypeInformation[]/*?*/ RequiredParameters;
+    internal readonly IParameterTypeInformation[]/*?*/ VarArgParameters;
 
     internal MethodRefSignatureConverter(PEFileToObjectModel peFileToObjectModel, MethodReference moduleMethodRef, MemoryReader signatureMemoryReader)
       : base(peFileToObjectModel, signatureMemoryReader, moduleMethodRef) {
-      this.RequiredParameters = TypeCache.EmptyParameterInfoArray;
-      this.VarArgParameters = TypeCache.EmptyParameterInfoArray;
       //  TODO: Check minimum required size of the signature...
       byte firstByte = this.SignatureMemoryReader.ReadByte();
       if (SignatureHeader.IsGeneric(firstByte)) {
@@ -4132,10 +4095,10 @@ namespace Microsoft.Cci.MetadataReader {
       this.ReturnCustomModifiers = this.GetCustomModifiers(out dummyPinned);
       byte retByte = this.SignatureMemoryReader.PeekByte(0);
       if (retByte == ElementType.Void) {
-        this.ReturnTypeReference = peFileToObjectModel.SystemVoid;
+        this.ReturnTypeReference = peFileToObjectModel.PlatformType.SystemVoid;
         this.SignatureMemoryReader.SkipBytes(1);
       } else if (retByte == ElementType.TypedReference) {
-        this.ReturnTypeReference = peFileToObjectModel.SystemTypedReference;
+        this.ReturnTypeReference = peFileToObjectModel.PlatformType.SystemTypedReference;
         this.SignatureMemoryReader.SkipBytes(1);
       } else {
         if (retByte == ElementType.ByReference) {
@@ -4145,12 +4108,9 @@ namespace Microsoft.Cci.MetadataReader {
         this.ReturnTypeReference = this.GetTypeReference();
       }
       if (paramCount > 0) {
-        IParameterTypeInformation[] reqModuleParamArr = this.GetModuleParameterTypeInformations(moduleMethodRef, paramCount);
-        if (reqModuleParamArr.Length > 0)
-          this.RequiredParameters = new EnumerableArrayWrapper<IParameterTypeInformation, IParameterTypeInformation>(reqModuleParamArr, Dummy.ParameterTypeInformation);
-        IParameterTypeInformation[] varArgModuleParamArr = this.GetModuleParameterTypeInformations(moduleMethodRef, paramCount - reqModuleParamArr.Length);
-        if (varArgModuleParamArr.Length > 0)
-          this.VarArgParameters = new EnumerableArrayWrapper<IParameterTypeInformation, IParameterTypeInformation>(varArgModuleParamArr, Dummy.ParameterTypeInformation);
+        this.RequiredParameters = this.GetModuleParameterTypeInformations(moduleMethodRef, paramCount);
+        if (this.RequiredParameters.Length < paramCount)
+          this.VarArgParameters = this.GetModuleParameterTypeInformations(moduleMethodRef, paramCount - this.RequiredParameters.Length);
       }
     }
 

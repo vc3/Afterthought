@@ -13,6 +13,7 @@ using Microsoft.Cci;
 using System.Collections.Generic;
 using System.Text;
 using System.Globalization;
+using System.Diagnostics.Contracts;
 
 //^ using Microsoft.Contracts;
 
@@ -638,6 +639,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// An object that can provide information about the local scopes of a method.
   /// </summary>
+  [ContractClass(typeof(ILocalScopeProviderContract))]
   public interface ILocalScopeProvider {
 
     /// <summary>
@@ -678,6 +680,45 @@ namespace Microsoft.Cci {
     bool IsIterator(IMethodBody methodBody);
 
   }
+
+  [ContractClassFor(typeof(ILocalScopeProvider))]
+  abstract class ILocalScopeProviderContract : ILocalScopeProvider {
+    public IEnumerable<ILocalScope> GetIteratorScopes(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
+      Contract.Ensures(Contract.Result<IEnumerable<ILocalScope>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ILocalScope> GetLocalScopes(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
+      Contract.Ensures(Contract.Result<IEnumerable<ILocalScope>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<INamespaceScope> GetNamespaceScopes(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
+      Contract.Ensures(Contract.Result<IEnumerable<INamespaceScope>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ILocalDefinition> GetConstantsInScope(ILocalScope scope) {
+      Contract.Requires(scope != null);
+      Contract.Ensures(Contract.Result<IEnumerable<ILocalDefinition>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ILocalDefinition> GetVariablesInScope(ILocalScope scope) {
+      Contract.Requires(scope != null);
+      Contract.Ensures(Contract.Result<IEnumerable<ILocalDefinition>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public bool IsIterator(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
+      throw new NotImplementedException();
+    }
+  }
+
 
   /// <summary>
   /// A description of the lexical scope in which a namespace type has been nested. This scope is tied to a particular

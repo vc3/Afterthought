@@ -12,20 +12,20 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Cci {
-  internal sealed class MemoryStream {
+namespace Microsoft.Cci.WriterUtilities {
+  public sealed class MemoryStream {
 
-    internal MemoryStream() {
+    public MemoryStream() {
       this.Buffer = new byte[64];
     }
 
-    internal MemoryStream(uint initialSize)
+    public MemoryStream(uint initialSize)
       //^ requires initialSize > 0;
     {
       this.Buffer = new byte[initialSize];
     }
 
-    internal byte[] Buffer;
+    public byte[] Buffer;
     //^ invariant Buffer.LongLength > 0;
 
     private void Grow(byte[] myBuffer, uint n, uint m)
@@ -39,9 +39,9 @@ namespace Microsoft.Cci {
         newBuffer[i] = myBuffer[i];
     }
 
-    internal uint Length;
+    public uint Length;
 
-    internal uint Position {
+    public uint Position {
       get {
         return this.position;
       }
@@ -59,7 +59,7 @@ namespace Microsoft.Cci {
     }
     private uint position;
 
-    internal byte[] ToArray() {
+    public byte[] ToArray() {
       uint n = this.Length;
       byte[] source = this.Buffer;
       if (source.Length == n) return this.Buffer;
@@ -69,7 +69,7 @@ namespace Microsoft.Cci {
       return result;
     }
 
-    internal void Write(byte[] buffer, uint index, uint count) {
+    public void Write(byte[] buffer, uint index, uint count) {
       uint p = this.position;
       this.Position = p + count;
       byte[] myBuffer = this.Buffer;
@@ -77,11 +77,11 @@ namespace Microsoft.Cci {
         myBuffer[j++] = buffer[k++];
     }
 
-    internal void WriteTo(MemoryStream stream) {
+    public void WriteTo(MemoryStream stream) {
       stream.Write(this.Buffer, 0, this.Length);
     }
 
-    internal void WriteTo(System.IO.Stream stream) {
+    public void WriteTo(System.IO.Stream stream) {
       stream.Write(this.Buffer, 0, (int)this.Length);
     }
   }

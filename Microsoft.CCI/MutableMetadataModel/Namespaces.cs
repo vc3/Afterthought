@@ -166,7 +166,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       get { return this.name; }
       set {
         Contract.Requires(!this.IsFrozen);
-        this.name = value;
+        this.name = value; 
       }
     }
     IName name;
@@ -305,7 +305,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       set {
         Contract.Requires(!this.IsFrozen);
         Contract.Requires(value != null);
-        this.unit = value;
+        this.unit = value; 
       }
     }
     IUnitReference unit;
@@ -443,7 +443,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public List<INamespaceMember> Members {
       get {
         if (this.members == null) this.members = new List<INamespaceMember>();
-        return this.members;
+        return this.members; 
       }
       set { this.members = value; }
     }
@@ -499,14 +499,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<ICustomAttribute> IReference.Attributes {
       get {
         if (this.Attributes == null) return Enumerable<ICustomAttribute>.Empty;
-        return this.Attributes.AsReadOnly();
+        return this.Attributes.AsReadOnly(); 
       }
     }
 
     IEnumerable<ILocation> IObjectWithLocations.Locations {
       get {
         if (this.Locations == null) return Enumerable<ILocation>.Empty;
-        return this.Locations.AsReadOnly();
+        return this.Locations.AsReadOnly(); 
       }
     }
 
@@ -658,14 +658,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<ICustomAttribute> IReference.Attributes {
       get {
         if (this.Attributes == null) return Enumerable<ICustomAttribute>.Empty;
-        return this.Attributes.AsReadOnly();
+        return this.Attributes.AsReadOnly(); 
       }
     }
 
     IEnumerable<ILocation> IObjectWithLocations.Locations {
       get {
         if (this.Locations == null) return Enumerable<ILocation>.Empty;
-        return this.Locations.AsReadOnly();
+        return this.Locations.AsReadOnly(); 
       }
     }
 

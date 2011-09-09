@@ -2547,8 +2547,18 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     OptionalHeaderStandardFields OptionalHeaderStandardFields;
     OptionalHeaderNTAdditionalFields OptionalHeaderNTAdditionalFields;
     OptionalHeaderDirectoryEntries OptionalHeaderDirectoryEntries;
-    SectionHeader[] SectionHeaders;
+    internal SectionHeader[] SectionHeaders;
     internal MemoryReader Win32ResourceMemoryReader;
+
+    internal string DebugInformationLocation {
+      get {
+        if (this.debugInformationLocation == null)
+          this.debugInformationLocation = this.ReadDebugInformationLocationFromDebugTableDirectoryData();
+        return this.debugInformationLocation;
+      }
+    }
+    string debugInformationLocation;
+
     internal DllCharacteristics DllCharacteristics {
       get
         //^ requires this.ReaderState >= ReaderState.PEFile;
@@ -2667,6 +2677,34 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     #endregion Fields and Properties [PEFile]
 
     #region Methods [PEFile]
+
+    private string ReadDebugInformationLocationFromDebugTableDirectoryData() {
+      if (this.OptionalHeaderDirectoryEntries.DebugTableDirectory.Size == 0) return string.Empty;
+      var debugDirectoryReader = new MemoryReader(this.DirectoryToMemoryBlock(this.OptionalHeaderDirectoryEntries.DebugTableDirectory));
+      PeDebugDirectory debugDir = new PeDebugDirectory();
+      debugDir.Characteristics = debugDirectoryReader.ReadUInt32();
+      debugDir.TimeDateStamp = debugDirectoryReader.ReadUInt32();
+      debugDir.MajorVersion = debugDirectoryReader.ReadUInt16();
+      debugDir.MinorVersion = debugDirectoryReader.ReadUInt16();
+      debugDir.Type = debugDirectoryReader.ReadUInt32();
+      debugDir.SizeOfData = debugDirectoryReader.ReadUInt32();
+      debugDir.AddressOfRawData = debugDirectoryReader.ReadUInt32();
+      debugDir.PointerToRawData = debugDirectoryReader.ReadUInt32();
+      if (debugDir.SizeOfData == 0) return string.Empty;
+      var dataBlock = new MemoryBlock(this.BinaryDocumentMemoryBlock.Pointer + debugDir.PointerToRawData, debugDir.SizeOfData);
+      var debugDataReader = new MemoryReader(dataBlock);
+      var magic = debugDataReader.ReadUInt32();
+      if (magic != 0x53445352) { //RSDS in little endian format
+        //TODO: error
+      }
+      var unknown1 = debugDataReader.ReadUInt32();
+      var unknown2 = debugDataReader.ReadUInt32();
+      var unknown3 = debugDataReader.ReadUInt32();
+      var unknown4 = debugDataReader.ReadUInt32();
+      var unknown5 = debugDataReader.ReadUInt32();
+      return debugDataReader.ReadASCIINullTerminated();
+    }
+
     bool ReadCOFFFileHeader(
       ref MemoryReader memReader
     )

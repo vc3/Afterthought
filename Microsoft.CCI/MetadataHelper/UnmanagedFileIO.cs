@@ -13,6 +13,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Globalization;
+using System.Collections.Generic;
 //^ using Microsoft.Contracts;
 
 namespace Microsoft.Cci {
@@ -122,7 +123,7 @@ namespace Microsoft.Cci {
       }
     }
 
-    #region Interop stuff
+  #region Interop stuff
     private enum PageAccess : int { PAGE_READONLY = 0x02 };
     private enum FileMapAccess : int { FILE_MAP_READ = 0x0004 };
 
@@ -157,7 +158,7 @@ namespace Microsoft.Cci {
       IntPtr hObject  // handle to object
     );
 
-    #endregion Interop stuff
+  #endregion Interop stuff
   }
 #endif
 
@@ -269,6 +270,24 @@ namespace Microsoft.Cci {
       return unmanagedBinaryMemoryBlock;
     }
 
+    /// <summary>
+    /// Creates an unmanaged binary memory block and copies the contents of the given byte enumeration into the block.
+    /// </summary>
+    /// <param name="stream">A stream of bytes that are to be copied into the resulting memory block.</param>
+    /// <param name="binaryDocument">The binary document whose contents are stored in the given file.</param>
+    /// <exception cref="System.IO.IOException">The length of the stream is not the same as the length of the binary document, or the stream length is greater than Int32.MaxValue.</exception>
+    public static UnmanagedBinaryMemoryBlock CreateUnmanagedBinaryMemoryBlock(IEnumerable<byte> stream, IBinaryDocument binaryDocument) {
+      UnmanagedBinaryMemoryBlock unmanagedBinaryMemoryBlock = new UnmanagedBinaryMemoryBlock(binaryDocument);
+      byte* pMainBuffer = (byte*)unmanagedBinaryMemoryBlock.Pointer;
+      byte* endOfBuffer = pMainBuffer + binaryDocument.Length;
+      foreach (var b in stream) {
+        if (pMainBuffer == endOfBuffer) throw new IOException("stream length != binaryDocument.Length: " + binaryDocument.Location);
+        *pMainBuffer++ = b;
+      }
+      if (pMainBuffer != endOfBuffer) throw new IOException("stream length != binaryDocument.Length: " + binaryDocument.Location);
+      return unmanagedBinaryMemoryBlock;
+    }
+
   }
 
   /// <summary>
@@ -282,13 +301,7 @@ namespace Microsoft.Cci {
     /// <param name="location"></param>
     /// <param name="name"></param>
     /// <param name="length"></param>
-    public BinaryDocument(
-      string location,
-      IName name,
-      uint length
-    )
-      //^ requires length >= 0;
-    {
+    public BinaryDocument(string location, IName name, uint length) {
       this.location = location;
       this.name = name;
       this.length = length;
@@ -359,17 +372,17 @@ namespace Microsoft.Cci {
     #region IBinaryLocation Members
 
     IBinaryDocument IBinaryLocation.BinaryDocument {
-      get
+      get 
         //^ ensures result == this.binaryDocument;
-      {
-        return this.binaryDocument;
+      { 
+        return this.binaryDocument; 
       }
     }
 
     uint IBinaryLocation.Offset {
-      get {
+      get { 
         //^ assume ((IBinaryLocation)this).BinaryDocument == this.binaryDocument; //see above
-        return this.offset;
+        return this.offset; 
       }
     }
 

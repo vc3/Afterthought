@@ -16,6 +16,7 @@ using System.Configuration.Assemblies;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using Microsoft.Cci.UtilityDataStructures;
+using Microsoft.Cci.WriterUtilities;
 
 //^ using Microsoft.Contracts;
 
@@ -45,7 +46,7 @@ namespace Microsoft.Cci {
       this.sizeOfImportAddressTable = this.emitRuntimeStartupStub ? (!this.module.Requires64bits ? 8u : 16u) : 0;
     }
 
-    HashtableForUintValues<AssemblyIdentity> assemblyRefIndex = new HashtableForUintValues<AssemblyIdentity>();
+    Dictionary<AssemblyIdentity, uint> assemblyRefIndex = new Dictionary<AssemblyIdentity, uint>();
     List<IAssemblyReference> assemblyRefList = new List<IAssemblyReference>();
     Dictionary<byte[], uint> blobIndex = new Dictionary<byte[], uint>(new ByteArrayComparer());
     BinaryWriter blobWriter = new BinaryWriter(new MemoryStream(1024), true);
@@ -102,6 +103,7 @@ namespace Microsoft.Cci {
     BinaryWriter sdataWriter = new BinaryWriter(new MemoryStream());
     SectionHeader rdataSection = new SectionHeader();
     SectionHeader sdataSection = new SectionHeader();
+    SectionHeader[] uninterpretedSections;
     HashtableForUintValues<ISignature> signatureIndex = new HashtableForUintValues<ISignature>();
     Hashtable signatureStructuralIndex = new Hashtable();
     uint sizeOfImportAddressTable;
@@ -251,6 +253,7 @@ namespace Microsoft.Cci {
       writer.WriteTlsSection();
       writer.WriteResourceSection();
       writer.WriteRelocSection();
+      writer.WriteUninterpretedSections();
 
       if (pdbWriter != null) {
         if (module.EntryPoint != Dummy.MethodReference)
@@ -262,21 +265,6 @@ namespace Microsoft.Cci {
       uint result = position & ~(alignment-1);
       if (result == position) return result;
       return result+alignment;
-    }
-
-    private uint ComputeHashSize() {
-      uint hashSize = 0;
-      IAssembly/*?*/ assembly = this.module as IAssembly;
-      if (assembly != null) {
-        uint keySize = IteratorHelper.EnumerableCount(assembly.PublicKey);
-        if (keySize > 0) {
-          if (keySize > 128+32)
-            hashSize = keySize-32;
-          else
-            hashSize = 128;
-        }
-      }
-      return hashSize;
     }
 
     private uint ComputeStrongNameSignatureSize() {
@@ -291,7 +279,7 @@ namespace Microsoft.Cci {
       uint result = this.ComputeOffsetToMetadata();
       result += this.ComputeSizeOfMetadata();
       result += Aligned(this.resourceWriter.BaseStream.Length, 4);
-      result += this.ComputeHashSize(); //size of strong name hash
+      result += this.ComputeStrongNameSignatureSize();
       return result;
     }
 
@@ -777,6 +765,30 @@ namespace Microsoft.Cci {
         this.relocSection.SizeOfRawData = this.module.FileAlignment;
         this.relocSection.VirtualSize = this.module.Requires64bits && !this.module.RequiresAmdInstructionSet ? 14u : 12u;
       }
+
+      uint pointerToRawData = this.relocSection.PointerToRawData+this.relocSection.SizeOfRawData;
+      uint rva = Aligned(this.relocSection.RelativeVirtualAddress+this.relocSection.VirtualSize, 0x2000);
+      List<SectionHeader> uninterpretedSections = null;
+      foreach (var peSection in this.module.UninterpretedSections) {
+        if (uninterpretedSections == null) uninterpretedSections = new List<SectionHeader>();
+        uninterpretedSections.Add(new SectionHeader() {
+          Name = peSection.SectionName.Value,
+          Characteristics = (uint)peSection.Characteristics,
+          NumberOfLinenumbers = 0,
+          NumberOfRelocations = 0,
+          PointerToLinenumbers = 0,
+          PointerToRawData = pointerToRawData,
+          PointerToRelocations = 0,
+          RawData = peSection.Rawdata,
+          RelativeVirtualAddress = rva,
+          SizeOfRawData = (uint)peSection.SizeOfRawData,
+          VirtualSize = (uint)peSection.VirtualSize
+        });
+        pointerToRawData += (uint)peSection.SizeOfRawData;
+        rva = Aligned(rva+(uint)peSection.VirtualSize, 0x2000);
+      }
+      if (uninterpretedSections != null)
+        this.uninterpretedSections = uninterpretedSections.ToArray();
     }
 
     internal uint GetAssemblyRefIndex(IAssemblyReference assemblyReference) {
@@ -833,6 +845,8 @@ namespace Microsoft.Cci {
       uint result = 0;
       if (this.module.ILOnly) result |= 1;
       if (this.module.Requires32bits) result |= 2;
+      if (this.module.StrongNameSigned) result |= 8;
+      if (this.module.NativeEntryPoint) result |= 0x10;
       if (this.module.TrackDebugData) result |= 0x10000;
       return result;
     }
@@ -970,7 +984,7 @@ namespace Microsoft.Cci {
       return result;
     }
 
-    private static ushort GetGenericParamFlags(IGenericParameter genPar) {
+    public static ushort GetGenericParamFlags(IGenericParameter genPar) {
       ushort result = 0;
       switch (genPar.Variance) {
         case TypeParameterVariance.Covariant: result |= 0x0001; break;
@@ -996,6 +1010,7 @@ namespace Microsoft.Cci {
       Debug.Assert(!this.streamsAreComplete);
       if (resourceReference.Resource.IsInExternalFile) return 0;
       uint result = this.resourceWriter.BaseStream.Position;
+      //TODO: avoid this allocation. Expose a Length property on IResourceReference and pull the iterator explicitly.
       byte[] resourceData = new List<byte>(resourceReference.Resource.Data).ToArray();
       this.resourceWriter.WriteUint((uint)resourceData.Length);
       this.resourceWriter.WriteBytes(resourceData);
@@ -1120,7 +1135,7 @@ namespace Microsoft.Cci {
         return (this.GetMemberRefIndex(methodReference) << 1)|1;
     }
 
-    private static ushort GetMethodFlags(IMethodDefinition methodDef) {
+    public static ushort GetMethodFlags(IMethodDefinition methodDef) {
       ushort result = GetTypeMemberVisibilityFlags(methodDef);
       if (methodDef.IsStatic) result |= 0x0010;
       if (methodDef.IsSealed) result |= 0x0020;
@@ -1137,7 +1152,7 @@ namespace Microsoft.Cci {
       return result;
     }
 
-    private static ushort GetMethodImplementationFlags(IMethodDefinition methodDef) {
+    public static ushort GetMethodImplementationFlags(IMethodDefinition methodDef) {
       ushort result = 0;
       if (methodDef.IsNativeCode) result |= 0x0001;
       else if (methodDef.IsRuntimeImplemented) result |= 0x0003;
@@ -1375,7 +1390,7 @@ namespace Microsoft.Cci {
       return 0;
     }
 
-    internal static uint GetTypeDefFlags(ITypeDefinition typeDef) {
+    public static uint GetTypeDefFlags(ITypeDefinition typeDef) {
       uint result = 0;
       switch (typeDef.Layout) {
         case LayoutKind.Sequential: result |= 0x00000008; break;
@@ -4378,6 +4393,9 @@ namespace Microsoft.Cci {
 
     private void WriteSpaceForHash() {
       uint size = this.clrHeader.strongNameSignature.Size;
+      //The actual contents will be filled in later by the StrongNameSignatureGeneration function in mscoree.dll
+      //At the moment the sn.exe utility is the only way to do it.
+      //TODO: add functionality to PeWriter to invoke StrongNameSignatureGeneration on the image once serialized.
       while (size > 0) { this.peStream.WriteByte(0); size--; }
     }
 
@@ -4488,6 +4506,15 @@ namespace Microsoft.Cci {
       if (this.tlsDataWriter.BaseStream.Length == 0) return;
       this.peStream.Position = this.tlsSection.PointerToRawData;
       this.tlsDataWriter.BaseStream.WriteTo(this.peStream);
+    }
+
+    private void WriteUninterpretedSections() {
+      if (this.uninterpretedSections == null) return;
+      foreach (var uninterpretedSection in this.uninterpretedSections) {
+        this.peStream.Position = uninterpretedSection.PointerToRawData;
+        foreach (var b in uninterpretedSection.RawData)
+          this.peStream.WriteByte(b);
+      }
     }
 
   }
@@ -5405,10 +5432,8 @@ namespace Microsoft.Cci {
     }
 
     public override void TraverseChildren(IPropertyDefinition propertyDefinition) {
-      if (this.traverseAttributes) {
+      if (this.traverseAttributes)
         this.Traverse(propertyDefinition.Attributes);
-        this.Traverse(propertyDefinition.ReturnValueAttributes);
-      }
       this.Traverse(propertyDefinition.Accessors);
       if (propertyDefinition.HasDefaultValue)
         this.Traverse(propertyDefinition.DefaultValue);
@@ -5501,6 +5526,7 @@ namespace Microsoft.Cci {
     internal ushort NumberOfRelocations;
     internal ushort NumberOfLinenumbers;
     internal uint Characteristics;
+    internal IEnumerable<byte> RawData;
   }
 
   internal enum TableIndices : byte {

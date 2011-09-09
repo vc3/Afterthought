@@ -511,7 +511,7 @@ namespace Microsoft.Cci {
       Contract.Requires(member != null);
 
       if (TypeHelper.TypesAreEquivalent(typeDefinition, member.ContainingTypeDefinition)) return true;
-      if (typeDefinition.IsGeneric && TypeHelper.TypesAreEquivalent(typeDefinition.InstanceType, member.ContainingType))
+      if (typeDefinition.IsGeneric && TypeHelper.TypesAreEquivalent(typeDefinition.InstanceType, member.ContainingTypeDefinition))
         return true;
       var geninst = member.ContainingTypeDefinition as IGenericTypeInstance;
       if (geninst != null && TypeHelper.TypesAreEquivalent(typeDefinition, geninst.GenericType.ResolvedType)) return true;
@@ -524,11 +524,11 @@ namespace Microsoft.Cci {
           return TypeHelper.Type1DerivesFromOrIsTheSameAsType2(typeDefinition, member.ContainingTypeDefinition);
         case TypeMemberVisibility.FamilyAndAssembly:
           return TypeHelper.GetDefiningUnit(typeDefinition).UnitIdentity.Equals(TypeHelper.GetDefiningUnit(member.ContainingTypeDefinition).UnitIdentity) &&
-            TypeHelper.Type1DerivesFromOrIsTheSameAsType2(typeDefinition, member.ContainingType);
+            TypeHelper.Type1DerivesFromOrIsTheSameAsType2(typeDefinition, member.ContainingTypeDefinition);
         //TODO: friend assemblies
         case TypeMemberVisibility.FamilyOrAssembly:
           return TypeHelper.GetDefiningUnit(typeDefinition).UnitIdentity.Equals(TypeHelper.GetDefiningUnit(member.ContainingTypeDefinition)) ||
-            TypeHelper.Type1DerivesFromOrIsTheSameAsType2(typeDefinition, member.ContainingType);
+            TypeHelper.Type1DerivesFromOrIsTheSameAsType2(typeDefinition, member.ContainingTypeDefinition);
         //TODO: friend assemblies
         case TypeMemberVisibility.Public:
           return true;
@@ -1005,7 +1005,7 @@ namespace Microsoft.Cci {
     /// Returns the unit that defines the given type. If the type is a structural type, such as a pointer the result is 
     /// the defining unit of the element type, or in the case of a generic type instance, the definining type of the generic template type.
     /// </summary>
-    public static IUnit/*?*/ GetDefiningUnit(ITypeDefinition typeDefinition) {
+    public static IUnit GetDefiningUnit(ITypeDefinition typeDefinition) {
       Contract.Requires(typeDefinition != null);
 
       INestedTypeDefinition/*?*/ nestedTypeDefinition = typeDefinition as INestedTypeDefinition;
@@ -1023,14 +1023,19 @@ namespace Microsoft.Cci {
       if (pointerType != null) return TypeHelper.GetDefiningUnit(pointerType.TargetType.ResolvedType);
       IArrayType/*?*/ arrayType = typeDefinition as IArrayType;
       if (arrayType != null) return TypeHelper.GetDefiningUnit(arrayType.ElementType.ResolvedType);
-      return null;
+      IGenericTypeParameter/*?*/ genericTypeParameter = typeDefinition as IGenericTypeParameter;
+      if (genericTypeParameter != null) return TypeHelper.GetDefiningUnit(genericTypeParameter.DefiningType);
+      IGenericMethodParameter/*?*/ genericMethodParameter = typeDefinition as IGenericMethodParameter;
+      if (genericMethodParameter != null) return TypeHelper.GetDefiningUnit(genericMethodParameter.DefiningMethod.ContainingType.ResolvedType);
+      Contract.Assume(false);
+      return Dummy.Unit;
     }
 
     /// <summary>
     /// Returns a reference to the unit that defines the given type. If the reference type is a reference to a structural type, such as a pointer the result is 
     /// the a reference to the defining unit of the element type, or in the case of a generic type instance, the definining type of the generic template type.
     /// </summary>
-    public static IUnitReference/*?*/ GetDefiningUnitReference(ITypeReference typeReference) {
+    public static IUnitReference GetDefiningUnitReference(ITypeReference typeReference) {
       Contract.Requires(typeReference != null);
 
       INestedTypeReference/*?*/ nestedTypeReference = typeReference as INestedTypeReference;
@@ -1048,7 +1053,12 @@ namespace Microsoft.Cci {
       if (pointerTypeReference != null) return TypeHelper.GetDefiningUnitReference(pointerTypeReference.TargetType);
       IArrayTypeReference/*?*/ arrayTypeReference = typeReference as IArrayTypeReference;
       if (arrayTypeReference != null) return TypeHelper.GetDefiningUnitReference(arrayTypeReference.ElementType);
-      return null;
+      IGenericTypeParameterReference/*?*/ genericTypeParameterReference = typeReference as IGenericTypeParameterReference;
+      if (genericTypeParameterReference != null) return TypeHelper.GetDefiningUnitReference(genericTypeParameterReference.DefiningType);
+      IGenericMethodParameterReference/*?*/ genericMethodParameterReference = typeReference as IGenericMethodParameterReference;
+      if (genericMethodParameterReference != null) return TypeHelper.GetDefiningUnitReference(genericMethodParameterReference.DefiningMethod.ContainingType);
+      Contract.Assume(false);
+      return Dummy.Unit;
     }
 
     /// <summary>
@@ -1091,7 +1101,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="declaringType">The type thats declares the field.</param>
     /// <param name="fieldReference">A reference to the field.</param>
-    public static IFieldDefinition GetField(ITypeDefinition declaringType, IFieldReference fieldReference) {
+    /// <param name="resolveTypes">True if type references should be resolved during signature matching.</param>
+    public static IFieldDefinition GetField(ITypeDefinition declaringType, IFieldReference fieldReference, bool resolveTypes = false) {
       Contract.Requires(declaringType != null);
       Contract.Requires(fieldReference != null);
       Contract.Ensures(Contract.Result<IFieldDefinition>() != null);
@@ -1099,7 +1110,7 @@ namespace Microsoft.Cci {
       foreach (ITypeDefinitionMember member in declaringType.GetMembersNamed(fieldReference.Name, false)) {
         IFieldDefinition/*?*/ field = member as IFieldDefinition;
         if (field == null) continue;
-        if (!TypeHelper.TypesAreEquivalent(field.Type, fieldReference.Type)) continue;
+        if (!TypeHelper.TypesAreEquivalent(field.Type, fieldReference.Type, resolveTypes)) continue;
         //TODO: check that custom modifiers are the same
         return field;
       }
@@ -1107,7 +1118,7 @@ namespace Microsoft.Cci {
         IFieldDefinition/*?*/ field = member as IFieldDefinition;
         if (field == null) continue;
         if (field.Name.UniqueKey != fieldReference.Name.UniqueKey) continue;
-        if (!TypeHelper.TypesAreEquivalent(field.Type, fieldReference.Type)) continue;
+        if (!TypeHelper.TypesAreEquivalent(field.Type, fieldReference.Type, resolveTypes)) continue;
         //TODO: check that custom modifiers are the same
         return field;
       }
@@ -1175,13 +1186,13 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="declaringType">The type that declares the method to be returned.</param>
     /// <param name="methodReference">A method reference whose name and signature matches that of the desired result.</param>
-    /// <returns></returns>
-    public static IMethodDefinition GetMethod(ITypeDefinition declaringType, IMethodReference methodReference) {
+    /// <param name="resolveTypes">True if type references should be resolved during signature matching.</param>
+    public static IMethodDefinition GetMethod(ITypeDefinition declaringType, IMethodReference methodReference, bool resolveTypes = false) {
       Contract.Requires(declaringType != null);
       Contract.Requires(methodReference != null);
       Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
 
-      IMethodDefinition result = TypeHelper.GetMethod(declaringType.GetMembersNamed(methodReference.Name, false), methodReference);
+      IMethodDefinition result = TypeHelper.GetMethod(declaringType.GetMembersNamed(methodReference.Name, false), methodReference, resolveTypes);
       if (result == Dummy.Method) {
         foreach (ITypeDefinitionMember member in declaringType.PrivateHelperMembers) {
           IMethodDefinition/*?*/ meth = member as IMethodDefinition;
@@ -1189,7 +1200,7 @@ namespace Microsoft.Cci {
           if (meth.Name.UniqueKey != methodReference.Name.UniqueKey) continue;
           if (meth.GenericParameterCount != methodReference.GenericParameterCount) continue;
           if (meth.ParameterCount != methodReference.ParameterCount) continue;
-          if (MemberHelper.SignaturesAreEqual(meth, methodReference)) return meth;
+          if (MemberHelper.SignaturesAreEqual(meth, methodReference, resolveTypes)) return meth;
         }
       }
       return result;
@@ -1221,8 +1232,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="members">A list of type members.</param>
     /// <param name="methodSignature">A method whose signature matches that of the desired result.</param>
-    /// <returns></returns>
-    public static IMethodDefinition GetMethod(IEnumerable<ITypeDefinitionMember> members, IMethodReference methodSignature) {
+    /// <param name="resolveTypes">True if type references should be resolved during signature matching.</param>
+    public static IMethodDefinition GetMethod(IEnumerable<ITypeDefinitionMember> members, IMethodReference methodSignature, bool resolveTypes = false) {
       Contract.Requires(members != null);
       Contract.Requires(Contract.ForAll(members, x => x != null));
       Contract.Requires(methodSignature != null);
@@ -1233,7 +1244,7 @@ namespace Microsoft.Cci {
         if (meth == null) continue;
         if (meth.GenericParameterCount != methodSignature.GenericParameterCount) continue;
         if (meth.ParameterCount != methodSignature.ParameterCount) continue;
-        if (MemberHelper.SignaturesAreEqual(meth, methodSignature)) return meth;
+        if (MemberHelper.SignaturesAreEqual(meth, methodSignature, resolveTypes)) return meth;
       }
       return Dummy.Method;
     }
@@ -1357,11 +1368,11 @@ namespace Microsoft.Cci {
       Contract.Ensures(Contract.Result<ITypeDefinition>() == null || Contract.Result<ITypeDefinition>().IsClass);
 
       if (!type1.IsInterface || !type2.IsInterface) return null;
-      if (type1.IsClass && TypeHelper.TypesAreEquivalent(type1, type2)) return type1;
+      if (type1.IsClass && TypeHelper.TypesAreEquivalent(type1, type2, true)) return type1;
 
       ITypeDefinition/*?*/ typeIter = TypeHelper.BaseClass(type1);
       if (typeIter == null) return null; //type1 has no base classes
-      if (TypeHelper.TypesAreEquivalent(typeIter, type2)) return typeIter; //type1 is derived from type2.
+      if (TypeHelper.TypesAreEquivalent(typeIter, type2, true)) return typeIter; //type1 is derived from type2.
       int depth1 = 0;
       while (typeIter != null) {
         typeIter = TypeHelper.BaseClass(typeIter);
@@ -1371,7 +1382,7 @@ namespace Microsoft.Cci {
 
       typeIter = TypeHelper.BaseClass(type2);
       if (typeIter == null) return null; //type2 has no base classes
-      if (TypeHelper.TypesAreEquivalent(typeIter, type1)) return typeIter; //type2 is derived from type1.
+      if (TypeHelper.TypesAreEquivalent(typeIter, type1, true)) return typeIter; //type2 is derived from type1.
       int depth2 = 0;
       while (typeIter != null) {
         typeIter = TypeHelper.BaseClass(typeIter);
@@ -1397,7 +1408,7 @@ namespace Microsoft.Cci {
 
       while (depth1 > 0) {
         //If type1 and type2 at method entry were both structs, depth1 == depth2 == 1 and neither type1 nor type2 is a class during the first iteration of the loop
-        if (type1.IsClass && TypeHelper.TypesAreEquivalent(type1, type2))
+        if (type1.IsClass && TypeHelper.TypesAreEquivalent(type1, type2, true))
           return type1;
         type1 = TypeHelper.BaseClass(type1);
         Contract.Assume(type1 != null); //Because depth1 > 0 and we were able to call TypeHelper.BaseClass depth1 times before getting null.
@@ -1412,11 +1423,11 @@ namespace Microsoft.Cci {
     /// Returns true if two parameters are equivalent.
     /// </summary>
     [Pure]
-    public static bool ParametersAreEquivalent(IParameterTypeInformation param1, IParameterTypeInformation param2) {
+    public static bool ParametersAreEquivalent(IParameterTypeInformation param1, IParameterTypeInformation param2, bool resolveTypes = false) {
       Contract.Requires(param1 != null);
       Contract.Requires(param2 != null);
 
-      if (param1.IsByReference != param2.IsByReference || param1.IsModified != param1.IsModified || !TypeHelper.TypesAreEquivalent(param1.Type, param2.Type))
+      if (param1.IsByReference != param2.IsByReference || param1.IsModified != param1.IsModified || !TypeHelper.TypesAreEquivalent(param1.Type, param2.Type, resolveTypes))
         return false;
 
       if (param1.IsModified) {
@@ -1427,7 +1438,7 @@ namespace Microsoft.Cci {
           if (!customModifier2enumerator.MoveNext())
             return false;
           ICustomModifier customModifier2 = customModifier2enumerator.Current;
-          if (!TypeHelper.TypesAreEquivalent(customModifier1.Modifier, customModifier2.Modifier))
+          if (!TypeHelper.TypesAreEquivalent(customModifier1.Modifier, customModifier2.Modifier, resolveTypes))
             return false;
           if (customModifier1.IsOptional != customModifier2.IsOptional)
             return false;
@@ -1440,12 +1451,12 @@ namespace Microsoft.Cci {
     /// Returns true if two parameters are equivalent, assuming that the type parameters of generic methods are equivalent if their indices match.
     /// </summary>
     [Pure]
-    public static bool ParametersAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(IParameterTypeInformation param1, IParameterTypeInformation param2) {
+    public static bool ParametersAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(IParameterTypeInformation param1, IParameterTypeInformation param2, bool resolveTypes = false) {
       Contract.Requires(param1 != null);
       Contract.Requires(param2 != null);
 
       if (param1.IsByReference != param2.IsByReference || param1.IsModified != param1.IsModified || 
-        !TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(param1.Type, param2.Type))
+        !TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(param1.Type, param2.Type, resolveTypes))
         return false;
 
       if (param1.IsModified) {
@@ -1456,7 +1467,7 @@ namespace Microsoft.Cci {
           if (!customModifier2enumerator.MoveNext())
             return false;
           ICustomModifier customModifier2 = customModifier2enumerator.Current;
-          if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(customModifier1.Modifier, customModifier2.Modifier))
+          if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(customModifier1.Modifier, customModifier2.Modifier, resolveTypes))
             return false;
           if (customModifier1.IsOptional != customModifier2.IsOptional)
             return false;
@@ -1469,7 +1480,7 @@ namespace Microsoft.Cci {
     /// Returns true if two parameter lists are equivalent.
     /// </summary>
     [Pure]
-    public static bool ParameterListsAreEquivalent(IEnumerable<IParameterTypeInformation> paramList1, IEnumerable<IParameterTypeInformation> paramList2) {
+    public static bool ParameterListsAreEquivalent(IEnumerable<IParameterTypeInformation> paramList1, IEnumerable<IParameterTypeInformation> paramList2, bool resolveTypes = false) {
       Contract.Requires(paramList1 != null);
       Contract.Requires(paramList2 != null);
       Contract.Requires(Contract.ForAll(paramList1, x => x != null));
@@ -1481,7 +1492,7 @@ namespace Microsoft.Cci {
           return false;
         }
         IParameterTypeInformation parameter2 = parameterEnumerator2.Current;
-        if (!TypeHelper.ParametersAreEquivalent(parameter1, parameter2))
+        if (!TypeHelper.ParametersAreEquivalent(parameter1, parameter2, resolveTypes))
           return false;
       }
       if (parameterEnumerator2.MoveNext())
@@ -1493,7 +1504,7 @@ namespace Microsoft.Cci {
     /// Returns true if two parameter lists are equivalent, assuming that the type parameters of generic methods are equivalent if their indices match.
     /// </summary>
     [Pure]
-    public static bool ParameterListsAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(IEnumerable<IParameterTypeInformation> paramList1, IEnumerable<IParameterTypeInformation> paramList2) {
+    public static bool ParameterListsAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(IEnumerable<IParameterTypeInformation> paramList1, IEnumerable<IParameterTypeInformation> paramList2, bool resolveTypes = false) {
       Contract.Requires(paramList1 != null);
       Contract.Requires(Contract.ForAll(paramList1, x => x != null));
       Contract.Requires(paramList2 != null);
@@ -1505,7 +1516,7 @@ namespace Microsoft.Cci {
           return false;
         }
         IParameterTypeInformation parameter2 = parameterEnumerator2.Current;
-        if (!TypeHelper.ParametersAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(parameter1, parameter2))
+        if (!TypeHelper.ParametersAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(parameter1, parameter2, resolveTypes))
           return false;
       }
       if (parameterEnumerator2.MoveNext())
@@ -1517,7 +1528,7 @@ namespace Microsoft.Cci {
     /// Returns true if two parameter lists of type IParameterDefinition are equivalent, assuming that the type parameters of generic methods are equivalent if their indices match.
     /// </summary>
     [Pure]
-    public static bool ParameterListsAreEquivalent(IEnumerable<IParameterDefinition> paramList1, IEnumerable<IParameterDefinition> paramList2) {
+    public static bool ParameterListsAreEquivalent(IEnumerable<IParameterDefinition> paramList1, IEnumerable<IParameterDefinition> paramList2, bool resolveTypes = false) {
       Contract.Requires(paramList1 != null);
       Contract.Requires(Contract.ForAll(paramList1, x => x != null));
       Contract.Requires(paramList2 != null);
@@ -1529,7 +1540,7 @@ namespace Microsoft.Cci {
           return false;
         }
         IParameterTypeInformation parameter2 = parameterEnumerator2.Current;
-        if (!TypeHelper.ParametersAreEquivalent(parameter1, parameter2)) {
+        if (!TypeHelper.ParametersAreEquivalent(parameter1, parameter2, resolveTypes)) {
           return false;
         }
       }
@@ -1601,7 +1612,7 @@ namespace Microsoft.Cci {
           return 1;
         default:
           if (type.IsEnum && type.ResolvedType.IsEnum) {
-            if (TypeHelper.TypesAreEquivalent(rootType, type.ResolvedType.UnderlyingType)) return 0;
+            if (TypeHelper.TypesAreEquivalent(rootType, type.ResolvedType.UnderlyingType, true)) return 0;
             return TypeHelper.SizeOfType(type.ResolvedType.UnderlyingType);
           }
           uint result = mayUseSizeOfProperty ? type.ResolvedType.SizeOf : 0;
@@ -1763,7 +1774,7 @@ namespace Microsoft.Cci {
           return 1;
         default:
           if (type.IsEnum && type.ResolvedType.IsEnum) {
-            if (TypeHelper.TypesAreEquivalent(rootType, type.ResolvedType.UnderlyingType)) return 1;
+            if (TypeHelper.TypesAreEquivalent(rootType, type.ResolvedType.UnderlyingType, true)) return 1;
             return TypeHelper.TypeAlignment(type.ResolvedType.UnderlyingType, rootType, mayUseAlignmentProperty);
           }
           ushort alignment = mayUseAlignmentProperty ? type.ResolvedType.Alignment : (ushort)0;
@@ -1788,14 +1799,14 @@ namespace Microsoft.Cci {
     /// Returns true if the given two array types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
-    public static bool ArrayTypesAreEquivalent(IArrayTypeReference/*?*/ arrayTypeRef1, IArrayTypeReference/*?*/ arrayTypeRef2) {
+    public static bool ArrayTypesAreEquivalent(IArrayTypeReference/*?*/ arrayTypeRef1, IArrayTypeReference/*?*/ arrayTypeRef2, bool resolveTypes) {
       if (arrayTypeRef1 == null || arrayTypeRef2 == null)
         return false;
       if (arrayTypeRef1 == arrayTypeRef2)
         return true;
       if (arrayTypeRef1.IsVector != arrayTypeRef2.IsVector || arrayTypeRef1.Rank != arrayTypeRef2.Rank)
         return false;
-      if (!TypeHelper.TypesAreEquivalent(arrayTypeRef1.ElementType, arrayTypeRef2.ElementType))
+      if (!TypeHelper.TypesAreEquivalent(arrayTypeRef1.ElementType, arrayTypeRef2.ElementType, resolveTypes))
         return false;
       if (
         !IteratorHelper.EnumerablesAreEqual<ulong>(arrayTypeRef1.Sizes, arrayTypeRef2.Sizes)
@@ -1810,19 +1821,19 @@ namespace Microsoft.Cci {
     /// Returns true if the given two generic instance types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
-    public static bool GenericTypeInstancesAreEquivalent(IGenericTypeInstanceReference/*?*/ genericTypeInstRef1, IGenericTypeInstanceReference/*?*/ genericTypeInstRef2) {
+    public static bool GenericTypeInstancesAreEquivalent(IGenericTypeInstanceReference/*?*/ genericTypeInstRef1, IGenericTypeInstanceReference/*?*/ genericTypeInstRef2, bool resolveTypes = false) {
       if (genericTypeInstRef1 == null || genericTypeInstRef2 == null)
         return false;
       if (genericTypeInstRef1 == genericTypeInstRef2)
         return true;
-      if (!TypeHelper.TypesAreEquivalent(genericTypeInstRef1.GenericType, genericTypeInstRef2.GenericType))
+      if (!TypeHelper.TypesAreEquivalent(genericTypeInstRef1.GenericType, genericTypeInstRef2.GenericType, resolveTypes))
         return false;
       IEnumerator<ITypeReference> genericArguments2enumerator = genericTypeInstRef2.GenericArguments.GetEnumerator();
       foreach (ITypeReference genericArgument1 in genericTypeInstRef1.GenericArguments) {
         if (!genericArguments2enumerator.MoveNext())
           return false;
         ITypeReference genericArgument2 = genericArguments2enumerator.Current;
-        if (!TypeHelper.TypesAreEquivalent(genericArgument1, genericArgument2))
+        if (!TypeHelper.TypesAreEquivalent(genericArgument1, genericArgument2, resolveTypes))
           return false;
       }
       return true;
@@ -1835,7 +1846,7 @@ namespace Microsoft.Cci {
       Contract.Requires(type != null);
 
       foreach (ITypeReference baseClass in type.BaseClasses) {
-        if (baseClass.InternedKey == type.PlatformType.SystemAttribute.InternedKey) return true;
+        if (TypeHelper.TypesAreEquivalent(baseClass, type.PlatformType.SystemAttribute, true)) return true;
       }
       return false;
     }
@@ -1844,24 +1855,24 @@ namespace Microsoft.Cci {
     /// Returns true if the given two pointer types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
-    public static bool PointerTypesAreEquivalent(IPointerTypeReference/*?*/ pointerTypeRef1, IPointerTypeReference/*?*/ pointerTypeRef2) {
+    public static bool PointerTypesAreEquivalent(IPointerTypeReference/*?*/ pointerTypeRef1, IPointerTypeReference/*?*/ pointerTypeRef2, bool resolveTypes = false) {
       if (pointerTypeRef1 == null || pointerTypeRef2 == null)
         return false;
       if (pointerTypeRef1 == pointerTypeRef2)
         return true;
-      return TypeHelper.TypesAreEquivalent(pointerTypeRef1.TargetType, pointerTypeRef2.TargetType);
+      return TypeHelper.TypesAreEquivalent(pointerTypeRef1.TargetType, pointerTypeRef2.TargetType, resolveTypes);
     }
 
     /// <summary>
     /// Returns true if the given two generic type parameters are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
-    public static bool GenericTypeParametersAreEquivalent(IGenericTypeParameterReference/*?*/ genericTypeParam1, IGenericTypeParameterReference/*?*/ genericTypeParam2) {
+    public static bool GenericTypeParametersAreEquivalent(IGenericTypeParameterReference/*?*/ genericTypeParam1, IGenericTypeParameterReference/*?*/ genericTypeParam2, bool resolveTypes = false) {
       if (genericTypeParam1 == null || genericTypeParam2 == null)
         return false;
       if (genericTypeParam1 == genericTypeParam2)
         return true;
-      if (!TypeHelper.TypesAreEquivalent(genericTypeParam1.DefiningType, genericTypeParam2.DefiningType))
+      if (!TypeHelper.TypesAreEquivalent(genericTypeParam1.DefiningType, genericTypeParam2.DefiningType, resolveTypes))
         return false;
       return genericTypeParam1.Index == genericTypeParam2.Index;
     }
@@ -1882,7 +1893,7 @@ namespace Microsoft.Cci {
     /// Returns true if the given two function pointer types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
-    public static bool FunctionPointerTypesAreEquivalent(IFunctionPointerTypeReference/*?*/ functionPointer1, IFunctionPointerTypeReference/*?*/ functionPointer2) {
+    public static bool FunctionPointerTypesAreEquivalent(IFunctionPointerTypeReference/*?*/ functionPointer1, IFunctionPointerTypeReference/*?*/ functionPointer2, bool resolveTypes = false) {
       if (functionPointer1 == null || functionPointer2 == null)
         return false;
       if (functionPointer1 == functionPointer2)
@@ -1891,11 +1902,11 @@ namespace Microsoft.Cci {
         return false;
       if (functionPointer1.ReturnValueIsByRef != functionPointer2.ReturnValueIsByRef)
         return false;
-      if (!TypeHelper.TypesAreEquivalent(functionPointer1.Type, functionPointer2.Type))
+      if (!TypeHelper.TypesAreEquivalent(functionPointer1.Type, functionPointer2.Type, resolveTypes))
         return false;
-      if (!TypeHelper.ParameterListsAreEquivalent(functionPointer1.Parameters, functionPointer2.Parameters))
+      if (!TypeHelper.ParameterListsAreEquivalent(functionPointer1.Parameters, functionPointer2.Parameters, resolveTypes))
         return false;
-      return TypeHelper.ParameterListsAreEquivalent(functionPointer1.ExtraArgumentTypes, functionPointer2.ExtraArgumentTypes);
+      return TypeHelper.ParameterListsAreEquivalent(functionPointer1.ExtraArgumentTypes, functionPointer2.ExtraArgumentTypes, resolveTypes);
     }
 
     /// <summary>
@@ -1904,7 +1915,7 @@ namespace Microsoft.Cci {
     /// </summary>
     [Pure]
     public static bool FunctionPointerTypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(
-      IFunctionPointerTypeReference/*?*/ functionPointer1, IFunctionPointerTypeReference/*?*/ functionPointer2) {
+      IFunctionPointerTypeReference/*?*/ functionPointer1, IFunctionPointerTypeReference/*?*/ functionPointer2, bool resolveTypes = false) {
       if (functionPointer1 == null || functionPointer2 == null)
         return false;
       if (functionPointer1 == functionPointer2)
@@ -1913,37 +1924,29 @@ namespace Microsoft.Cci {
         return false;
       if (functionPointer1.ReturnValueIsByRef != functionPointer2.ReturnValueIsByRef)
         return false;
-      if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(functionPointer1.Type, functionPointer2.Type))
+      if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(functionPointer1.Type, functionPointer2.Type, resolveTypes))
         return false;
-      if (!TypeHelper.ParameterListsAreEquivalent(functionPointer1.Parameters, functionPointer2.Parameters))
+      if (!TypeHelper.ParameterListsAreEquivalent(functionPointer1.Parameters, functionPointer2.Parameters, resolveTypes))
         return false;
-      return TypeHelper.ParameterListsAreEquivalent(functionPointer1.ExtraArgumentTypes, functionPointer2.ExtraArgumentTypes);
+      return TypeHelper.ParameterListsAreEquivalent(functionPointer1.ExtraArgumentTypes, functionPointer2.ExtraArgumentTypes, resolveTypes);
     }
 
     /// <summary>
     /// Returns true if the given two function pointer types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
+    [Obsolete("Please use TypeHelper.TypesAreEquivalent instead")]
     public static bool NamespaceTypesAreEquivalent(INamespaceTypeReference/*?*/ nsType1, INamespaceTypeReference/*?*/ nsType2) {
-      if (nsType1 == null || nsType2 == null)
-        return false;
-      if (nsType1 == nsType2)
-        return true;
-      return nsType1.Name.UniqueKey == nsType2.Name.UniqueKey
-        && UnitHelper.UnitNamespacesAreEquivalent(nsType1.ContainingUnitNamespace, nsType2.ContainingUnitNamespace);
+      return TypeHelper.TypesAreEquivalent(nsType1, nsType2);
     }
 
     /// <summary>
     /// Returns true if the given two function pointer types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
+    [Obsolete("Please use TypeHelper.TypesAreEquivalent instead")]
     public static bool NestedTypesAreEquivalent(INestedTypeReference/*?*/ nstType1, INestedTypeReference/*?*/ nstType2) {
-      if (nstType1 == null || nstType2 == null)
-        return false;
-      if (nstType1 == nstType2)
-        return true;
-      return nstType1.Name.UniqueKey == nstType2.Name.UniqueKey
-        && TypeHelper.TypesAreEquivalent(nstType1.ContainingType, nstType2.ContainingType);
+      return TypeHelper.TypesAreEquivalent(nstType1, nstType2);
     }
 
     internal static ITypeReference SpecializeTypeReference(ITypeReference typeReference, ITypeReference context, IInternFactory internFactory) {
@@ -1998,10 +2001,12 @@ namespace Microsoft.Cci {
     /// Returns true if the given two types are to be considered equivalent for the purpose of signature matching and so on.
     /// </summary>
     [Pure]
-    public static bool TypesAreEquivalent(ITypeReference/*?*/ type1, ITypeReference/*?*/ type2) {
+    public static bool TypesAreEquivalent(ITypeReference/*?*/ type1, ITypeReference/*?*/ type2, bool resolveTypes = false) {
       if (type1 == null || type2 == null) return false;
       if (type1 == type2) return true;
-      return type1.InternedKey == type2.InternedKey;
+      if (type1.InternedKey == type2.InternedKey) return true;
+      if (!resolveTypes) return false;
+      return type1.ResolvedType == type2.ResolvedType;
     }
 
     /// <summary>
@@ -2009,7 +2014,7 @@ namespace Microsoft.Cci {
     /// TypeHelper.TypesAreEquivalent in that two generic method type parameters are considered equivalent if their parameter list indices are the same.
     /// </summary>
     [Pure]
-    public static bool TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(ITypeReference/*?*/ type1, ITypeReference/*?*/ type2) {
+    public static bool TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(ITypeReference/*?*/ type1, ITypeReference/*?*/ type2, bool resolveTypes = false) {
       if (type1 == null || type2 == null) return false;
       if (type1 == type2) return true;
       if (type1.InternedKey == type2.InternedKey) return true;
@@ -2025,35 +2030,36 @@ namespace Microsoft.Cci {
       var inst2 = type2 as IGenericTypeInstanceReference;
       if (inst1 != null || inst2 != null) {
         if (inst1 == null || inst2 == null) return false;
-        if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(inst1.GenericType, inst2.GenericType)) return false;
-        return IteratorHelper.EnumerablesAreEqual<ITypeReference>(inst1.GenericArguments, inst2.GenericArguments, RelaxedTypeEquivalenceComparer.instance);
+        if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(inst1.GenericType, inst2.GenericType, resolveTypes)) return false;
+        return IteratorHelper.EnumerablesAreEqual<ITypeReference>(inst1.GenericArguments, inst2.GenericArguments,
+          resolveTypes ? RelaxedTypeEquivalenceComparer.resolvingInstance : RelaxedTypeEquivalenceComparer.instance);
       }
 
       var array1 = type1 as IArrayTypeReference;
       var array2 = type2 as IArrayTypeReference;
       if (array1 != null || array2 != null) {
         if (array1 == null || array2 == null) return false;
-        return TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(array1.ElementType, array2.ElementType);
+        return TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(array1.ElementType, array2.ElementType, resolveTypes);
       }
 
       var pointer1 = type1 as IPointerTypeReference;
       var pointer2 = type2 as IPointerTypeReference;
       if (pointer1 != null || pointer2 != null) {
         if (pointer1 == null || pointer2 == null) return false;
-        return TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(pointer1.TargetType, pointer2.TargetType);
+        return TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(pointer1.TargetType, pointer2.TargetType, resolveTypes);
       }
 
       var mpointer1 = type1 as IManagedPointerTypeReference;
       var mpointer2 = type2 as IManagedPointerTypeReference;
       if (mpointer1 != null || mpointer2 != null) {
         if (mpointer1 == null || mpointer2 == null) return false;
-        return TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(mpointer1.TargetType, mpointer2.TargetType);
+        return TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(mpointer1.TargetType, mpointer2.TargetType, resolveTypes);
       }
 
       var fpointer1 = type1 as IFunctionPointerTypeReference;
       var fpointer2 = type2 as IFunctionPointerTypeReference;
       if (fpointer1 != null || fpointer2 != null) {
-        return TypeHelper.FunctionPointerTypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(fpointer1, fpointer2);
+        return TypeHelper.FunctionPointerTypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(fpointer1, fpointer2, resolveTypes);
       }
 
       return false;
@@ -2064,10 +2070,22 @@ namespace Microsoft.Cci {
     /// true, as opposed to the stricter rules applied by TypeHelper.TypesAreEquivalent.
     /// </summary>
     private class RelaxedTypeEquivalenceComparer : IEqualityComparer<ITypeReference> {
+
+      private RelaxedTypeEquivalenceComparer(bool resolveTypes = false) {
+        this.resolveTypes = resolveTypes;
+      }
+
+      bool resolveTypes;
+
       /// <summary>
       /// A singleton instance of RelaxedTypeEquivalenceComparer that is safe to use in all contexts.
       /// </summary>
       internal static RelaxedTypeEquivalenceComparer instance = new RelaxedTypeEquivalenceComparer();
+
+      /// <summary>
+      /// A singleton instance of RelaxedTypeEquivalenceComparer that is safe to use in all contexts.
+      /// </summary>
+      internal static RelaxedTypeEquivalenceComparer resolvingInstance = new RelaxedTypeEquivalenceComparer(true);
 
       /// <summary>
       /// Determines whether the specified objects are equal.
@@ -2079,7 +2097,7 @@ namespace Microsoft.Cci {
       /// </returns>
       public bool Equals(ITypeReference x, ITypeReference y) {
         if (x == null) return y == null;
-        return TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(x, y);
+        return TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(x, y, this.resolveTypes);
       }
 
       /// <summary>
@@ -2100,25 +2118,25 @@ namespace Microsoft.Cci {
     /// Type1 derives from type2 if the latter is a direct or indirect base class.
     /// </summary>
     [Pure]
-    public static bool Type1DerivesFromOrIsTheSameAsType2(ITypeDefinition type1, ITypeReference type2) {
+    public static bool Type1DerivesFromOrIsTheSameAsType2(ITypeDefinition type1, ITypeReference type2, bool resolveTypes = false) {
       Contract.Requires(type1 != null);
       Contract.Requires(type2 != null);
 
-      if (TypeHelper.TypesAreEquivalent(type1, type2)) return true;
-      return TypeHelper.Type1DerivesFromType2(type1, type2);
+      if (TypeHelper.TypesAreEquivalent(type1, type2, resolveTypes)) return true;
+      return TypeHelper.Type1DerivesFromType2(type1, type2, resolveTypes);
     }
 
     /// <summary>
     /// Type1 derives from type2 if the latter is a direct or indirect base class.
     /// </summary>
     [Pure]
-    public static bool Type1DerivesFromType2(ITypeDefinition type1, ITypeReference type2) {
+    public static bool Type1DerivesFromType2(ITypeDefinition type1, ITypeReference type2, bool resolveTypes = false) {
       Contract.Requires(type1 != null);
       Contract.Requires(type2 != null);
 
       foreach (ITypeReference baseClass in type1.BaseClasses) {
-        if (TypeHelper.TypesAreEquivalent(baseClass, type2)) return true;
-        if (TypeHelper.Type1DerivesFromType2(baseClass.ResolvedType, type2)) return true;
+        if (TypeHelper.TypesAreEquivalent(baseClass, type2, resolveTypes)) return true;
+        if (TypeHelper.Type1DerivesFromType2(baseClass.ResolvedType, type2, resolveTypes)) return true;
       }
       return false;
     }
@@ -2128,17 +2146,16 @@ namespace Microsoft.Cci {
     /// that derives from the given interface.
     /// </summary>
     [Pure]
-    public static bool Type1ImplementsType2(ITypeDefinition type1, ITypeReference type2) {
+    public static bool Type1ImplementsType2(ITypeDefinition type1, ITypeReference type2, bool resolveTypes = false) {
       Contract.Requires(type1 != null);
       Contract.Requires(type2 != null);
 
       foreach (ITypeReference implementedInterface in type1.Interfaces) {
-        ITypeDefinition iface = implementedInterface.ResolvedType;
-        if (TypeHelper.TypesAreEquivalent(iface, type2)) return true;
-        if (TypeHelper.Type1ImplementsType2(iface, type2)) return true;
+        if (TypeHelper.TypesAreEquivalent(implementedInterface, type2, resolveTypes)) return true;
+        if (TypeHelper.Type1ImplementsType2(implementedInterface.ResolvedType, type2, resolveTypes)) return true;
       }
       foreach (ITypeReference baseClass in type1.BaseClasses) {
-        if (TypeHelper.Type1ImplementsType2(baseClass.ResolvedType, type2)) return true;
+        if (TypeHelper.Type1ImplementsType2(baseClass.ResolvedType, type2, resolveTypes)) return true;
       }
       return false;
     }
@@ -2147,7 +2164,7 @@ namespace Microsoft.Cci {
     /// Returns true if Type1 is CovariantWith Type2 as per CLR.
     /// </summary>
     [Pure]
-    public static bool Type1IsCovariantWithType2(ITypeDefinition type1, ITypeReference type2) {
+    public static bool Type1IsCovariantWithType2(ITypeDefinition type1, ITypeReference type2, bool resolveTypes = false) {
       Contract.Requires(type1 != null);
       Contract.Requires(type2 != null);
 
@@ -2155,24 +2172,22 @@ namespace Microsoft.Cci {
       IArrayTypeReference/*?*/ arrType2 = type2 as IArrayTypeReference;
       if (arrType1 == null || arrType2 == null) return false;
       if (arrType1.Rank != arrType2.Rank || arrType1.IsVector != arrType2.IsVector) return false;
-      ITypeDefinition elemType1 = arrType1.ElementType.ResolvedType;
-      ITypeDefinition elemType2 = arrType2.ElementType.ResolvedType;
-      return TypeHelper.TypesAreAssignmentCompatible(elemType1, elemType2);
+      return TypeHelper.TypesAreAssignmentCompatible(arrType1.ElementType.ResolvedType, arrType2.ElementType.ResolvedType, resolveTypes);
     }
 
     /// <summary>
     /// Returns true if a CLR supplied implicit reference conversion is available to convert a value of the given source type to a corresponding value of the given target type.
     /// </summary>
     [Pure]
-    public static bool TypesAreAssignmentCompatible(ITypeDefinition sourceType, ITypeDefinition targetType) {
+    public static bool TypesAreAssignmentCompatible(ITypeDefinition sourceType, ITypeDefinition targetType, bool resolveTypes = false) {
       Contract.Requires(sourceType != null);
       Contract.Requires(targetType != null);
 
-      if (TypeHelper.TypesAreEquivalent(sourceType, targetType)) return true;
-      if (sourceType.IsReferenceType && TypeHelper.Type1DerivesFromOrIsTheSameAsType2(sourceType, targetType)) return true;
-      if (targetType.IsInterface && TypeHelper.Type1ImplementsType2(sourceType, targetType)) return true;
-      if (sourceType.IsInterface && TypeHelper.TypesAreEquivalent(targetType, targetType.PlatformType.SystemObject)) return true;
-      if (TypeHelper.Type1IsCovariantWithType2(sourceType, targetType)) return true;
+      if (TypeHelper.TypesAreEquivalent(sourceType, targetType, resolveTypes)) return true;
+      if (sourceType.IsReferenceType && TypeHelper.Type1DerivesFromOrIsTheSameAsType2(sourceType, targetType, resolveTypes)) return true;
+      if (targetType.IsInterface && TypeHelper.Type1ImplementsType2(sourceType, targetType, resolveTypes)) return true;
+      if (sourceType.IsInterface && TypeHelper.TypesAreEquivalent(targetType, targetType.PlatformType.SystemObject, resolveTypes)) return true;
+      if (TypeHelper.Type1IsCovariantWithType2(sourceType, targetType, resolveTypes)) return true;
       return false;
     }
 

@@ -94,12 +94,12 @@ namespace Microsoft.Cci {
       /// <summary>
       /// tracks definitions 
       /// </summary>
-      protected readonly Dictionary<IDefinition, IDefinition> definitionsAlreadyVisited = new Dictionary<IDefinition, IDefinition>();
+      protected readonly SetOfObjects definitionsAlreadyVisited = new SetOfObjects();
 
       /// <summary>
       /// 
       /// </summary>
-      protected readonly Dictionary<ITypeDefinition, ITypeDefinition> allTypes = new Dictionary<ITypeDefinition, ITypeDefinition>();
+      protected readonly SetOfObjects allTypes = new SetOfObjects();
 
       /// <summary>
       /// Visits the specified alias for type.
@@ -534,7 +534,7 @@ namespace Microsoft.Cci {
           case PrimitiveTypeCode.Float64:
             validValue = constant.Value is double; break;
           case PrimitiveTypeCode.String:
-            validValue = constant.Value is string; break;
+            validValue = constant.Value is string || constant.Value == null; break;
           case PrimitiveTypeCode.NotPrimitive:
             validValue = constant.Value == null || rctype == Dummy.Type; break; //TODO: check that value can be enum val
         }
@@ -621,7 +621,7 @@ namespace Microsoft.Cci {
             this.ReportError(MetadataError.MethodMarkedAsHavingDeclarativeSecurityHasNoSecurityAttributes, method);
         } else {
           if (IteratorHelper.EnumerableIsNotEmpty(method.SecurityAttributes) || 
-        AttributeHelper.Contains(method.Attributes, this.validator.host.PlatformType.SystemSecuritySuppressUnmanagedCodeSecurityAttribute))
+          AttributeHelper.Contains(method.Attributes, this.validator.host.PlatformType.SystemSecuritySuppressUnmanagedCodeSecurityAttribute))
             this.ReportError(MetadataError.MethodWithSecurityAttributesMustBeMarkedAsHavingDeclarativeSecurity, method);
         }
         if (method.IsSynchronized && method.ContainingTypeDefinition.IsValueType)
@@ -753,11 +753,11 @@ namespace Microsoft.Cci {
         if (module.ModuleName.Value.IndexOfAny(badPosixNameChars) > 0)
           this.ReportError(MetadataError.NotPosixAssemblyName, module, module.ModuleName.Value);
         foreach (var type in module.GetAllTypes()) {
-          if (this.allTypes.ContainsKey(type)) {
+          if (this.allTypes.Contains(type)) {
             this.ReportError(MetadataError.DuplicateEntryInAllTypes, module);
             continue;
           }
-          this.allTypes.Add(type, type);
+          this.allTypes.Add(type);
         }
         this.Visit((IUnit)module);
         //check for duplicate assembly references
@@ -818,7 +818,7 @@ namespace Microsoft.Cci {
       /// </summary>
       public void Visit(INamespaceTypeDefinition namespaceTypeDefinition) {
         this.Visit((INamedTypeDefinition)namespaceTypeDefinition);
-        if (!this.allTypes.ContainsKey(namespaceTypeDefinition))
+        if (!this.allTypes.Contains(namespaceTypeDefinition))
           this.ReportError(MetadataError.GetAllTypesIsIncomplete, namespaceTypeDefinition);
       }
 
@@ -847,7 +847,7 @@ namespace Microsoft.Cci {
       /// </summary>
       public void Visit(INestedTypeDefinition nestedTypeDefinition) {
         this.Visit((INamedTypeDefinition)nestedTypeDefinition);
-        if (!this.allTypes.ContainsKey(nestedTypeDefinition))
+        if (!this.allTypes.Contains(nestedTypeDefinition))
           this.ReportError(MetadataError.GetAllTypesIsIncomplete, nestedTypeDefinition);
       }
 
@@ -905,14 +905,16 @@ namespace Microsoft.Cci {
           if (parameterDefinition.MarshallingInformation.UnmanagedType == System.Runtime.InteropServices.UnmanagedType.LPArray) {
             if (parameterDefinition.MarshallingInformation.ParamIndex != null) {
               var index = parameterDefinition.MarshallingInformation.ParamIndex.Value;
-              if (index > IteratorHelper.EnumerableCount(parameterDefinition.ContainingSignature.Parameters))
+              if (index >= IteratorHelper.EnumerableCount(parameterDefinition.ContainingSignature.Parameters))
                 this.ReportError(MetadataError.ParameterIndexIsInvalid, parameterDefinition.MarshallingInformation, parameterDefinition);
-              if (index == 0 && parameterDefinition.MarshallingInformation.NumberOfElements == 0 && !parameterDefinition.IsOut)
-                this.ReportError(MetadataError.ParameterMarshalledArraysMustHaveSizeKnownAtCompileTime, parameterDefinition.MarshallingInformation, parameterDefinition);
+              if (parameterDefinition.MarshallingInformation.NumberOfElements > 0)
+                this.ReportError(MetadataError.NumberOfElementsSpecifiedExplicitlyAsWellAsByAParameter, parameterDefinition);
             } else {
-              //The ECMA spec is not clear here because it only talks about ParamIndex == 0. It seems that if ParamIndex is actually null, then
-              //it is not an error to have NumberOfElements == 0, because the .NET signature usually includes the parameter with the array size and
-              //therefore the marshaller does not need to do anything.
+              //The ECMA spec seems to suggest that this check is needed.
+              //The MSDN documentation claims that these values are ignored when marshalling from the CLR to COM.
+              //Actual code found in the .NET Framework fail this test. So disable it for now.
+              //if (parameterDefinition.MarshallingInformation.NumberOfElements == 0 && parameterDefinition.IsOut)
+              //  this.ReportError(MetadataError.ParameterMarshalledArraysMustHaveSizeKnownAtCompileTime, parameterDefinition.MarshallingInformation, parameterDefinition);
             }
           }
           if (parameterDefinition.MarshallingInformation.UnmanagedType == System.Runtime.InteropServices.UnmanagedType.ByValArray) {
@@ -950,6 +952,12 @@ namespace Microsoft.Cci {
       /// Performs some computation with the given parameter type information.
       /// </summary>
       public void Visit(IParameterTypeInformation parameterTypeInformation) {
+      }
+
+      /// <summary>
+      /// Performs some compuation with the given PE section.
+      /// </summary>
+      public void Visit(IPESection peSection) {
       }
 
       /// <summary>
@@ -1097,11 +1105,11 @@ namespace Microsoft.Cci {
       /// </summary>
       public void Visit(ITypeDefinition typeDefinition) {
         this.validator.currentDefinition = typeDefinition;
-        if (this.definitionsAlreadyVisited.ContainsKey(typeDefinition)) {
+        if (this.definitionsAlreadyVisited.Contains(typeDefinition)) {
           this.ReportError(MetadataError.DuplicateDefinition, typeDefinition);
           return;
         }
-        this.definitionsAlreadyVisited.Add(typeDefinition, typeDefinition);
+        this.definitionsAlreadyVisited.Add(typeDefinition);
         if (typeDefinition.Alignment > 0) {
           if (typeDefinition.Layout != LayoutKind.Sequential) {
             //work around bug in c# compiler
@@ -1234,16 +1242,16 @@ namespace Microsoft.Cci {
       /// Visits the specified type member.
       /// </summary>
       public void Visit(ITypeDefinitionMember typeMember) {
-        if (this.definitionsAlreadyVisited.ContainsKey(typeMember)) {
+        if (this.definitionsAlreadyVisited.Contains(typeMember)) {
           this.ReportError(MetadataError.DuplicateDefinition, typeMember);
           return;
         }
-        this.definitionsAlreadyVisited.Add(typeMember, typeMember);
+        this.definitionsAlreadyVisited.Add(typeMember);
         if (typeMember.Name.Value == string.Empty)
           this.ReportError(MetadataError.EmptyName, typeMember);
         if (typeMember.ContainingTypeDefinition is Dummy)
           this.ReportError(MetadataError.IncompleteNode, typeMember, "ContainingTypeDefinition");
-        if (!this.definitionsAlreadyVisited.ContainsKey(typeMember.ContainingTypeDefinition))
+        if (!this.definitionsAlreadyVisited.Contains(typeMember.ContainingTypeDefinition) && !(typeMember is INamespaceMember))
           this.ReportError(MetadataError.ContainingTypeDefinitionNotVisited, typeMember);
         switch (typeMember.Visibility) {
           case TypeMemberVisibility.Assembly:
@@ -1280,10 +1288,12 @@ namespace Microsoft.Cci {
         var resolvedType = typeReference.ResolvedType;
         if (resolvedType != Dummy.Type && typeReference.InternedKey != resolvedType.InternedKey) {
           //then the type had better be an alias
-          if (!typeReference.IsAlias)
-            this.ReportError(MetadataError.TypeReferenceResolvesToDifferentType, typeReference);
-          else if (typeReference.AliasForType.AliasedType.ResolvedType.InternedKey != resolvedType.InternedKey)
-            this.ReportError(MetadataError.TypeReferenceResolvesToDifferentTypeFromAlias, typeReference);
+          if (!(typeReference is IGenericTypeInstanceReference)) {
+            if (!typeReference.IsAlias)
+              this.ReportError(MetadataError.TypeReferenceResolvesToDifferentType, typeReference);
+            else if (typeReference.AliasForType.AliasedType.ResolvedType.InternedKey != resolvedType.InternedKey)
+              this.ReportError(MetadataError.TypeReferenceResolvesToDifferentTypeFromAlias, typeReference);
+          }
         }
       }
 
@@ -1765,6 +1775,10 @@ namespace Microsoft.Cci {
       /// </summary>
       NotPosixName,
       /// <summary>
+      /// The size of the array passed in this parameter is specified explicitly as well as via another (size) parameter. This is probably a mistake.
+      /// </summary>
+      NumberOfElementsSpecifiedExplicitlyAsWellAsByAParameter,
+      /// <summary>
       /// Only types that have LayoutKind set to SequentialLayout are permitted to specify a non zero value for Alignment.
       /// </summary>
       OnlySequentialLayoutTypesCanSpecificyAlignment,
@@ -1902,6 +1916,8 @@ namespace Microsoft.Cci {
           switch (this.Error) {
             case MetadataError.MetadataConstantTypeMismatch:
               return true;
+            case MetadataError.NumberOfElementsSpecifiedExplicitlyAsWellAsByAParameter:
+              return true;
             default:
               return false;
           }
@@ -1913,7 +1929,7 @@ namespace Microsoft.Cci {
       /// </summary>
       public string Message {
         get {
-          System.Resources.ResourceManager resourceManager = new System.Resources.ResourceManager("Microsoft.Cci.MetadataHelper", typeof(ErrorMessage).Assembly);
+          System.Resources.ResourceManager resourceManager = new System.Resources.ResourceManager("Microsoft.Cci.MetadataHelper.ErrorMessages", typeof(ErrorMessage).Assembly);
           string messageKey = this.Error.ToString();
           string/*?*/ localizedString = null;
           try {

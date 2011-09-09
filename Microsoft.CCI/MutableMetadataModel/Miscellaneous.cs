@@ -85,7 +85,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public ushort NumberOfNamedArguments {
       get {
         if (this.NamedArguments == null) return 0;
-        return (ushort)this.NamedArguments.Count;
+        return (ushort)this.NamedArguments.Count; 
       }
     }
 
@@ -102,14 +102,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<IMetadataExpression> ICustomAttribute.Arguments {
       get {
         if (this.Arguments == null) return Enumerable<IMetadataExpression>.Empty;
-        return this.Arguments.AsReadOnly();
+        return this.Arguments.AsReadOnly(); 
       }
     }
 
     IEnumerable<IMetadataNamedArgument> ICustomAttribute.NamedArguments {
       get {
         if (this.namedArguments == null) return Enumerable<IMetadataNamedArgument>.Empty;
-        return this.NamedArguments.AsReadOnly();
+        return this.NamedArguments.AsReadOnly(); 
       }
     }
 
@@ -646,6 +646,109 @@ namespace Microsoft.Cci.MutableCodeModel {
   }
 
   /// <summary>
+  /// A section of the PE file that does not contain any objects that can be referenced in another way
+  /// using this object model. The data of such a section is not decompiled by metadata reader and 
+  /// is written out unchanged by metadata writers. Presumably it is meaningful in some way and is 
+  /// thus exposed for use by other tools.
+  /// </summary>
+  public sealed class PESection : IPESection {
+
+
+    /// <summary>
+    /// A section of the PE file that does not contain any objects that can be referenced in another way
+    /// using this object model. The data of such a section is not decompiled by metadata reader and 
+    /// is written out unchanged by metadata writers. Presumably it is meaningful in some way and is 
+    /// thus exposed for use by other tools.
+    /// </summary>
+    public PESection() {
+      this.sectionName = Dummy.Name;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="peSection"></param>
+    /// <param name="internFactory"></param>
+    public void Copy(IPESection peSection, IInternFactory internFactory) {
+      this.sectionName = peSection.SectionName;
+      this.characteristics = peSection.Characteristics;
+      this.virtualAddress = peSection.VirtualAddress;
+      this.virtualSize = peSection.VirtualSize;
+      this.sizeOfRawData = peSection.SizeOfRawData;
+      if (peSection.SizeOfRawData > 0)
+        this.Rawdata = new List<byte>(peSection.Rawdata);
+    }
+
+    /// <summary>
+    /// The name of the section. Should be exactly eight characters long.
+    /// </summary>
+    public IName SectionName {
+      get { return this.sectionName; }
+      set { this.sectionName = value; }
+    }
+    IName sectionName;
+
+    /// <summary>
+    /// A set of bits that describes the purpose of a section and how it behaves when loaded.
+    /// </summary>
+    public PESectionCharacteristics Characteristics {
+      get { return this.characteristics; }
+      set { this.characteristics = value; }
+    }
+    PESectionCharacteristics characteristics;
+
+    /// <summary>
+    /// For executable images this is the address of the first byte of the section, when loaded into memory, relative to the image base.
+    /// </summary>
+    public int VirtualAddress {
+      get { return this.virtualAddress; }
+      set { this.virtualAddress = value; }
+    }
+    int virtualAddress;
+
+    /// <summary>
+    /// Total size of the section in bytes. If this value is greater than SizeOfRawData, the section is zero-padded.
+    /// </summary>
+    public int VirtualSize {
+      get { return this.virtualSize; }
+      set { this.virtualSize = value; }
+    }
+    int virtualSize;
+
+    /// <summary>
+    /// Size of the initialized data on disk in bytes, shall be a multiple of FileAlignment from the PE header.
+    /// If this is less than VirtualSize the remainder of the section is zero filled.
+    /// Because this field is rounded while the VirtualSize field is not, it is possible for this to be greater than VirtualSize.
+    /// When a section contains only uninitialized data, this field should be 0.
+    /// </summary>
+    public int SizeOfRawData {
+      get { return this.sizeOfRawData; }
+      set { this.sizeOfRawData = value; }
+    }
+    int sizeOfRawData;
+
+    /// <summary>
+    /// The data, if any, with which the section will be initialized when loaded. May be null.
+    /// </summary>
+    public List<byte>/*?*/ Rawdata {
+      get { return this.rawdata; }
+      set { this.rawdata = value; }
+    }
+    List<byte>/*?*/ rawdata;
+
+    #region IPESection Members
+
+    IEnumerable<byte> IPESection.Rawdata {
+      get {
+        if (this.Rawdata == null) return Enumerable<byte>.Empty;
+        return this.Rawdata.AsReadOnly();
+      }
+    }
+
+    #endregion
+  }
+
+  /// <summary>
   /// A named data resource that is stored as part of CLR metadata.
   /// </summary>
   public sealed class Resource : IResource, ICopyFrom<IResource> {
@@ -767,7 +870,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<ICustomAttribute> IResourceReference.Attributes {
       get {
         if (this.Attributes == null) return Enumerable<ICustomAttribute>.Empty;
-        return this.Attributes.AsReadOnly();
+        return this.Attributes.AsReadOnly(); 
       }
     }
 
@@ -865,7 +968,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<ICustomAttribute> IResourceReference.Attributes {
       get {
         if (this.Attributes == null) return Enumerable<ICustomAttribute>.Empty;
-        return this.Attributes.AsReadOnly();
+        return this.Attributes.AsReadOnly(); 
       }
     }
 
@@ -994,7 +1097,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<ICustomAttribute> ISecurityAttribute.Attributes {
       get {
         if (this.Attributes == null) return Enumerable<ICustomAttribute>.Empty;
-        return this.Attributes.AsReadOnly();
+        return this.Attributes.AsReadOnly(); 
       }
     }
 

@@ -149,11 +149,17 @@ namespace Microsoft.Cci {
       if (this.unitCache.Count > 0) {
         AssemblyIdentity/*?*/ result = null;
         IUnit referringUnit = Dummy.Unit;
+        var dummyVersion = new Version(255, 255, 255, 255);
         lock (GlobalLock.LockingObject) {
           foreach (IUnit unit in this.unitCache.Values) {
             AssemblyIdentity coreId = unit.CoreAssemblySymbolicIdentity;
             if (coreId.Name.Value.Length == 0) continue;
-            if (result == null || result.Version < coreId.Version) { result = coreId; referringUnit = unit; }
+            if (result == null || result.Version == dummyVersion ||
+               (result.Version < coreId.Version && coreId.Version != dummyVersion) ||
+                result.Version == coreId.Version && unit.UnitIdentity.Equals(coreId)) {
+              result = coreId;
+              referringUnit = unit;
+            }
           }
         }
         if (result != null) {
@@ -285,7 +291,7 @@ namespace Microsoft.Cci {
       if (unit != null)
         result = unit as IAssembly;
       else {
-        if (assemblyIdentity.Location == "" || assemblyIdentity.Location == "unknown://location") {
+        if (string.IsNullOrEmpty(assemblyIdentity.Location) || string.Equals(assemblyIdentity.Location, "unknown://location", StringComparison.OrdinalIgnoreCase)) {
           result = Dummy.Assembly;
           lock (GlobalLock.LockingObject) {
             this.unitCache.Add(assemblyIdentity, result);
@@ -293,7 +299,7 @@ namespace Microsoft.Cci {
         } else {
           unit = this.LoadUnitFrom(assemblyIdentity.Location);
           result = unit as IAssembly;
-          if (result != null && this.UnifyAssembly(result.AssemblyIdentity).Equals(assemblyIdentity))
+          if (result != null && this.UnifyAssembly(result).Equals(assemblyIdentity))
             lock (GlobalLock.LockingObject) {
               this.unitCache[assemblyIdentity] = result;
             }
@@ -433,12 +439,12 @@ namespace Microsoft.Cci {
     /// </summary>
     private AssemblyIdentity/*?*/ Probe(string probeDir, AssemblyIdentity referencedAssembly) {
       string path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".dll");
-      if (File.Exists(path)) return new AssemblyIdentity(referencedAssembly, path);
-      path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".winmd");
-      if (File.Exists(path)) return new AssemblyIdentity(referencedAssembly, path);
-      path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".exe");
-      if (File.Exists(path)) return new AssemblyIdentity(referencedAssembly, path);
-      return null;
+      if (!File.Exists(path)) path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".exe");
+      if (!File.Exists(path)) return null;
+      var assembly = this.LoadUnitFrom(path) as IAssembly;
+      if (assembly == null) return null;
+      if (assembly.AssemblyIdentity != referencedAssembly) return null;
+      return assembly.AssemblyIdentity;
     }
 
     /// <summary>
@@ -533,7 +539,7 @@ namespace Microsoft.Cci {
     /// Such units can then be discovered by clients via GetUnit. 
     /// </summary>
     /// <param name="unit">The unit to register.</param>
-    protected void RegisterAsLatest(IUnit unit) {
+    public void RegisterAsLatest(IUnit unit) {
       lock (GlobalLock.LockingObject) {
         this.unitCache[unit.UnitIdentity] = unit;
       }
@@ -543,7 +549,7 @@ namespace Microsoft.Cci {
     /// Removes the unit with the given identity.
     /// Returns true iff the unitIdentity is found in the loaded units.
     /// </summary>
-    protected bool RemoveUnit(UnitIdentity unitIdentity) {
+    public bool RemoveUnit(UnitIdentity unitIdentity) {
       lock (GlobalLock.LockingObject) {
         return this.unitCache.Remove(unitIdentity);
       }
@@ -593,14 +599,23 @@ namespace Microsoft.Cci {
     readonly Dictionary<UnitIdentity, IUnit> unitCache = new Dictionary<UnitIdentity, IUnit>();
 
     /// <summary>
-    /// Default implementation of UnifyAssembly. Override this method to change the behaviour.
+    /// Default implementation of UnifyAssembly. Override this method to change the behavior.
     /// </summary>
     public virtual AssemblyIdentity UnifyAssembly(AssemblyIdentity assemblyIdentity) {
       if (assemblyIdentity.Name.UniqueKeyIgnoringCase == this.CoreAssemblySymbolicIdentity.Name.UniqueKeyIgnoringCase &&
         assemblyIdentity.Culture == this.CoreAssemblySymbolicIdentity.Culture && 
         IteratorHelper.EnumerablesAreEqual(assemblyIdentity.PublicKeyToken, this.CoreAssemblySymbolicIdentity.PublicKeyToken))
         return this.CoreAssemblySymbolicIdentity;
+      if (string.Equals(assemblyIdentity.Name.Value, "mscorlib", StringComparison.OrdinalIgnoreCase) && assemblyIdentity.Version == new Version(255, 255, 255, 255))
+        return this.CoreAssemblySymbolicIdentity;
       return assemblyIdentity;
+    }
+
+    /// <summary>
+    /// Default implementation of UnifyAssembly. Override this method to change the behavior.
+    /// </summary>
+    public virtual AssemblyIdentity UnifyAssembly(IAssemblyReference assemblyReference) {
+      return this.UnifyAssembly(assemblyReference.AssemblyIdentity);
     }
 
     /// <summary>
@@ -1142,7 +1157,8 @@ namespace Microsoft.Cci {
     readonly Hashtable ManagedPointerTypeHashTable;
     readonly MultiHashtable<MatrixTypeStore> MatrixTypeHashtable;
     readonly DoubleHashtable TypeListHashtable;
-    readonly DoubleHashtable GenericInstanceHashtable;
+    readonly DoubleHashtable GenericTypeInstanceHashtable;
+    readonly DoubleHashtable GenericMethodInstanceHashtable;
     readonly DoubleHashtable GenericTypeParameterHashtable;
     readonly DoubleHashtable GenericMethodTypeParameterHashTable;
     readonly DoubleHashtable CustomModifierHashTable;
@@ -1182,7 +1198,8 @@ namespace Microsoft.Cci {
       this.ManagedPointerTypeHashTable = new Hashtable();
       this.MatrixTypeHashtable = new MultiHashtable<MatrixTypeStore>();
       this.TypeListHashtable = new DoubleHashtable();
-      this.GenericInstanceHashtable = new DoubleHashtable();
+      this.GenericTypeInstanceHashtable = new DoubleHashtable();
+      this.GenericMethodInstanceHashtable = new DoubleHashtable();
       this.GenericTypeParameterHashtable = new DoubleHashtable();
       this.GenericMethodTypeParameterHashTable = new DoubleHashtable();
       this.CustomModifierHashTable = new DoubleHashtable();
@@ -1356,10 +1373,10 @@ namespace Microsoft.Cci {
     ) {
       uint genericTypeInternedId = this.GetTypeReferenceInternId(genericTypeReference);
       uint genericArgumentsInternedId = this.GetTypeReferenceListInternedId(genericArguments.GetEnumerator());
-      uint value = this.GenericInstanceHashtable.Find(genericTypeInternedId, genericArgumentsInternedId);
+      uint value = this.GenericTypeInstanceHashtable.Find(genericTypeInternedId, genericArgumentsInternedId);
       if (value == 0) {
         value = this.CurrentTypeInternValue++;
-        this.GenericInstanceHashtable.Add(genericTypeInternedId, genericArgumentsInternedId, value);
+        this.GenericTypeInstanceHashtable.Add(genericTypeInternedId, genericArgumentsInternedId, value);
       }
       return value;
     }
@@ -1539,10 +1556,10 @@ namespace Microsoft.Cci {
     ) {
       var genericMethodInternedId = genericMethodInstanceReference.GenericMethod.InternedKey;
       uint genericArgumentsInternedId = this.GetTypeReferenceListInternedId(genericMethodInstanceReference.GenericArguments.GetEnumerator());
-      uint value = this.GenericInstanceHashtable.Find(genericMethodInternedId, genericArgumentsInternedId);
+      uint value = this.GenericMethodInstanceHashtable.Find(genericMethodInternedId, genericArgumentsInternedId);
       if (value == 0) {
         value = this.CurrentMethodReferenceInternValue++;
-        this.GenericInstanceHashtable.Add(genericMethodInternedId, genericArgumentsInternedId, value);
+        this.GenericMethodInstanceHashtable.Add(genericMethodInternedId, genericArgumentsInternedId, value);
       }
       return value;
     }
@@ -1551,7 +1568,11 @@ namespace Microsoft.Cci {
       IFieldReference fieldReference
     ) {
       uint containingTypeReferenceInternedId = this.GetTypeReferenceInternId(fieldReference.ContainingType);
-      uint fieldTypeInternedId = this.GetTypeReferenceInternId(fieldReference.Type);
+      uint fieldTypeInternedId;
+      if (fieldReference.IsModified)
+        fieldTypeInternedId = this.GetModifiedTypeReferenceInternId(fieldReference.Type, fieldReference.CustomModifiers);
+      else
+        fieldTypeInternedId = this.GetTypeReferenceInternId(fieldReference.Type);
       uint fieldNameId = (uint)fieldReference.Name.UniqueKey;
       var fieldsForType = this.FieldReferenceHashtable.Find(containingTypeReferenceInternedId);
       if (fieldsForType == null) {
@@ -1965,6 +1986,15 @@ namespace Microsoft.Cci {
     }
     IName/*?*/ allowMultiple;
 
+    IName INameTable.BeginInvoke {
+      get {
+        if (this.beginInvoke == null)
+          this.beginInvoke = this.GetNameFor("BeginInvoke");
+        return this.beginInvoke;
+      }
+    }
+    IName/*?*/ beginInvoke;
+
     IName INameTable.BoolOpBool {
       get {
         if (this.boolOpBool == null)
@@ -1991,6 +2021,15 @@ namespace Microsoft.Cci {
       }
     }
     IName/*?*/ delegateOpAddition;
+
+    IName INameTable.EndInvoke {
+      get {
+        if (this.endInvoke == null)
+          this.endInvoke = this.GetNameFor("EndInvoke");
+        return this.endInvoke;
+      }
+    }
+    IName/*?*/ endInvoke;
 
     IName INameTable.EnumOpEnum {
       get {

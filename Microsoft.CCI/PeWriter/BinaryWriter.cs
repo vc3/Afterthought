@@ -12,23 +12,23 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Cci {
-  internal sealed class BinaryWriter {
+namespace Microsoft.Cci.WriterUtilities {
+  public sealed class BinaryWriter {
 
-    internal BinaryWriter(MemoryStream output) {
+    public BinaryWriter(MemoryStream output) {
       this.BaseStream = output;
     }
 
-    internal BinaryWriter(MemoryStream output, bool unicode) {
+    public BinaryWriter(MemoryStream output, bool unicode) {
       this.BaseStream = output;
       this.UTF8 = !unicode;
     }
 
-    internal MemoryStream BaseStream;
+    public MemoryStream BaseStream;
 
     private bool UTF8 = true;
 
-    internal void Align(uint alignment) {
+    public void Align(uint alignment) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       while (i % alignment > 0) {
@@ -37,33 +37,33 @@ namespace Microsoft.Cci {
       }
     }
 
-    internal void WriteBool(bool value) {
+    public void WriteBool(bool value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position = i+1;
       m.Buffer[i] = (byte)(value ? 1 : 0);
     }
 
-    internal void WriteByte(byte value) {
+    public void WriteByte(byte value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position = i+1;
       m.Buffer[i] = value;
     }
 
-    internal void WriteSbyte(sbyte value) {
+    public void WriteSbyte(sbyte value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position = i+1;
       m.Buffer[i] = (byte)value;
     }
 
-    internal void WriteBytes(byte[] buffer) {
+    public void WriteBytes(byte[] buffer) {
       if (buffer == null) return;
       this.BaseStream.Write(buffer, 0, (uint)buffer.Length);
     }
 
-    //internal void WriteChar(char ch) {
+    //public void WriteChar(char ch) {
     //  MemoryStream m = this.BaseStream;
     //  uint i = m.Position;
     //  if (this.UTF8) {
@@ -80,7 +80,7 @@ namespace Microsoft.Cci {
     //  }
     //}
 
-    internal void WriteChars(char[] chars) {
+    public void WriteChars(char[] chars) {
       if (chars == null) return;
       MemoryStream m = this.BaseStream;
       uint n = (uint)chars.Length;
@@ -136,7 +136,7 @@ namespace Microsoft.Cci {
       }
     }
 
-    internal unsafe void WriteDouble(double value) {
+    public unsafe void WriteDouble(double value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+8;
@@ -146,7 +146,7 @@ namespace Microsoft.Cci {
         buffer[i+j] = *(d + j);
     }
 
-    internal void WriteShort(short value) {
+    public void WriteShort(short value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+2;
@@ -155,7 +155,7 @@ namespace Microsoft.Cci {
       buffer[i] = (byte)(value >> 8);
     }
 
-    internal unsafe void WriteUshort(ushort value) {
+    public unsafe void WriteUshort(ushort value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+2;
@@ -164,7 +164,7 @@ namespace Microsoft.Cci {
       buffer[i] = (byte)(value >> 8);
     }
 
-    internal void WriteInt(int value) {
+    public void WriteInt(int value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+4;
@@ -175,7 +175,7 @@ namespace Microsoft.Cci {
       buffer[i] = (byte)(value >> 24);
     }
 
-    internal void WriteUint(uint value) {
+    public void WriteUint(uint value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+4;
@@ -186,7 +186,7 @@ namespace Microsoft.Cci {
       buffer[i] = (byte)(value >> 24);
     }
 
-    internal void WriteLong(long value) {
+    public void WriteLong(long value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+8;
@@ -203,7 +203,7 @@ namespace Microsoft.Cci {
       buffer[i] = (byte)(hi >> 24);
     }
 
-    internal unsafe void WriteUlong(ulong value) {
+    public void WriteUlong(ulong value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+8;
@@ -220,7 +220,7 @@ namespace Microsoft.Cci {
       buffer[i] = (byte)(hi >> 24);
     }
 
-    internal unsafe void WriteFloat(float value) {
+    public unsafe void WriteFloat(float value) {
       MemoryStream m = this.BaseStream;
       uint i = m.Position;
       m.Position=i+4;
@@ -230,11 +230,11 @@ namespace Microsoft.Cci {
         buffer[i+j] = *(f + j);
     }
 
-    internal void WriteString(string str) {
+    public void WriteString(string str) {
       this.WriteString(str, false);
     }
 
-    internal void WriteString(string str, bool emitNullTerminator) {
+    public void WriteString(string str, bool emitNullTerminator) {
       if (str == null) {
         this.WriteByte(0xff);
         return;
@@ -315,7 +315,64 @@ namespace Microsoft.Cci {
       }
     }
 
-    internal void WriteCompressedInt(int val) {
+    public void WriteCompressedFullInt(int value) {
+      MemoryStream m = this.BaseStream;
+      uint i = m.Position;
+      byte[] buffer = m.Buffer;
+      uint d = (uint)value;
+      if (d + 64 < 128) {
+        buffer[i++] = (byte)(d*2 + 0);
+      } else if (d + 64*128 < 128*128) {
+        buffer[i++] = (byte)(d*4 + 1);
+        buffer[i++] = (byte)(d >> 6);
+      } else if (d + 64*128*128 < 128*128*128) {
+        buffer[i++] = (byte)(d*8 + 3);
+        buffer[i++] = (byte)(d >> 5);
+        buffer[i++] = (byte)(d >> 13);
+      } else if (d + 64*128*128*128 < 128*128*128*128) {
+        buffer[i++] = (byte)(d*16 + 7);
+        buffer[i++] = (byte)(d >> 4);
+        buffer[i++] = (byte)(d >> 12);
+        buffer[i++] = (byte)(d >> 20);
+      } else {
+        buffer[i++] = (byte)15;
+        buffer[i++] = (byte)d;
+        buffer[i++] = (byte)(d >> 8);
+        buffer[i++] = (byte)(d >> 16);
+        buffer[i++] = (byte)(d >> 24);
+      }
+      m.Position=i;
+    }
+
+    public void WriteCompressedFullUInt(uint value) {
+      MemoryStream m = this.BaseStream;
+      uint i = m.Position;
+      byte[] buffer = m.Buffer;
+      if (value < 128) {
+        buffer[i++] = (byte)(value*2 + 0);
+      } else if (value < 128*128) {
+        buffer[i++] = (byte)(value*4 + 1);
+        buffer[i++] = (byte)(value >> 6);
+      } else if (value < 128*128*128) {
+        buffer[i++] = (byte)(value*8 + 3);
+        buffer[i++] = (byte)(value >> 5);
+        buffer[i++] = (byte)(value >> 13);
+      } else if (value < 128*128*128*128) {
+        buffer[i++] = (byte)(value*16 + 7);
+        buffer[i++] = (byte)(value >> 4);
+        buffer[i++] = (byte)(value >> 12);
+        buffer[i++] = (byte)(value >> 20);
+      } else {
+        buffer[i++] = (byte)15;
+        buffer[i++] = (byte)value;
+        buffer[i++] = (byte)(value >> 8);
+        buffer[i++] = (byte)(value >> 16);
+        buffer[i++] = (byte)(value >> 24);
+      }
+      m.Position=i;
+    }
+
+    public void WriteCompressedInt(int val) {
       if (val >= 0) {
         val = val << 1;
         this.WriteCompressedUInt((uint)val);
@@ -342,7 +399,7 @@ namespace Microsoft.Cci {
       }
     }
 
-    internal void WriteCompressedUInt(uint val) {
+    public void WriteCompressedUInt(uint val) {
       if (val <= 0x7f)
         this.WriteByte((byte)val);
       else if (val <= 0x3fff) {
@@ -358,7 +415,7 @@ namespace Microsoft.Cci {
       }
     }
 
-    internal static uint GetUTF8ByteCount(string str) {
+    public static uint GetUTF8ByteCount(string str) {
       uint count = 0;
       for (int i = 0, n = str.Length; i < n; i++) {
         char ch = str[i];

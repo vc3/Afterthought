@@ -20,7 +20,7 @@ namespace Microsoft.Cci
   /// Subclass this class and define public fields for options
   /// </summary>
   [ContractVerification(false)]
-  public abstract class OptionParsing
+  public abstract class OptionParsing //TODO: move this to another assembly.
   {
     /// <summary>
     /// Base constructor for building parseable options

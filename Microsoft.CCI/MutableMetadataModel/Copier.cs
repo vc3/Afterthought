@@ -725,6 +725,15 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Returns a shallow copy of the given parameter type information.
+    /// </summary>
+    public PESection Copy(IPESection peSection) {
+      var copy = new PESection();
+      copy.Copy(peSection, this.internFactory);
+      return copy;
+    }
+
+    /// <summary>
     /// Returns a shallow copy of the specified platform invoke information.
     /// </summary>
     public PlatformInvokeInformation Copy(IPlatformInvokeInformation platformInvokeInformation) {
@@ -884,6 +893,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <param name="targetHost">An object representing the application that will host the copies made by this copier.</param>
     public MetadataDeepCopier(IMetadataHost targetHost)
       : this(targetHost, new MetadataShallowCopier(targetHost)) {
+      Contract.Requires(targetHost != null);
     }
 
     /// <summary>
@@ -892,6 +902,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <param name="targetUnit">The unit of metadata into which copies made by this copier will be inserted.</param>
     public MetadataDeepCopier(IMetadataHost targetHost, IUnit targetUnit)
       : this(targetHost, new MetadataShallowCopier(targetHost, targetUnit)) {
+      Contract.Requires(targetHost != null);
+      Contract.Requires(targetUnit != null);
     }
 
     /// <summary>
@@ -900,6 +912,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <param name="targetHost"></param>
     /// <param name="shallowCopier"></param>
     protected MetadataDeepCopier(IMetadataHost targetHost, MetadataShallowCopier shallowCopier) {
+      Contract.Requires(targetHost != null);
+      Contract.Requires(shallowCopier != null);
+
       this.targetHost = targetHost;
       this.shallowCopier = shallowCopier;
       this.internFactory = targetHost.InternFactory;
@@ -909,8 +924,17 @@ namespace Microsoft.Cci.MutableCodeModel {
     MetadataShallowCopier shallowCopier;
     IInternFactory internFactory;
 
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.targetHost != null);
+      Contract.Invariant(this.shallowCopier != null);
+      Contract.Invariant(this.internFactory != null);
+    }
+
+
     Substitutor SubstituteCopiesForOriginals {
       get {
+        Contract.Ensures(Contract.Result<Substitutor>() != null);
         if (this.substituteCopiesForOriginals == null)
           this.substituteCopiesForOriginals = new Substitutor(targetHost, shallowCopier, this);
         return this.substituteCopiesForOriginals;
@@ -920,6 +944,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     MetadataTraverser TraverseAndPopulateDefinitionCacheWithCopies {
       get {
+        Contract.Ensures(Contract.Result<MetadataTraverser>() != null);
         if (this.traverseAndPopulateDefinitionCacheWithCopies == null) {
           var populator = new Populator(this.SubstituteCopiesForOriginals.shallowCopier, this.SubstituteCopiesForOriginals.DefinitionCache);
           this.traverseAndPopulateDefinitionCacheWithCopies = new MetadataTraverser() { PreorderVisitor = populator };
@@ -931,6 +956,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     MetadataDispatcher Dispatcher {
       get {
+        Contract.Ensures(Contract.Result<MetadataDispatcher>() != null);
         if (this.dispatcher == null)
           this.dispatcher = new MetadataDispatcher() { copier = this };
         return this.dispatcher;
@@ -1304,6 +1330,9 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public void Visit(IParameterTypeInformation parameterTypeInformation) {
+      }
+
+      public void Visit(IPESection peSection) {
       }
 
       public void Visit(IPlatformInvokeInformation platformInvokeInformation) {
@@ -2097,6 +2126,12 @@ namespace Microsoft.Cci.MutableCodeModel {
         return mutableCopy;
       }
 
+      internal IPESection Substitute(IPESection peSection) {
+        if (peSection is Dummy) return peSection;
+        var mutableCopy = this.shallowCopier.Copy(peSection);
+        return mutableCopy;
+      }
+
       internal IPlatformInvokeInformation Substitute(IPlatformInvokeInformation platformInvokeInformation) {
         if (platformInvokeInformation is Dummy) return platformInvokeInformation;
         var mutableCopy = this.shallowCopier.Copy(platformInvokeInformation);
@@ -2336,7 +2371,6 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (mutableCopy.Getter != null)
           mutableCopy.Getter = this.SubstituteViaDispatcher(mutableCopy.Getter);
         this.SubstituteElements(mutableCopy.Parameters);
-        this.SubstituteElements(mutableCopy.ReturnValueAttributes);
         if (mutableCopy.ReturnValueIsModified)
           this.SubstituteElements(mutableCopy.ReturnValueCustomModifiers);
         if (mutableCopy.Setter != null)
@@ -2681,7 +2715,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified alias for type.
     /// </summary>
     public AliasForType Copy(IAliasForType aliasForType) {
+      Contract.Requires(aliasForType != null);
       Contract.Requires(!(aliasForType is Dummy));
+      Contract.Ensures(Contract.Result<AliasForType>() != null);
+
       aliasForType.Dispatch(this.Dispatcher);
       return (AliasForType)this.Dispatcher.result;
     }
@@ -2690,7 +2727,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a shallow copy of the given array type reference.
     /// </summary>
     public ArrayTypeReference Copy(IArrayTypeReference arrayTypeReference) {
+      Contract.Requires(arrayTypeReference != null);
       Contract.Requires(!(arrayTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<ArrayTypeReference>() != null);
+
       return (ArrayTypeReference)this.SubstituteCopiesForOriginals.Substitute(arrayTypeReference);
     }
 
@@ -2698,7 +2738,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given assembly.
     /// </summary>
     public Assembly Copy(IAssembly assembly) {
+      Contract.Requires(assembly != null);
       Contract.Requires(!(assembly is Dummy));
+      Contract.Ensures(Contract.Result<Assembly>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(assembly);
       foreach (var type in assembly.GetAllTypes())
         this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(type);
@@ -2709,7 +2752,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given assembly reference.
     /// </summary>
     public AssemblyReference Copy(IAssemblyReference assemblyReference) {
+      Contract.Requires(assemblyReference != null);
       Contract.Requires(!(assemblyReference is Dummy));
+      Contract.Ensures(Contract.Result<AssemblyReference>() != null);
+
       return (AssemblyReference)this.SubstituteCopiesForOriginals.Substitute(assemblyReference, keepAsDefinition: false);
     }
 
@@ -2725,7 +2771,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given custom modifier.
     /// </summary>
     public CustomModifier Copy(ICustomModifier customModifier) {
+      Contract.Requires(customModifier != null);
       Contract.Requires(!(customModifier is Dummy));
+      Contract.Ensures(Contract.Result<CustomModifier>() != null);
+
       return (CustomModifier)this.SubstituteCopiesForOriginals.Substitute(customModifier);
     }
 
@@ -2733,7 +2782,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given event definition.
     /// </summary>
     public EventDefinition Copy(IEventDefinition eventDefinition) {
+      Contract.Requires(eventDefinition != null);
       Contract.Requires(!(eventDefinition is Dummy || eventDefinition is ISpecializedEventDefinition));
+      Contract.Ensures(Contract.Result<EventDefinition>() != null);
+
       eventDefinition.Dispatch(this.Dispatcher);
       return (EventDefinition)this.Dispatcher.result;
     }
@@ -2742,7 +2794,11 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given method body.
     /// </summary>
     protected virtual IMethodBody CopyMethodBody(IMethodBody methodBody, IMethodDefinition method) {
+      Contract.Requires(methodBody != null);
+      Contract.Requires(method != null);
       Contract.Requires(!(methodBody is Dummy));
+      Contract.Ensures(Contract.Result<IMethodBody>() != null);
+
       return this.SubstituteCopiesForOriginals.Substitute(this.SubstituteCopiesForOriginals.shallowCopier.Copy(methodBody));
     }
 
@@ -2750,7 +2806,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given field definition.
     /// </summary>
     public FieldDefinition Copy(IFieldDefinition fieldDefinition) {
+      Contract.Requires(fieldDefinition != null);
       Contract.Requires(!(fieldDefinition is Dummy || fieldDefinition is ISpecializedFieldDefinition));
+      Contract.Ensures(Contract.Result<FieldDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(fieldDefinition);
       return (FieldDefinition)this.SubstituteCopiesForOriginals.Substitute(fieldDefinition);
     }
@@ -2759,7 +2818,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given field reference.
     /// </summary>
     public FieldReference Copy(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
       Contract.Requires(!(fieldReference is Dummy));
+      Contract.Ensures(Contract.Result<FieldReference>() != null);
+
       fieldReference.DispatchAsReference(this.Dispatcher);
       return (FieldReference)this.Dispatcher.result;
     }
@@ -2768,6 +2830,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given field reference.
     /// </summary>
     private FieldReference CopyUnspecialized(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+      Contract.Ensures(Contract.Result<FieldReference>() != null);
+
       return (FieldReference)this.SubstituteCopiesForOriginals.Substitute(fieldReference, keepAsDefinition: false);
     }
 
@@ -2775,7 +2840,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given file reference.
     /// </summary>
     public FileReference Copy(IFileReference fileReference) {
+      Contract.Requires(fileReference != null);
       Contract.Requires(!(fileReference is Dummy));
+      Contract.Ensures(Contract.Result<FileReference>() != null);
+
       return (FileReference)this.SubstituteCopiesForOriginals.Substitute(fileReference);
     }
 
@@ -2783,7 +2851,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given function pointer type reference.
     /// </summary>
     public FunctionPointerTypeReference Copy(IFunctionPointerTypeReference functionPointerTypeReference) {
+      Contract.Requires(functionPointerTypeReference != null);
       Contract.Requires(!(functionPointerTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<FunctionPointerTypeReference>() != null);
+
       return (FunctionPointerTypeReference)this.SubstituteCopiesForOriginals.Substitute(functionPointerTypeReference);
     }
 
@@ -2799,7 +2870,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given generic method parameter reference.
     /// </summary>
     public GenericMethodParameter Copy(IGenericMethodParameter genericMethodParameter) {
+      Contract.Requires(genericMethodParameter != null);
       Contract.Requires(!(genericMethodParameter is Dummy));
+      Contract.Ensures(Contract.Result<GenericMethodParameter>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(genericMethodParameter);
       return (GenericMethodParameter)this.SubstituteCopiesForOriginals.Substitute(genericMethodParameter);
     }
@@ -2808,7 +2882,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given generic method parameter reference.
     /// </summary>
     public GenericMethodParameterReference Copy(IGenericMethodParameterReference genericMethodParameterReference) {
+      Contract.Requires(genericMethodParameterReference != null);
       Contract.Requires(!(genericMethodParameterReference is Dummy));
+      Contract.Ensures(Contract.Result<GenericMethodParameterReference>() != null);
+
       return (GenericMethodParameterReference)this.SubstituteCopiesForOriginals.Substitute(genericMethodParameterReference, keepAsDefinition: false);
     }
 
@@ -2816,7 +2893,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given generic type parameter.
     /// </summary>
     public GenericTypeParameter Copy(IGenericTypeParameter genericTypeParameter) {
+      Contract.Requires(genericTypeParameter != null);
       Contract.Requires(!(genericTypeParameter is Dummy));
+      Contract.Ensures(Contract.Result<GenericTypeParameter>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(genericTypeParameter);
       return (GenericTypeParameter)this.SubstituteCopiesForOriginals.Substitute(genericTypeParameter);
     }
@@ -2833,7 +2913,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given generic type parameter reference.
     /// </summary>
     public GenericTypeParameterReference Copy(IGenericTypeParameterReference genericTypeParameterReference) {
+      Contract.Requires(genericTypeParameterReference != null);
       Contract.Requires(!(genericTypeParameterReference is Dummy));
+      Contract.Ensures(Contract.Result<GenericTypeParameterReference>() != null);
+
       return (GenericTypeParameterReference)this.SubstituteCopiesForOriginals.Substitute(genericTypeParameterReference, keepAsDefinition: false);
     }
 
@@ -2841,7 +2924,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given global field definition.
     /// </summary>
     public GlobalFieldDefinition Copy(IGlobalFieldDefinition globalFieldDefinition) {
+      Contract.Requires(globalFieldDefinition != null);
       Contract.Requires(!(globalFieldDefinition is Dummy));
+      Contract.Ensures(Contract.Result<GlobalFieldDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(globalFieldDefinition);
       return (GlobalFieldDefinition)this.SubstituteCopiesForOriginals.Substitute(globalFieldDefinition);
     }
@@ -2850,7 +2936,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given global method definition.
     /// </summary>
     public GlobalMethodDefinition Copy(IGlobalMethodDefinition globalMethodDefinition) {
+      Contract.Requires(globalMethodDefinition != null);
       Contract.Requires(!(globalMethodDefinition is Dummy));
+      Contract.Ensures(Contract.Result<GlobalMethodDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(globalMethodDefinition);
       return (GlobalMethodDefinition)this.SubstituteCopiesForOriginals.Substitute(globalMethodDefinition);
     }
@@ -2859,7 +2948,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified local definition.
     /// </summary>
     public LocalDefinition Copy(ILocalDefinition localDefinition) {
+      Contract.Requires(localDefinition != null);
       Contract.Requires(!(localDefinition is Dummy));
+      Contract.Ensures(Contract.Result<LocalDefinition>() != null);
+
       return (LocalDefinition)this.SubstituteCopiesForOriginals.Substitute(localDefinition);
     }
 
@@ -2867,7 +2959,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given managed pointer type reference.
     /// </summary>
     public ManagedPointerTypeReference Copy(IManagedPointerTypeReference managedPointerTypeReference) {
+      Contract.Requires(managedPointerTypeReference != null);
       Contract.Requires(!(managedPointerTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<ManagedPointerTypeReference>() != null);
+
       return (ManagedPointerTypeReference)this.SubstituteCopiesForOriginals.Substitute(managedPointerTypeReference);
     }
 
@@ -2875,7 +2970,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given marshalling information.
     /// </summary>
     public MarshallingInformation Copy(IMarshallingInformation marshallingInformation) {
+      Contract.Requires(marshallingInformation != null);
       Contract.Requires(!(marshallingInformation is Dummy));
+      Contract.Ensures(Contract.Result<MarshallingInformation>() != null);
+
       return (MarshallingInformation)this.SubstituteCopiesForOriginals.Substitute(marshallingInformation);
     }
 
@@ -2883,7 +2981,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given metadata constant.
     /// </summary>
     public MetadataConstant Copy(IMetadataConstant constant) {
+      Contract.Requires(constant != null);
       Contract.Requires(!(constant is Dummy));
+      Contract.Ensures(Contract.Result<MetadataConstant>() != null);
+
       return (MetadataConstant)this.SubstituteCopiesForOriginals.Substitute(constant);
     }
 
@@ -2891,7 +2992,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given metadata array creation expression.
     /// </summary>
     public MetadataCreateArray Copy(IMetadataCreateArray createArray) {
+      Contract.Requires(createArray != null);
       Contract.Requires(!(createArray is Dummy));
+      Contract.Ensures(Contract.Result<MetadataCreateArray>() != null);
+
       return (MetadataCreateArray)this.SubstituteCopiesForOriginals.Substitute(createArray);
     }
 
@@ -2899,7 +3003,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given metadata expression.
     /// </summary>
     public MetadataExpression Copy(IMetadataExpression expression) {
+      Contract.Requires(expression != null);
       Contract.Requires(!(expression is Dummy));
+      Contract.Ensures(Contract.Result<MetadataExpression>() != null);
+
       expression.Dispatch(this.Dispatcher);
       return (MetadataExpression)this.Dispatcher.result;
     }
@@ -2908,7 +3015,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given metadata named argument expression.
     /// </summary>
     public MetadataNamedArgument Copy(IMetadataNamedArgument namedArgument) {
+      Contract.Requires(namedArgument != null);
       Contract.Requires(!(namedArgument is Dummy));
+      Contract.Ensures(Contract.Result<MetadataNamedArgument>() != null);
+
       return (MetadataNamedArgument)this.SubstituteCopiesForOriginals.Substitute(namedArgument);
     }
 
@@ -2916,7 +3026,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given metadata typeof expression.
     /// </summary>
     public MetadataTypeOf Copy(IMetadataTypeOf typeOf) {
+      Contract.Requires(typeOf != null);
       Contract.Requires(!(typeOf is Dummy));
+      Contract.Ensures(Contract.Result<MetadataTypeOf>() != null);
+
       return (MetadataTypeOf)this.SubstituteCopiesForOriginals.Substitute(typeOf);
     }
 
@@ -2924,7 +3037,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given method body.
     /// </summary>
     public MethodBody Copy(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
       Contract.Requires(!(methodBody is Dummy));
+      Contract.Ensures(Contract.Result<MethodBody>() != null);
+
       return (MethodBody)this.SubstituteCopiesForOriginals.Substitute(methodBody, methodBody.MethodDefinition);
     }
 
@@ -2932,7 +3048,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given method definition.
     /// </summary>
     public MethodDefinition Copy(IMethodDefinition method) {
+      Contract.Requires(method != null);
       Contract.Requires(!(method is Dummy || method is ISpecializedMethodDefinition));
+      Contract.Ensures(Contract.Result<MethodDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(method);
       return (MethodDefinition)this.SubstituteCopiesForOriginals.Substitute(method);
     }
@@ -2941,7 +3060,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given method implementation.
     /// </summary>
     public MethodImplementation Copy(IMethodImplementation methodImplementation) {
+      Contract.Requires(methodImplementation != null);
       Contract.Requires(!(methodImplementation is Dummy));
+      Contract.Ensures(Contract.Result<MethodImplementation>() != null);
+
       return (MethodImplementation)this.SubstituteCopiesForOriginals.Substitute(methodImplementation);
     }
 
@@ -2949,7 +3071,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given method reference.
     /// </summary>
     public MethodReference Copy(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
       Contract.Requires(!(methodReference is Dummy));
+      Contract.Ensures(Contract.Result<MethodReference>() != null);
+
       methodReference.DispatchAsReference(this.Dispatcher);
       return (MethodReference)this.Dispatcher.result;
     }
@@ -2958,6 +3083,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given method reference.
     /// </summary>
     private MethodReference CopyUnspecialized(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
+      Contract.Ensures(Contract.Result<MethodReference>() != null);
+
       return (MethodReference)this.SubstituteCopiesForOriginals.Substitute(methodReference, keepAsDefinition: false);
     }
 
@@ -2965,7 +3093,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given modified type reference.
     /// </summary>
     public ModifiedTypeReference Copy(IModifiedTypeReference modifiedTypeReference) {
+      Contract.Requires(modifiedTypeReference != null);
       Contract.Requires(!(modifiedTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<ModifiedTypeReference>() != null);
+
       return (ModifiedTypeReference)this.SubstituteCopiesForOriginals.Substitute(modifiedTypeReference);
     }
 
@@ -2973,7 +3104,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given module.
     /// </summary>
     public Module Copy(IModule module) {
+      Contract.Requires(module != null);
       Contract.Requires(!(module is Dummy));
+      Contract.Ensures(Contract.Result<Module>() != null);
+
       var assembly = module as IAssembly;
       if (assembly != null) return this.Copy(assembly);
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(module);
@@ -2984,7 +3118,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given module reference.
     /// </summary>
     public ModuleReference Copy(IModuleReference moduleReference) {
+      Contract.Requires(moduleReference != null);
       Contract.Requires(!(moduleReference is Dummy));
+      Contract.Ensures(Contract.Result<ModuleReference>() != null);
+
       var assemblyReference = moduleReference as IAssemblyReference;
       if (assemblyReference != null) return this.Copy(assemblyReference);
       return (ModuleReference)this.SubstituteCopiesForOriginals.Substitute(moduleReference, keepAsDefinition: false);
@@ -2994,7 +3131,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified named type definition.
     /// </summary>
     public NamedTypeDefinition Copy(INamedTypeDefinition namedTypeDefinition) {
+      Contract.Requires(namedTypeDefinition != null);
       Contract.Requires(!(namedTypeDefinition is Dummy));
+      Contract.Ensures(Contract.Result<NamedTypeDefinition>() != null);
+
       namedTypeDefinition.Dispatch(this.Dispatcher);
       return (NamedTypeDefinition)this.Dispatcher.result;
     }
@@ -3003,7 +3143,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given alias for a namespace type definition.
     /// </summary>
     public NamespaceAliasForType Copy(INamespaceAliasForType namespaceAliasForType) {
+      Contract.Requires(namespaceAliasForType != null);
       Contract.Requires(!(namespaceAliasForType is Dummy));
+      Contract.Ensures(Contract.Result<NamespaceAliasForType>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(namespaceAliasForType);
       return (NamespaceAliasForType)this.SubstituteCopiesForOriginals.Substitute(namespaceAliasForType);
     }
@@ -3012,7 +3155,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given namespace type definition.
     /// </summary>
     public NamespaceTypeDefinition Copy(INamespaceTypeDefinition namespaceTypeDefinition) {
+      Contract.Requires(namespaceTypeDefinition != null);
       Contract.Requires(!(namespaceTypeDefinition is Dummy));
+      Contract.Ensures(Contract.Result<NamespaceTypeDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(namespaceTypeDefinition);
       return (NamespaceTypeDefinition)this.SubstituteCopiesForOriginals.Substitute(namespaceTypeDefinition);
     }
@@ -3021,7 +3167,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given namespace type reference.
     /// </summary>
     public NamespaceTypeReference Copy(INamespaceTypeReference namespaceTypeReference) {
+      Contract.Requires(namespaceTypeReference != null);
       Contract.Requires(!(namespaceTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<NamespaceTypeReference>() != null);
+
       return (NamespaceTypeReference)this.SubstituteCopiesForOriginals.Substitute(namespaceTypeReference, keepAsDefinition: false);
     }
 
@@ -3029,7 +3178,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given nested type alias.
     /// </summary>
     public NestedAliasForType Copy(INestedAliasForType nestedAliasForType) {
+      Contract.Requires(nestedAliasForType != null);
       Contract.Requires(!(nestedAliasForType is Dummy));
+      Contract.Ensures(Contract.Result<NestedAliasForType>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(nestedAliasForType);
       return (NestedAliasForType)this.SubstituteCopiesForOriginals.Substitute(nestedAliasForType);
     }
@@ -3038,7 +3190,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given nested type definition.
     /// </summary>
     public NestedTypeDefinition Copy(INestedTypeDefinition nestedTypeDefinition) {
+      Contract.Requires(nestedTypeDefinition != null);
       Contract.Requires(!(nestedTypeDefinition is Dummy || nestedTypeDefinition is ISpecializedNestedTypeDefinition));
+      Contract.Ensures(Contract.Result<NestedTypeDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(nestedTypeDefinition);
       return (NestedTypeDefinition)this.SubstituteCopiesForOriginals.Substitute(nestedTypeDefinition);
     }
@@ -3047,7 +3202,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given nested type reference.
     /// </summary>
     public NestedTypeReference Copy(INestedTypeReference nestedTypeReference) {
+      Contract.Requires(nestedTypeReference != null);
       Contract.Requires(!(nestedTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<NestedTypeReference>() != null);
+
       nestedTypeReference.DispatchAsReference(this.Dispatcher);
       return (NestedTypeReference)this.Dispatcher.result;
     }
@@ -3056,6 +3214,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given nested type reference.
     /// </summary>
     private NestedTypeReference CopyUnspecialized(INestedTypeReference nestedTypeReference) {
+      Contract.Requires(nestedTypeReference != null);
+      Contract.Ensures(Contract.Result<NestedTypeReference>() != null);
+
       return (NestedTypeReference)this.SubstituteCopiesForOriginals.Substitute(nestedTypeReference, keepAsDefinition: false);
     }
 
@@ -3063,7 +3224,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given nested unit namespace.
     /// </summary>
     public NestedUnitNamespace Copy(INestedUnitNamespace nestedUnitNamespace) {
+      Contract.Requires(nestedUnitNamespace != null);
       Contract.Requires(!(nestedUnitNamespace is Dummy));
+      Contract.Ensures(Contract.Result<NestedUnitNamespace>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(nestedUnitNamespace);
       return (NestedUnitNamespace)this.SubstituteCopiesForOriginals.Substitute(nestedUnitNamespace);
     }
@@ -3072,7 +3236,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given nested unit namespace reference.
     /// </summary>
     public NestedUnitNamespaceReference Copy(INestedUnitNamespaceReference nestedUnitNamespaceReference) {
+      Contract.Requires(nestedUnitNamespaceReference != null);
       Contract.Requires(!(nestedUnitNamespaceReference is Dummy));
+      Contract.Ensures(Contract.Result<NestedUnitNamespaceReference>() != null);
+
       return (NestedUnitNamespaceReference)this.SubstituteCopiesForOriginals.Substitute(nestedUnitNamespaceReference, keepAsDefinition: false);
     }
 
@@ -3080,7 +3247,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified operation.
     /// </summary>
     public Operation Copy(IOperation operation) {
+      Contract.Requires(operation != null);
       Contract.Requires(!(operation is Dummy));
+      Contract.Ensures(Contract.Result<Operation>() != null);
+
       return (Operation)this.SubstituteCopiesForOriginals.Substitute(operation);
     }
 
@@ -3088,7 +3258,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified operation exception information.
     /// </summary>
     public OperationExceptionInformation Copy(IOperationExceptionInformation operationExceptionInformation) {
+      Contract.Requires(operationExceptionInformation != null);
       Contract.Requires(!(operationExceptionInformation is Dummy));
+      Contract.Ensures(Contract.Result<OperationExceptionInformation>() != null);
+
       return (OperationExceptionInformation)this.SubstituteCopiesForOriginals.Substitute(operationExceptionInformation);
     }
 
@@ -3096,7 +3269,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given parameter definition.
     /// </summary>
     public ParameterDefinition Copy(IParameterDefinition parameterDefinition) {
+      Contract.Requires(parameterDefinition != null);
       Contract.Requires(!(parameterDefinition is Dummy));
+      Contract.Ensures(Contract.Result<ParameterDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(parameterDefinition);
       return (ParameterDefinition)this.SubstituteCopiesForOriginals.Substitute(parameterDefinition);
     }
@@ -3105,15 +3281,32 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given parameter type information.
     /// </summary>
     public ParameterTypeInformation Copy(IParameterTypeInformation parameterTypeInformation) {
+      Contract.Requires(parameterTypeInformation != null);
       Contract.Requires(!(parameterTypeInformation is Dummy));
+      Contract.Ensures(Contract.Result<ParameterTypeInformation>() != null);
+
       return (ParameterTypeInformation)this.SubstituteCopiesForOriginals.Substitute(parameterTypeInformation, keepAsDefinition: false);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given PE section.
+    /// </summary>
+    public PESection Copy(IPESection peSection) {
+      Contract.Requires(peSection != null);
+      Contract.Requires(!(peSection is Dummy));
+      Contract.Ensures(Contract.Result<PESection>() != null);
+
+      return (PESection)this.SubstituteCopiesForOriginals.Substitute(peSection);
     }
 
     /// <summary>
     /// Returns a deep copy of the specified platform invoke information.
     /// </summary>
     public PlatformInvokeInformation Copy(IPlatformInvokeInformation platformInvokeInformation) {
+      Contract.Requires(platformInvokeInformation != null);
       Contract.Requires(!(platformInvokeInformation is Dummy));
+      Contract.Ensures(Contract.Result<PlatformInvokeInformation>() != null);
+
       return (PlatformInvokeInformation)this.SubstituteCopiesForOriginals.Substitute(platformInvokeInformation);
     }
 
@@ -3121,7 +3314,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given pointer type reference.
     /// </summary>
     public PointerTypeReference Copy(IPointerTypeReference pointerTypeReference) {
+      Contract.Requires(pointerTypeReference != null);
       Contract.Requires(!(pointerTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<PointerTypeReference>() != null);
+
       return (PointerTypeReference)this.SubstituteCopiesForOriginals.Substitute(pointerTypeReference);
     }
 
@@ -3129,7 +3325,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given property definition.
     /// </summary>
     public PropertyDefinition Copy(IPropertyDefinition propertyDefinition) {
+      Contract.Requires(propertyDefinition != null);
       Contract.Requires(!(propertyDefinition is Dummy || propertyDefinition is ISpecializedPropertyDefinition));
+      Contract.Ensures(Contract.Result<PropertyDefinition>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(propertyDefinition);
       return (PropertyDefinition)this.SubstituteCopiesForOriginals.Substitute(propertyDefinition);
     }
@@ -3138,7 +3337,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given reference to a manifest resource.
     /// </summary>
     public ResourceReference Copy(IResourceReference resourceReference) {
+      Contract.Requires(resourceReference != null);
       Contract.Requires(!(resourceReference is Dummy));
+      Contract.Ensures(Contract.Result<ResourceReference>() != null);
+
       return (ResourceReference)this.SubstituteCopiesForOriginals.Substitute(resourceReference);
     }
 
@@ -3146,7 +3348,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given root unit namespace.
     /// </summary>
     public RootUnitNamespace Copy(IRootUnitNamespace rootUnitNamespace) {
+      Contract.Requires(rootUnitNamespace != null);
       Contract.Requires(!(rootUnitNamespace is Dummy));
+      Contract.Ensures(Contract.Result<RootUnitNamespace>() != null);
+
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(rootUnitNamespace);
       return (RootUnitNamespace)this.SubstituteCopiesForOriginals.Substitute(rootUnitNamespace);
     }
@@ -3155,7 +3360,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given root unit namespace.
     /// </summary>
     public RootUnitNamespaceReference Copy(IRootUnitNamespaceReference rootUnitNamespaceReference) {
+      Contract.Requires(rootUnitNamespaceReference != null);
       Contract.Requires(!(rootUnitNamespaceReference is Dummy));
+      Contract.Ensures(Contract.Result<RootUnitNamespaceReference>() != null);
+
       return (RootUnitNamespaceReference)this.SubstituteCopiesForOriginals.Substitute(rootUnitNamespaceReference, keepAsDefinition: false);
     }
 
@@ -3163,7 +3371,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given security attribute.
     /// </summary>
     public SecurityAttribute Copy(ISecurityAttribute securityAttribute) {
+      Contract.Requires(securityAttribute != null);
       Contract.Requires(!(securityAttribute is Dummy));
+      Contract.Ensures(Contract.Result<SecurityAttribute>() != null);
+
       return (SecurityAttribute)this.SubstituteCopiesForOriginals.Substitute(securityAttribute);
     }
 
@@ -3171,7 +3382,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given specialized field reference.
     /// </summary>
     public SpecializedFieldReference Copy(ISpecializedFieldReference specializedFieldReference) {
+      Contract.Requires(specializedFieldReference != null);
       Contract.Requires(!(specializedFieldReference is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedFieldReference>() != null);
+
       return (SpecializedFieldReference)this.SubstituteCopiesForOriginals.Substitute(specializedFieldReference);
     }
 
@@ -3179,7 +3393,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given specialized method reference.
     /// </summary>
     public SpecializedMethodReference Copy(ISpecializedMethodReference specializedMethodReference) {
+      Contract.Requires(specializedMethodReference != null);
       Contract.Requires(!(specializedMethodReference is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedMethodReference>() != null);
+
       return (SpecializedMethodReference)this.SubstituteCopiesForOriginals.Substitute(specializedMethodReference);
     }
 
@@ -3187,7 +3404,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given specialized nested type reference.
     /// </summary>
     public SpecializedNestedTypeReference Copy(ISpecializedNestedTypeReference specializedNestedTypeReference) {
+      Contract.Requires(specializedNestedTypeReference != null);
       Contract.Requires(!(specializedNestedTypeReference is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedNestedTypeReference>() != null);
+
       return (SpecializedNestedTypeReference)this.SubstituteCopiesForOriginals.Substitute(specializedNestedTypeReference);
     }
 
@@ -3195,7 +3415,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified type definition.
     /// </summary>
     public ITypeDefinition Copy(ITypeDefinition typeDefinition) {
+      Contract.Requires(typeDefinition != null);
       Contract.Requires(!(typeDefinition is Dummy));
+      Contract.Ensures(Contract.Result<ITypeDefinition>() != null);
+
       typeDefinition.Dispatch(this.Dispatcher);
       return (ITypeDefinition)this.Dispatcher.result;
     }
@@ -3204,7 +3427,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified type member.
     /// </summary>
     public TypeDefinitionMember Copy(ITypeDefinitionMember typeMember) {
+      Contract.Requires(typeMember != null);
       Contract.Requires(!(typeMember is Dummy));
+      Contract.Ensures(Contract.Result<TypeDefinitionMember>() != null);
+
       typeMember.Dispatch(this.Dispatcher);
       return (TypeDefinitionMember)this.Dispatcher.result;
     }
@@ -3213,7 +3439,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified type reference.
     /// </summary>
     public TypeReference Copy(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
       Contract.Requires(!(typeReference is Dummy));
+      Contract.Ensures(Contract.Result<TypeReference>() != null);
+
       typeReference.DispatchAsReference(this.Dispatcher);
       return (TypeReference)this.Dispatcher.result;
     }
@@ -3222,7 +3451,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified unit namespace.
     /// </summary>
     public UnitNamespace Copy(IUnitNamespace unitNamespace) {
+      Contract.Requires(unitNamespace != null);
       Contract.Requires(!(unitNamespace is Dummy));
+      Contract.Ensures(Contract.Result<UnitNamespace>() != null);
+
       unitNamespace.Dispatch(this.Dispatcher);
       return (UnitNamespace)this.Dispatcher.result;
     }
@@ -3231,7 +3463,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the specified unit namespace.
     /// </summary>
     public UnitNamespaceReference Copy(IUnitNamespaceReference unitNamespace) {
+      Contract.Requires(unitNamespace != null);
       Contract.Requires(!(unitNamespace is Dummy));
+      Contract.Ensures(Contract.Result<UnitNamespaceReference>() != null);
+
       unitNamespace.DispatchAsReference(this.Dispatcher);
       return (UnitNamespaceReference)this.Dispatcher.result;
     }
@@ -3240,7 +3475,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Returns a deep copy of the given Win32 resource.
     /// </summary>
     public Win32Resource Copy(IWin32Resource win32Resource) {
+      Contract.Requires(win32Resource != null);
       Contract.Requires(!(win32Resource is Dummy));
+      Contract.Ensures(Contract.Result<Win32Resource>() != null);
+
       return (Win32Resource)this.SubstituteCopiesForOriginals.Substitute(win32Resource);
     }
 
@@ -3250,6 +3488,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <param name="definitions"></param>
     public void Copy(List<IDefinition> definitions) {
       Contract.Requires(definitions != null);
+
       var n = definitions.Count;
       for (int i = 0; i < n; i++)
         this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(definitions[i]);
@@ -3261,6 +3500,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// If the parameter has already been copied, return the copy. If not, assume that it is outside the cone and return this original.
     /// </summary>
     protected IParameterDefinition GetExistingCopyIfInsideCone(IParameterDefinition parameter) {
+      Contract.Requires(parameter != null);
+      Contract.Ensures(Contract.Result<IParameterDefinition>() != null);
+
       return this.SubstituteCopiesForOriginals.SubstituteReference(parameter);
     }
 
@@ -3268,6 +3510,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// If the property has already been copied, return the copy. If not, assume that it is outside the cone and return this original.
     /// </summary>
     protected IPropertyDefinition GetExistingCopyIfInsideCone(IPropertyDefinition propertyDefinition) {
+      Contract.Requires(propertyDefinition != null);
+      Contract.Ensures(Contract.Result<IPropertyDefinition>() != null);
+
       return this.SubstituteCopiesForOriginals.SubstituteReference(propertyDefinition);
     }
 
@@ -4073,6 +4318,18 @@ namespace Microsoft.Cci.MutableCodeModel {
       ParameterTypeInformation result = null;
       result = new ParameterTypeInformation();
       result.Copy(parameterTypeInformation, this.host.InternFactory);
+      return result;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="peSection"></param>
+    /// <returns></returns>
+    private PESection GetMutableShallowCopy(IPESection peSection) {
+      PESection result = null;
+      result = new PESection();
+      result.Copy(peSection, this.host.InternFactory);
       return result;
     }
 
@@ -5958,7 +6215,6 @@ namespace Microsoft.Cci.MutableCodeModel {
           propertyDefinition.Getter = this.DeepCopy(propertyDefinition.Getter);
       }
       propertyDefinition.Parameters = this.DeepCopy(propertyDefinition.Parameters);
-      propertyDefinition.ReturnValueAttributes = this.DeepCopyPropertyReturnValueAttributes(propertyDefinition.ReturnValueAttributes);
       if (propertyDefinition.ReturnValueIsModified)
         propertyDefinition.ReturnValueCustomModifiers = this.DeepCopy(propertyDefinition.ReturnValueCustomModifiers);
       if (propertyDefinition.Setter != null) {
@@ -6290,15 +6546,6 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (!this.oldOrder.TryGetValue(yn, out yi)) yi = int.MaxValue;
         return xi - yi;
       }
-    }
-
-    /// <summary>
-    /// Visits the property return value attributes.
-    /// </summary>
-    /// <param name="customAttributes">The custom attributes.</param>
-    /// <returns></returns>
-    protected List<ICustomAttribute> DeepCopyPropertyReturnValueAttributes(List<ICustomAttribute> customAttributes) {
-      return this.DeepCopy(customAttributes);
     }
 
     /// <summary>

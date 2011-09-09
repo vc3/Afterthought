@@ -763,6 +763,10 @@ namespace Microsoft.Cci {
       get { return 0; }
     }
 
+    public string DebugInformationLocation {
+      get { return string.Empty; }
+    }
+
     public ushort DllCharacteristics {
       get { return 0; }
     }
@@ -776,6 +780,14 @@ namespace Microsoft.Cci {
     }
 
     public bool ILOnly {
+      get { return false; }
+    }
+
+    public bool StrongNameSigned {
+      get { return false; }
+    }
+
+    public bool NativeEntryPoint {
       get { return false; }
     }
 
@@ -895,6 +907,10 @@ namespace Microsoft.Cci {
 
     public new string Location {
       get { return string.Empty; }
+    }
+
+    public IEnumerable<IPESection> UninterpretedSections {
+      get { return Enumerable<IPESection>.Empty; }
     }
 
     public new IName Name {
@@ -1083,6 +1099,11 @@ namespace Microsoft.Cci {
     [Pure]
     public AssemblyIdentity UnifyAssembly(AssemblyIdentity assemblyIdentity) {
       return assemblyIdentity;
+    }
+
+    [Pure]
+    public AssemblyIdentity UnifyAssembly(IAssemblyReference assemblyReference) {
+      return assemblyReference.AssemblyIdentity;
     }
 
     public IEnumerable<IUnit> LoadedUnits {
@@ -2824,6 +2845,10 @@ namespace Microsoft.Cci {
       get { return Dummy.Assembly.AssemblyIdentity; }
     }
 
+    public string DebugInformationLocation {
+      get { return string.Empty; }
+    }
+
     public ushort DllCharacteristics {
       get { return 0; }
     }
@@ -2837,6 +2862,14 @@ namespace Microsoft.Cci {
     }
 
     public bool ILOnly {
+      get { return false; }
+    }
+
+    public bool StrongNameSigned {
+      get { return false; }
+    }
+
+    public bool NativeEntryPoint {
       get { return false; }
     }
 
@@ -2956,6 +2989,10 @@ namespace Microsoft.Cci {
 
     public new string Location {
       get { return string.Empty; }
+    }
+
+    public IEnumerable<IPESection> UninterpretedSections {
+      get { return Enumerable<IPESection>.Empty; }
     }
 
     public new IName Name {
@@ -3923,6 +3960,10 @@ namespace Microsoft.Cci {
       get { return Dummy.Name; }
     }
 
+    public IName BeginInvoke {
+      get { return Dummy.Name; }
+    }
+
     public IName BoolOpBool {
       get { return Dummy.Name; }
     }
@@ -3944,6 +3985,10 @@ namespace Microsoft.Cci {
     }
 
     public IName EmptyName {
+      get { return Dummy.Name; }
+    }
+
+    public IName EndInvoke {
       get { return Dummy.Name; }
     }
 
@@ -4805,6 +4850,10 @@ namespace Microsoft.Cci {
       get { return Dummy.NamespaceTypeReference; }
     }
 
+    public INamespaceTypeReference SystemContextStaticAttribute {
+      get { return Dummy.NamespaceTypeReference; }
+    }
+
     public INamespaceTypeReference SystemIAsyncResult {
       get { return Dummy.NamespaceTypeReference; }
     }
@@ -4814,6 +4863,10 @@ namespace Microsoft.Cci {
     }
 
     public INamespaceTypeReference SystemDateTime {
+      get { return Dummy.NamespaceTypeReference; }
+    }
+
+    public INamespaceTypeReference SystemDateTimeOffset {
       get { return Dummy.NamespaceTypeReference; }
     }
 
@@ -4833,11 +4886,19 @@ namespace Microsoft.Cci {
       get { return Dummy.NamespaceTypeReference; }
     }
 
+    public INamespaceTypeReference SystemException {
+      get { return Dummy.NamespaceTypeReference; }
+    }
+
     public INamespaceTypeReference SystemFloat32 {
       get { return Dummy.NamespaceTypeReference; }
     }
 
     public INamespaceTypeReference SystemFloat64 {
+      get { return Dummy.NamespaceTypeReference; }
+    }
+
+    public INamespaceTypeReference SystemGlobalizationCultureInfo {
       get { return Dummy.NamespaceTypeReference; }
     }
 
@@ -4941,6 +5002,10 @@ namespace Microsoft.Cci {
       get { return Dummy.NamespaceTypeReference; }
     }
 
+    public INamespaceTypeReference SystemThreadStaticAttribute {
+      get { return Dummy.NamespaceTypeReference; }
+    }
+
     public INamespaceTypeReference SystemType {
       get { return Dummy.NamespaceTypeReference; }
     }
@@ -4982,6 +5047,8 @@ namespace Microsoft.Cci {
     }
 
     #endregion
+
+
   }
 
   [ContractVerification(false)]
@@ -5031,10 +5098,6 @@ namespace Microsoft.Cci {
 
     public IEnumerable<IParameterDefinition> Parameters {
       get { return Enumerable<IParameterDefinition>.Empty; }
-    }
-
-    public IEnumerable<ICustomAttribute> ReturnValueAttributes {
-      get { return Enumerable<ICustomAttribute>.Empty; }
     }
 
     public IEnumerable<ICustomModifier> ReturnValueCustomModifiers {
@@ -5448,6 +5511,10 @@ namespace Microsoft.Cci {
 
     public new string Location {
       get { return string.Empty; }
+    }
+
+    public IEnumerable<IPESection> UninterpretedSections {
+      get { return Enumerable<IPESection>.Empty; }
     }
 
     public new IName Name {
@@ -6924,10 +6991,6 @@ namespace Microsoft.Cci {
 
     public IEnumerable<IParameterDefinition> Parameters {
       get { return Enumerable<IParameterDefinition>.Empty; }
-    }
-
-    public IEnumerable<ICustomAttribute> ReturnValueAttributes {
-      get { return Enumerable<ICustomAttribute>.Empty; }
     }
 
     public IEnumerable<ICustomModifier> ReturnValueCustomModifiers {

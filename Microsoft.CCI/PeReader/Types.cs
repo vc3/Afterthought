@@ -598,26 +598,26 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       var ns = this.ContainingUnitNamespace as INestedUnitNamespaceReference;
       if (ns == null) return PrimitiveTypeCode.NotPrimitive;
       var pe = this.PEFileToObjectModel;
-      if (ns.Name.UniqueKey != pe.SystemChar.NamespaceFullName.UniqueKey) return PrimitiveTypeCode.NotPrimitive;
+      if (ns.Name.UniqueKey != pe.NameTable.System.UniqueKey) return PrimitiveTypeCode.NotPrimitive;
       var rs = ns.ContainingUnitNamespace as IRootUnitNamespaceReference;
       if (rs == null) return PrimitiveTypeCode.NotPrimitive;
       var key = this.Name.UniqueKey;
-      if (key == pe.SystemBoolean.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Boolean;
-      if (key == pe.SystemByte.MangledTypeName.UniqueKey) return PrimitiveTypeCode.UInt8;
-      if (key == pe.SystemChar.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Char;
-      if (key == pe.SystemDouble.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Float64;
-      if (key == pe.SystemInt16.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Int16;
-      if (key == pe.SystemInt32.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Int32;
-      if (key == pe.SystemInt64.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Int64;
-      if (key == pe.SystemSByte.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Int8;
-      if (key == pe.SystemIntPtr.MangledTypeName.UniqueKey) return PrimitiveTypeCode.IntPtr;
-      if (key == pe.SystemSingle.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Float32;
-      if (key == pe.SystemString.MangledTypeName.UniqueKey) return PrimitiveTypeCode.String;
-      if (key == pe.SystemUInt16.MangledTypeName.UniqueKey) return PrimitiveTypeCode.UInt16;
-      if (key == pe.SystemUInt32.MangledTypeName.UniqueKey) return PrimitiveTypeCode.UInt32;
-      if (key == pe.SystemUInt64.MangledTypeName.UniqueKey) return PrimitiveTypeCode.UInt64;
-      if (key == pe.SystemUIntPtr.MangledTypeName.UniqueKey) return PrimitiveTypeCode.UIntPtr;
-      if (key == pe.SystemVoid.MangledTypeName.UniqueKey) return PrimitiveTypeCode.Void;
+      if (key == pe.PlatformType.SystemBoolean.Name.UniqueKey) return PrimitiveTypeCode.Boolean;
+      if (key == pe.PlatformType.SystemInt8.Name.UniqueKey) return PrimitiveTypeCode.UInt8;
+      if (key == pe.PlatformType.SystemChar.Name.UniqueKey) return PrimitiveTypeCode.Char;
+      if (key == pe.PlatformType.SystemFloat64.Name.UniqueKey) return PrimitiveTypeCode.Float64;
+      if (key == pe.PlatformType.SystemInt16.Name.UniqueKey) return PrimitiveTypeCode.Int16;
+      if (key == pe.PlatformType.SystemInt32.Name.UniqueKey) return PrimitiveTypeCode.Int32;
+      if (key == pe.PlatformType.SystemInt64.Name.UniqueKey) return PrimitiveTypeCode.Int64;
+      if (key == pe.PlatformType.SystemInt8.Name.UniqueKey) return PrimitiveTypeCode.Int8;
+      if (key == pe.PlatformType.SystemIntPtr.Name.UniqueKey) return PrimitiveTypeCode.IntPtr;
+      if (key == pe.PlatformType.SystemFloat32.Name.UniqueKey) return PrimitiveTypeCode.Float32;
+      if (key == pe.PlatformType.SystemString.Name.UniqueKey) return PrimitiveTypeCode.String;
+      if (key == pe.PlatformType.SystemUInt16.Name.UniqueKey) return PrimitiveTypeCode.UInt16;
+      if (key == pe.PlatformType.SystemUInt32.Name.UniqueKey) return PrimitiveTypeCode.UInt32;
+      if (key == pe.PlatformType.SystemUInt64.Name.UniqueKey) return PrimitiveTypeCode.UInt64;
+      if (key == pe.PlatformType.SystemUIntPtr.Name.UniqueKey) return PrimitiveTypeCode.UIntPtr;
+      if (key == pe.PlatformType.SystemVoid.Name.UniqueKey) return PrimitiveTypeCode.Void;
       return PrimitiveTypeCode.NotPrimitive;
     }
 
@@ -875,7 +875,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     ITypeDefinition ITypeReference.ResolvedType {
       get {
         var resolvedTypeDefRef = this.ResolvedType;
-        if (resolvedTypeDefRef == null) return Dummy.Type;
+        if (resolvedTypeDefRef == Dummy.NamedTypeDefinition) return Dummy.Type;
         return resolvedTypeDefRef;
       }
     }
@@ -1018,7 +1018,11 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     #region INamedTypeReference Members
 
     INamedTypeDefinition INamedTypeReference.ResolvedType {
-      get { return this.ResolvedType; }
+      get {
+        var result = this.ResolvedType;
+        if (result == Dummy.NamespaceTypeDefinition) return Dummy.NamedTypeDefinition;
+        return result;
+      }
     }
 
     #endregion
@@ -1576,13 +1580,13 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public bool IsDelegate {
       get {
-        return this.BaseTypeReference == this.PEFileToObjectModel.SystemMulticastDelegate;
+        return TypeHelper.TypesAreEquivalent(this.BaseTypeReference, this.PEFileToObjectModel.SystemMulticastDelegate);
       }
     }
 
     public bool IsEnum {
       get {
-        return this.BaseTypeReference == this.PEFileToObjectModel.SystemEnum && this.IsSealed && !this.IsGeneric;
+        return TypeHelper.TypesAreEquivalent(this.BaseTypeReference, this.PEFileToObjectModel.SystemEnum) && this.IsSealed && !this.IsGeneric;
       }
     }
 
@@ -1606,14 +1610,14 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public bool IsValueType {
       get {
-        return (this.BaseTypeReference == this.PEFileToObjectModel.SystemValueType
-            || this.BaseTypeReference == this.PEFileToObjectModel.SystemEnum)
+        return (TypeHelper.TypesAreEquivalent(this.BaseTypeReference, this.PEFileToObjectModel.SystemValueType)
+            || TypeHelper.TypesAreEquivalent(this.BaseTypeReference, this.PEFileToObjectModel.SystemEnum))
           && this.IsSealed;
       }
     }
 
     public bool IsStruct {
-      get { return this.BaseTypeReference == this.PEFileToObjectModel.SystemValueType && this.IsSealed; }
+      get { return TypeHelper.TypesAreEquivalent(this.BaseTypeReference, this.PEFileToObjectModel.SystemValueType) && this.IsSealed; }
     }
 
     public uint SizeOf {
@@ -1933,7 +1937,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
             }
             if (this.enumUnderlyingType == null) {
               //TODO: emit error. The module is invalid.
-              this.enumUnderlyingType = this.PEFileToObjectModel.SystemInt32;
+              this.enumUnderlyingType = this.PEFileToObjectModel.PlatformType.SystemInt32;
             }
           } else
             this.enumUnderlyingType = Dummy.TypeReference;
@@ -2176,7 +2180,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
             }
             if (this.enumUnderlyingType == null) {
               //TODO: emit error. The module is invalid.
-              this.enumUnderlyingType = this.PEFileToObjectModel.SystemInt32;
+              this.enumUnderlyingType = this.PEFileToObjectModel.PlatformType.SystemInt32;
             }
           } else
             this.enumUnderlyingType = Dummy.TypeReference;
@@ -2876,22 +2880,20 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public override ITypeDefinition ResolvedType {
       get {
         if (this.resolvedType == null)
-          this.resolvedType = this.Resolve();
+          this.Resolve();
         if (this.resolvedType == Dummy.GenericMethodParameter) return Dummy.Type;
         return this.resolvedType;
       }
     }
     IGenericMethodParameter resolvedType;
 
-    IGenericMethodParameter Resolve() {
+    void Resolve() {
+      this.resolvedType = Dummy.GenericMethodParameter;
       var definingMethod = this.DefiningMethod;
-      if (definingMethod.IsGeneric) {
-        ushort index = 0;
-        foreach (IGenericMethodParameter genMethPar in definingMethod.GenericParameters) {
-          if (index++ == this.Index) return genMethPar;
-        }
+      if (!definingMethod.IsGeneric || this.Index >= definingMethod.GenericParameterCount) return;
+      foreach (var genMethPar in definingMethod.GenericParameters) {
+        if (genMethPar.Index == this.Index) { this.resolvedType = genMethPar; return; }
       }
-      return Dummy.GenericMethodParameter;
     }
 
     #region IGenericMethodParameter Members
@@ -2911,7 +2913,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     IGenericMethodParameter IGenericMethodParameterReference.ResolvedType {
       get {
         if (this.resolvedType == null)
-          this.resolvedType = this.Resolve();
+          this.Resolve();
         return this.resolvedType;
       }
     }
@@ -3223,9 +3225,9 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
           ITypeReference/*?*/ modTypeRef = this.PEFileToObjectModel.GetTypeReferenceForGenericConstraintRowId(this, genParamIter);
           if (
             modTypeRef == null
-            || modTypeRef == this.PEFileToObjectModel.SystemEnum
-            || modTypeRef == this.PEFileToObjectModel.SystemObject
-            || modTypeRef == this.PEFileToObjectModel.SystemValueType
+            || TypeHelper.TypesAreEquivalent(modTypeRef, this.PEFileToObjectModel.SystemEnum)
+            || TypeHelper.TypesAreEquivalent(modTypeRef, this.PEFileToObjectModel.PlatformType.SystemObject)
+            || TypeHelper.TypesAreEquivalent(modTypeRef, this.PEFileToObjectModel.SystemValueType)
             || modTypeRef.ResolvedType.IsInterface
           ) {
             continue;
@@ -4179,15 +4181,6 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
   }
 
   internal sealed class TypeCache {
-    internal readonly static EnumerableArrayWrapper<Module, IModule> EmptyModuleArray = new EnumerableArrayWrapper<Module, IModule>(new Module[0], Dummy.Module);
-    internal static readonly EnumerableArrayWrapper<IParameterDefinition, IParameterDefinition> EmptyParameterArray = new EnumerableArrayWrapper<IParameterDefinition, IParameterDefinition>(new IParameterDefinition[0], Dummy.ParameterDefinition);
-    internal static readonly EnumerableArrayWrapper<IParameterTypeInformation, IParameterTypeInformation> EmptyParameterInfoArray = new EnumerableArrayWrapper<IParameterTypeInformation, IParameterTypeInformation>(new IParameterTypeInformation[0], Dummy.ParameterTypeInformation);
-    internal static readonly EnumerableArrayWrapper<ITypeReference/*?*/, ITypeReference> EmptyTypeArray = new EnumerableArrayWrapper<ITypeReference/*?*/, ITypeReference>(new ITypeReference/*?*/[0], Dummy.TypeReference);
-    internal static readonly EnumerableArrayWrapper<IGenericTypeParameter, IGenericTypeParameter> EmptyGenericTypeParameters = new EnumerableArrayWrapper<IGenericTypeParameter, IGenericTypeParameter>(new IGenericTypeParameter[0], Dummy.GenericTypeParameter);
-    internal static readonly EnumerableArrayWrapper<IGenericMethodParameter, IGenericMethodParameter> EmptyGenericMethodParameters = new EnumerableArrayWrapper<IGenericMethodParameter, IGenericMethodParameter>(new IGenericMethodParameter[0], Dummy.GenericMethodParameter);
-    internal static readonly EnumerableArrayWrapper<SecurityCustomAttribute, ICustomAttribute> EmptySecurityAttributes = new EnumerableArrayWrapper<SecurityCustomAttribute, ICustomAttribute>(new SecurityCustomAttribute[0], Dummy.CustomAttribute);
-    internal static readonly EnumerableArrayWrapper<ExpressionBase, IMetadataExpression> EmptyExpressionList = new EnumerableArrayWrapper<ExpressionBase, IMetadataExpression>(new ExpressionBase[0], Dummy.Expression);
-    internal static readonly EnumerableArrayWrapper<FieldOrPropertyNamedArgumentExpression, IMetadataNamedArgument> EmptyNamedArgumentList = new EnumerableArrayWrapper<FieldOrPropertyNamedArgumentExpression, IMetadataNamedArgument>(new FieldOrPropertyNamedArgumentExpression[0], Dummy.NamedArgument);
     internal static readonly byte[] EmptyByteArray = new byte[0];
     internal static PrimitiveTypeCode[] PrimitiveTypeCodeConv = {
       PrimitiveTypeCode.Int8,     //SByte,

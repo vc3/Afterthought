@@ -157,21 +157,21 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<IMetadataExpression> IMetadataCreateArray.Initializers {
       get {
         if (this.initializers == null) return Enumerable<IMetadataExpression>.Empty;
-        return this.initializers.AsReadOnly();
+        return this.initializers.AsReadOnly(); 
       }
     }
 
     IEnumerable<int> IMetadataCreateArray.LowerBounds {
       get {
         if (this.lowerBounds == null) return Enumerable<int>.Empty;
-        return this.lowerBounds.AsReadOnly();
+        return this.lowerBounds.AsReadOnly(); 
       }
     }
 
     IEnumerable<ulong> IMetadataCreateArray.Sizes {
       get {
         if (this.sizes == null) return Enumerable<ulong>.Empty;
-        return this.sizes.AsReadOnly();
+        return this.sizes.AsReadOnly(); 
       }
     }
 
@@ -235,7 +235,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<ILocation> IObjectWithLocations.Locations {
       get {
         if (this.locations == null) return Enumerable<ILocation>.Empty;
-        return this.locations.AsReadOnly();
+        return this.locations.AsReadOnly(); 
       }
     }
 

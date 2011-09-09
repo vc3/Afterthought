@@ -661,7 +661,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       get {
         if (this.unifiedAssemblyIdentity == null) {
           this.isFrozen = true;
-          this.unifiedAssemblyIdentity = this.Host.UnifyAssembly(this.AssemblyIdentity);
+          this.unifiedAssemblyIdentity = this.Host.UnifyAssembly(this);
         }
         return this.unifiedAssemblyIdentity;
       }
@@ -705,6 +705,8 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.entryPoint = Dummy.MethodReference;
       this.fileAlignment = 512;
       this.ilOnly = true;
+      this.StrongNameSigned = false;
+      this.NativeEntryPoint = false;
       this.kind = ModuleKind.DynamicallyLinkedLibrary;
       this.linkerMajorVersion = 6;
       this.linkerMinorVersion = 0;
@@ -745,6 +747,7 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.assemblyReferences = null;
       this.baseAddress = module.BaseAddress;
       this.containingAssembly = module.ContainingAssembly;
+      this.debugInformationLocation = module.DebugInformationLocation;
       this.dllCharacteristics = module.DllCharacteristics;
       if (module.Kind == ModuleKind.ConsoleApplication || module.Kind == ModuleKind.WindowsApplication)
         this.entryPoint = module.EntryPoint;
@@ -752,6 +755,8 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.entryPoint = Dummy.MethodReference;
       this.fileAlignment = module.FileAlignment;
       this.ilOnly = module.ILOnly;
+      this.strongNameSigned = module.StrongNameSigned;
+      this.nativeEntryPoint = module.NativeEntryPoint;
       this.kind = module.Kind;
       this.linkerMajorVersion = module.LinkerMajorVersion;
       this.linkerMinorVersion = module.LinkerMinorVersion;
@@ -805,6 +810,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <value>All types.</value>
     public List<INamedTypeDefinition> AllTypes {
       get {
+        Contract.Ensures(Contract.Result<List<INamedTypeDefinition>>() != null);
         if (this.allTypes == null) this.allTypes = new List<INamedTypeDefinition>();
         return this.allTypes;
       }
@@ -844,6 +850,15 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.containingAssembly = value; }
     }
     IAssembly/*?*/ containingAssembly;
+
+    /// <summary>
+    /// A path to the debug information corresponding to this module. Can be absolute or relative to the file path of the module. Empty if not specified.
+    /// </summary>
+    public virtual string DebugInformationLocation {
+      get { return this.debugInformationLocation; }
+      set { this.debugInformationLocation = value; }
+    }
+    string debugInformationLocation;
 
     /// <summary>
     /// Flags that control the behavior of the target operating system. CLI implementations are supposed to ignore this, but some operating system pay attention.
@@ -898,6 +913,25 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.ilOnly = value; }
     }
     bool ilOnly;
+
+    /// <summary>
+    /// True if the module contains a hash of its contents, encrypted with the private key of an assembly strong name.
+    /// </summary>
+    public bool StrongNameSigned {
+      get { return this.strongNameSigned; }
+      set { this.strongNameSigned = value; }
+    }
+    bool strongNameSigned;
+
+    /// <summary>
+    /// True if the module has a native entry point.
+    /// </summary>
+    /// <value></value>
+    public bool NativeEntryPoint {
+      get { return this.nativeEntryPoint; }
+      set { this.nativeEntryPoint = value; }
+    }
+    bool nativeEntryPoint;
 
     /// <summary>
     /// The kind of metadata stored in this module. For example whether this module is an executable or a manifest resource file.
@@ -1318,6 +1352,11 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <param name="internFactory"></param>
     public void Copy(IModuleReference moduleReference, IInternFactory internFactory) {
       ((ICopyFrom<IUnitReference>)this).Copy(moduleReference, internFactory);
+      var mutableModuleReference = moduleReference as ModuleReference;
+      if (mutableModuleReference != null) {
+        this.host = mutableModuleReference.Host;
+        this.referringUnit = mutableModuleReference.ReferringUnit;
+      }
       this.containingAssembly = moduleReference.ContainingAssembly;
       this.moduleIdentity = moduleReference.ModuleIdentity;
       this.resolvedModule = null;
@@ -1464,6 +1503,10 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.contractAssemblySymbolicIdentity = unit.ContractAssemblySymbolicIdentity;
       this.coreAssemblySymbolicIdentity = unit.CoreAssemblySymbolicIdentity;
       this.location = unit.Location;
+      if (IteratorHelper.EnumerableIsNotEmpty(unit.UninterpretedSections))
+        this.uninterpretedSections = new List<IPESection>(unit.UninterpretedSections);
+      else
+        this.uninterpretedSections = null;
       this.platformType = unit.PlatformType;
       this.unitNamespaceRoot = unit.UnitNamespaceRoot;
     }
@@ -1504,6 +1547,16 @@ namespace Microsoft.Cci.MutableCodeModel {
     string location;
 
     /// <summary>
+    /// A sequence of PE sections that are not well known to PE readers and thus have not been decompiled into 
+    /// other parts of the Metadata Model. These sections may have meaning to other tools. 
+    /// </summary>
+    public virtual List<IPESection> UninterpretedSections {
+      get { return this.uninterpretedSections; }
+      set { this.uninterpretedSections = value; }
+    }
+    List<IPESection> uninterpretedSections;
+
+    /// <summary>
     /// A collection of well known types that must be part of every target platform and that are fundamental to modeling compiled code.
     /// The types are obtained by querying the unit set of the compilation and thus can include types that are defined by the compilation itself.
     /// </summary>
@@ -1532,6 +1585,18 @@ namespace Microsoft.Cci.MutableCodeModel {
       get;
     }
 
+    #region IUnit Members
+
+    IEnumerable<IPESection> IUnit.UninterpretedSections {
+      get {
+        if (this.UninterpretedSections == null)
+          return Enumerable<IPESection>.Empty;
+        else
+          return this.UninterpretedSections.AsReadOnly();
+      }
+    }
+
+    #endregion
     #region INamespaceRootOwner Members
 
     /// <summary>

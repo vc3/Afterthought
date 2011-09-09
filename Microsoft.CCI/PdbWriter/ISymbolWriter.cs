@@ -18,13 +18,13 @@ using System.Security;
 
 namespace Microsoft.Cci {
 
-  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("B01FAFEB-C450-3A4D-BEEC-B4CEEC01E006"), SuppressUnmanagedCodeSecurity]
+  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("B01FAFEB-C450-3A4D-BEEC-B4CEEC01E006")]
   internal interface ISymUnmanagedDocumentWriter {
     void SetSource(uint sourceSize, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)] byte[] source);
     void SetCheckSum(ref Guid algorithmId, uint checkSumSize, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] byte[] checkSum);
   };
 
-  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("0B97726E-9E6D-4f05-9A26-424022093CAA"), SuppressUnmanagedCodeSecurity]
+  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("0B97726E-9E6D-4f05-9A26-424022093CAA")]
   internal interface ISymUnmanagedWriter2 {
     ISymUnmanagedDocumentWriter DefineDocument(string url, ref Guid language, ref Guid languageVendor, ref Guid documentType);
     void SetUserEntryPoint(uint entryMethod);

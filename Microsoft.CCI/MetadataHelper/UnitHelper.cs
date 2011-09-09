@@ -185,7 +185,7 @@ namespace Microsoft.Cci {
     /// environment to co-exist while agreeing on how to map strings to IName instances.</param>
     /// <param name="unit">The unit of metadata to search for the type.</param>
     /// <param name="typeName">A string containing the fully qualified type name, using C# formatting conventions.</param>
-    /// <param name="genericParameterCount">The number of generic parameters the returned type should have.</param>
+    /// <param name="genericParameterCount">The total number of generic parameters (including inherited parameters) that the returned type should have.</param>
     public static INamedTypeDefinition FindType(INameTable nameTable, IUnit unit, string typeName, int genericParameterCount) {
       Contract.Requires(nameTable != null);
       Contract.Requires(unit != null);
@@ -207,6 +207,9 @@ namespace Microsoft.Cci {
       Contract.Requires(offset >= 0);
       Contract.Ensures(offset >= 0);
 
+      int len = typeName.Length;
+      if (offset >= len) return null;
+
       int savedOffset = offset;
       var nestedNamespaceDefinition = GetNamespace(nameTable, namespaceDefinition, typeName, ref offset);
       if (nestedNamespaceDefinition != null) {
@@ -214,10 +217,24 @@ namespace Microsoft.Cci {
         if (naType != null) return naType;
       }
       offset = savedOffset;
-      var nsType = GetNamespaceType(nameTable, namespaceDefinition, typeName, genericParameterCount, ref offset);
-      if (nsType == null) return null;
-      if (offset >= typeName.Length) return nsType;
-      return GetNestedType(nameTable, nsType, typeName, genericParameterCount, ref offset);
+      int dotPos = typeName.IndexOf('.', offset);
+      Contract.Assume(dotPos < 0 || (dotPos >= offset && dotPos < len));
+      if (dotPos < 0) dotPos = len;
+      IName tName = nameTable.GetNameFor(typeName.Substring(offset, dotPos-offset));
+      foreach (var member in namespaceDefinition.GetMembersNamed(tName, false)) {
+        var namespaceType = member as INamespaceTypeDefinition;
+        if (namespaceType == null) continue;
+        if (dotPos == len) {
+          if (namespaceType.GenericParameterCount != genericParameterCount) continue;
+          return namespaceType;
+        } else {
+          if (namespaceType.GenericParameterCount > genericParameterCount) continue;
+          offset = dotPos+1;
+          var nt = GetNestedType(nameTable, namespaceType, typeName, genericParameterCount-namespaceType.GenericParameterCount, ref offset);
+          if (nt != null) return nt;
+        }
+      }
+      return null;
     }
 
     private static INestedUnitNamespace/*?*/ GetNamespace(INameTable nameTable, INamespaceDefinition namespaceDefinition, string typeName, ref int offset) {
@@ -242,30 +259,6 @@ namespace Microsoft.Cci {
       return null;
     }
 
-    private static INamespaceTypeDefinition/*?*/ GetNamespaceType(INameTable nameTable, INamespaceDefinition namespaceDefinition, string typeName, int genericParameterCount, ref int offset) {
-      Contract.Requires(nameTable != null);
-      Contract.Requires(namespaceDefinition != null);
-      Contract.Requires(typeName != null);
-      Contract.Requires(genericParameterCount >= 0);
-      Contract.Requires(offset >= 0);
-      Contract.Ensures(offset >= 0);
-
-      int len = typeName.Length;
-      if (offset >= len) return null;
-      int dotPos = typeName.IndexOf('.', offset);
-      Contract.Assume(dotPos < 0 || (dotPos >= offset && dotPos < len));
-      if (dotPos < 0) dotPos = len;
-      IName tName = nameTable.GetNameFor(typeName.Substring(offset, dotPos-offset));
-      foreach (var member in namespaceDefinition.GetMembersNamed(tName, false)) {
-        var namespaceType = member as INamespaceTypeDefinition;
-        if (namespaceType == null) continue;
-        if (namespaceType.GenericParameterCount != genericParameterCount) continue;
-        offset = dotPos+1;
-        return namespaceType;
-      }
-      return null;
-    }
-
     private static INestedTypeDefinition/*?*/ GetNestedType(INameTable nameTable, ITypeDefinition typeDefinition, string typeName, int genericParameterCount, ref int offset) {
       Contract.Requires(nameTable != null);
       Contract.Requires(typeDefinition != null);
@@ -283,10 +276,14 @@ namespace Microsoft.Cci {
       foreach (var member in typeDefinition.GetMembersNamed(tName, false)) {
         var nestedType = member as INestedTypeDefinition;
         if (nestedType == null) continue;
-        if (nestedType.GenericParameterCount != genericParameterCount) continue;
-        if (dotPos == len) return nestedType;
+        if (dotPos == len) {
+          if (nestedType.GenericParameterCount != genericParameterCount) continue;
+          return nestedType;
+        }
+        if (nestedType.GenericParameterCount > genericParameterCount) continue;
         offset = dotPos+1;
-        return GetNestedType(nameTable, nestedType, typeName, genericParameterCount, ref offset);
+        var nt = GetNestedType(nameTable, nestedType, typeName, genericParameterCount-nestedType.GenericParameterCount, ref offset);
+        if (nt != null) return nt;
       }
       return null;
     }

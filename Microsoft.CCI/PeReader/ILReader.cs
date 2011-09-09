@@ -308,7 +308,7 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
       ITypeReference/*?*/ typeReference;
       if (currByte == ElementType.TypedReference) {
         this.SignatureMemoryReader.SkipBytes(1);
-        typeReference = this.PEFileToObjectModel.SystemTypedReference;
+        typeReference = this.PEFileToObjectModel.PlatformType.SystemTypedReference;
       } else {
         customModifiers = this.GetCustomModifiers(out isPinned);
         currByte = this.SignatureMemoryReader.PeekByte(0);
@@ -361,10 +361,10 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
       this.ReturnCustomModifiers = this.GetCustomModifiers(out dummyPinned);
       byte retByte = this.SignatureMemoryReader.PeekByte(0);
       if (retByte == ElementType.Void) {
-        this.ReturnTypeReference = peFileToObjectModel.SystemVoid;
+        this.ReturnTypeReference = peFileToObjectModel.PlatformType.SystemVoid;
         this.SignatureMemoryReader.SkipBytes(1);
       } else if (retByte == ElementType.TypedReference) {
-        this.ReturnTypeReference = peFileToObjectModel.SystemTypedReference;
+        this.ReturnTypeReference = peFileToObjectModel.PlatformType.SystemTypedReference;
         this.SignatureMemoryReader.SkipBytes(1);
       } else {
         if (retByte == ElementType.ByReference) {
@@ -912,7 +912,7 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
             value = this.GetLocal(memReader.ReadUInt16());
             break;
           case OperationCode.Localloc:
-            value = PointerType.GetPointerType(this.PEFileToObjectModel.SystemVoid, this.PEFileToObjectModel.InternFactory);
+            value = PointerType.GetPointerType(this.PEFileToObjectModel.PlatformType.SystemVoid, this.PEFileToObjectModel.InternFactory);
             break;
           case OperationCode.Endfilter:
             break;
@@ -1082,7 +1082,7 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
               exceptionType = typeRef;
             }
           } else if (sehTableEntry.SEHFlags == SEHFlags.Filter) {
-            exceptionType = this.PEFileToObjectModel.SystemObject;
+            exceptionType = this.PEFileToObjectModel.PlatformType.SystemObject;
             filterDecisionStart = sehTableEntry.ClassTokenOrFilterOffset;
           }
           exceptions[i] = new CilExceptionInformation(handlerKind, exceptionType, tryStart, tryEnd, filterDecisionStart, handlerStart, handlerEnd);

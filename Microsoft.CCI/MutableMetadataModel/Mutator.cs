@@ -227,7 +227,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IAliasForType Rewrite(IAliasForType aliasForType) {
       aliasForType.Dispatch(this.dispatchingVisitor);
-      return (IAliasForType)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IAliasForType)??aliasForType;
     }
 
     /// <summary>
@@ -235,7 +235,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IAliasMember Rewrite(IAliasMember aliasMember) {
       aliasMember.Dispatch(this.dispatchingVisitor);
-      return (IAliasMember)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IAliasMember)??aliasMember;
     }
 
     /// <summary>
@@ -321,7 +321,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IFieldReference Rewrite(IFieldReference fieldReference) {
       fieldReference.Dispatch(this.dispatchingVisitor);
-      return (IFieldReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IFieldReference)??fieldReference;
     }
 
 
@@ -526,7 +526,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IMetadataExpression Rewrite(IMetadataExpression metadataExpression) {
       metadataExpression.Dispatch(this.dispatchingVisitor);
-      return (IMetadataExpression)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IMetadataExpression)??metadataExpression;
     }
 
     /// <summary>
@@ -585,7 +585,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IMethodReference Rewrite(IMethodReference methodReference) {
       methodReference.DispatchAsReference(this.dispatchingVisitor);
-      return (IMethodReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IMethodReference)??methodReference;
     }
 
     /// <summary>
@@ -645,7 +645,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual INamedTypeDefinition Rewrite(INamedTypeDefinition namedTypeDefinition) {
       namedTypeDefinition.Dispatch(this.dispatchingVisitor);
-      return (INamedTypeDefinition)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as INamedTypeDefinition)??namedTypeDefinition;
     }
 
     /// <summary>
@@ -653,7 +653,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual INamedTypeReference Rewrite(INamedTypeReference typeReference) {
       typeReference.DispatchAsReference(this.dispatchingVisitor);
-      return (INamedTypeReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as INamedTypeReference)??typeReference;
     }
 
     /// <summary>
@@ -671,7 +671,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual INamespaceDefinition Rewrite(INamespaceDefinition namespaceDefinition) {
       namespaceDefinition.Dispatch(this.dispatchingVisitor);
-      return (INamespaceDefinition)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as INamespaceDefinition)??namespaceDefinition;
     }
 
     /// <summary>
@@ -679,7 +679,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual INamespaceMember Rewrite(INamespaceMember namespaceMember) {
       namespaceMember.Dispatch(this.dispatchingVisitor);
-      return (INamespaceMember)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as INamespaceMember)??namespaceMember;
     }
 
     /// <summary>
@@ -730,13 +730,13 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual INestedTypeReference Rewrite(INestedTypeReference nestedTypeReference) {
       nestedTypeReference.DispatchAsReference(this.dispatchingVisitor);
-      return (INestedTypeReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as INestedTypeReference)??nestedTypeReference;
     }
 
     /// <summary>
     /// Rewrites the given namespace type reference.
     /// </summary>
-    private INestedTypeReference RewriteUnspecialized(INestedTypeReference nestedTypeReference) {
+    public virtual INestedTypeReference RewriteUnspecialized(INestedTypeReference nestedTypeReference) {
       Contract.Requires(!(nestedTypeReference is ISpecializedNestedTypeReference));
       var mutableNestedTypeReference = nestedTypeReference as NestedTypeReference;
       if (mutableNestedTypeReference == null || mutableNestedTypeReference.IsFrozen) return nestedTypeReference;
@@ -808,6 +808,16 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (mutableParameterTypeInformation == null) return parameterTypeInformation;
       this.RewriteChildren(mutableParameterTypeInformation);
       return mutableParameterTypeInformation;
+    }
+
+    /// <summary>
+    /// Rewrites the given PE section.
+    /// </summary>
+    public virtual IPESection Rewrite(IPESection peSection) {
+      var mutablePESection = peSection as PESection;
+      if (mutablePESection == null) return peSection;
+      this.RewriteChildren(mutablePESection);
+      return mutablePESection;
     }
 
     /// <summary>
@@ -932,7 +942,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public virtual ITypeDefinition Rewrite(ITypeDefinition typeDefinition) {
       Contract.Requires(!(typeDefinition is IGenericTypeInstance), "Generic type instances should be reconstructed, not rewritten.");
       typeDefinition.Dispatch(this.dispatchingVisitor);
-      return (ITypeDefinition)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as ITypeDefinition)??typeDefinition;
     }
 
     /// <summary>
@@ -940,7 +950,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual ITypeDefinitionMember Rewrite(ITypeDefinitionMember typeMember) {
       typeMember.Dispatch(this.dispatchingVisitor);
-      return (ITypeDefinitionMember)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as ITypeDefinitionMember)??typeMember;
     }
 
     /// <summary>
@@ -948,7 +958,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual ITypeReference Rewrite(ITypeReference typeReference) {
       typeReference.DispatchAsReference(this.dispatchingVisitor);
-      return (ITypeReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as ITypeReference)??typeReference;
     }
 
     /// <summary>
@@ -956,7 +966,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IUnit Rewrite(IUnit unit) {
       unit.Dispatch(this.dispatchingVisitor);
-      return (IUnit)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IUnit)??unit;
     }
 
     /// <summary>
@@ -964,7 +974,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IUnitNamespace Rewrite(IUnitNamespace unitNamespace) {
       unitNamespace.Dispatch(this.dispatchingVisitor);
-      return (IUnitNamespace)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IUnitNamespace)??unitNamespace;
     }
 
     /// <summary>
@@ -972,7 +982,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IUnitNamespaceReference Rewrite(IUnitNamespaceReference unitNamespaceReference) {
       unitNamespaceReference.DispatchAsReference(this.dispatchingVisitor);
-      return (IUnitNamespaceReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IUnitNamespaceReference)??unitNamespaceReference;
     }
 
     /// <summary>
@@ -980,7 +990,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IUnitReference Rewrite(IUnitReference unitReference) {
       unitReference.DispatchAsReference(this.dispatchingVisitor);
-      return (IUnitReference)this.dispatchingVisitor.result;
+      return (this.dispatchingVisitor.result as IUnitReference)??unitReference;
     }
 
     /// <summary>
@@ -1240,6 +1250,16 @@ namespace Microsoft.Cci.MutableCodeModel {
       for (int i = 0, n = parameterTypeInformations.Count; i < n; i++)
         parameterTypeInformations[i] = this.Rewrite(parameterTypeInformations[i]);
       return parameterTypeInformations;
+    }
+
+    /// <summary>
+    /// Rewrites the specified PE sections.
+    /// </summary>
+    public virtual List<IPESection>/*?*/ Rewrite(List<IPESection>/*?*/ peSections) {
+      if (peSections == null) return null;
+      for (int i = 0, n = peSections.Count; i < n; i++)
+        peSections[i] = this.Rewrite(peSections[i]);
+      return peSections;
     }
 
     /// <summary>
@@ -1583,7 +1603,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       method.InternFactory = this.internFactory;
       method.Parameters = this.Rewrite(method.Parameters);
       if (method.IsPlatformInvoke)
-        method.PlatformInvokeData = this.Rewrite((PlatformInvokeInformation)method.PlatformInvokeData);
+        method.PlatformInvokeData = this.Rewrite(method.PlatformInvokeData);
       method.ReturnValueAttributes = this.Rewrite(method.ReturnValueAttributes);
       if (method.ReturnValueIsModified)
         method.ReturnValueCustomModifiers = this.Rewrite(method.ReturnValueCustomModifiers);
@@ -1775,6 +1795,13 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Rewrites the given PE section.
+    /// </summary>
+    /// <param name="peSection"></param>
+    public virtual void RewriteChildren(PESection peSection) {
+    }
+
+    /// <summary>
     /// Rewrites the children of the specified platform invoke information.
     /// </summary>
     public virtual void RewriteChildren(PlatformInvokeInformation platformInvokeInformation) {
@@ -1801,7 +1828,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (propertyDefinition.Getter != null)
         propertyDefinition.Getter = this.Rewrite(propertyDefinition.Getter);
       propertyDefinition.Parameters = this.Rewrite(propertyDefinition.Parameters);
-      propertyDefinition.ReturnValueAttributes = this.Rewrite(propertyDefinition.ReturnValueAttributes);
       if (propertyDefinition.ReturnValueIsModified)
         propertyDefinition.ReturnValueCustomModifiers = this.Rewrite(propertyDefinition.ReturnValueCustomModifiers);
       if (propertyDefinition.Setter != null)
@@ -1912,6 +1938,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public virtual void RewriteChildren(Unit unit) {
       this.RewriteChildren((UnitReference)unit);
       unit.PlatformType = this.host.PlatformType;
+      unit.UninterpretedSections = this.Rewrite(unit.UninterpretedSections);
     }
 
     /// <summary>
@@ -1976,9 +2003,9 @@ namespace Microsoft.Cci.MutableCodeModel {
   /// <remarks>While the model is being copied, the resulting model is incomplete and or inconsistent. It should not be traversed
   /// independently nor should any of its computed properties, such as ResolvedType be evaluated. Scenarios that need such functionality
   /// should be implemented by first making a mutable copy of the entire assembly and then running a second pass over the mutable result.
-  /// The new classes MetadataCopier and MutatingVisitor are meant to facilitate such scenarios.
+  /// The new classes MetadataDeepCopier and MetadataRewriter are meant to facilitate such scenarios.
   /// </remarks>
-  [Obsolete("This class has been superceded by MetadataCopier and MutatingVisitor, used in combination. It will go away after June 2011")]
+  [Obsolete("This class has been superceded by MetadataDeepCopier and MetadataRewriter, used in combination. It will go away in the future.")]
   public class MetadataMutator {
 
     /// <summary>
@@ -2977,6 +3004,22 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
       result = new ParameterTypeInformation();
       result.Copy(parameterTypeInformation, this.host.InternFactory);
+      return result;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="peSection"></param>
+    /// <returns></returns>
+    public virtual PESection GetMutableCopy(IPESection peSection) {
+      PESection result = null;
+      if (this.copyOnlyIfNotAlreadyMutable) {
+        result = peSection as PESection;
+        if (result != null) return result;
+      }
+      result = new PESection();
+      result.Copy(peSection, this.host.InternFactory);
       return result;
     }
 
@@ -4242,6 +4285,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.path.Push(module);
       module.AssemblyReferences = this.Visit(module.AssemblyReferences);
       module.Locations = this.Visit(module.Locations);
+      module.UninterpretedSections = this.Visit(module.UninterpretedSections);
       module.ModuleAttributes = this.Visit(module.ModuleAttributes);
       module.ModuleReferences = this.Visit(module.ModuleReferences);
       module.Win32Resources = this.Visit(module.Win32Resources);
@@ -4978,7 +5022,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (propertyDefinition.Getter != null)
         propertyDefinition.Getter = this.Visit(propertyDefinition.Getter);
       propertyDefinition.Parameters = this.Visit(propertyDefinition.Parameters);
-      propertyDefinition.ReturnValueAttributes = this.VisitPropertyReturnValueAttributes(propertyDefinition.ReturnValueAttributes);
       if (propertyDefinition.ReturnValueIsModified)
         propertyDefinition.ReturnValueCustomModifiers = this.Visit(propertyDefinition.ReturnValueCustomModifiers);
       if (propertyDefinition.Setter != null)
@@ -5124,6 +5167,26 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Visits the specified PE sections.
+    /// </summary>
+    /// <param name="peSections">The PE section.</param>
+    public virtual List<IPESection>/*?*/ Visit(List<IPESection>/*?*/ peSections) {
+      if (this.stopTraversal || peSections == null) return peSections;
+      for (int i = 0, n = peSections.Count; i < n; i++)
+        peSections[i] = this.Visit(this.GetMutableCopy(peSections[i]));
+      return peSections;
+    }
+
+    /// <summary>
+    /// Visits the specifed PE section.
+    /// </summary>
+    /// <param name="peSection">The PE section</param>
+    /// <returns></returns>
+    public virtual PESection Visit(PESection peSection) {
+      return peSection;
+    }
+
+    /// <summary>
     /// Visits the specified unit.
     /// </summary>
     /// <param name="unit">The unit.</param>
@@ -5133,6 +5196,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.path.Push(unit);
       unit.Attributes = this.Visit(unit.Attributes);
       unit.Locations = this.Visit(unit.Locations);
+      unit.UninterpretedSections = this.Visit(unit.UninterpretedSections);
       unit.UnitNamespaceRoot = this.Visit(this.GetMutableCopy((IRootUnitNamespace)unit.UnitNamespaceRoot));
       this.path.Pop();
       return unit;
@@ -5201,15 +5265,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <returns></returns>
     public virtual Win32Resource Visit(Win32Resource win32Resource) {
       return win32Resource;
-    }
-
-    /// <summary>
-    /// Visits the property return value attributes.
-    /// </summary>
-    /// <param name="customAttributes">The custom attributes.</param>
-    /// <returns></returns>
-    public virtual List<ICustomAttribute> VisitPropertyReturnValueAttributes(List<ICustomAttribute> customAttributes) {
-      return this.Visit(customAttributes);
     }
 
     /// <summary>
@@ -6972,6 +7027,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.path.Push(module);
       module.AssemblyReferences = this.Mutate(module.AssemblyReferences);
       module.Locations = this.Mutate(module.Locations);
+      module.UninterpretedSections = this.Mutate(module.UninterpretedSections);
       module.ModuleAttributes = this.Mutate(module.ModuleAttributes);
       module.ModuleReferences = this.Mutate(module.ModuleReferences);
       module.Win32Resources = this.Mutate(module.Win32Resources);
@@ -7343,6 +7399,18 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Visits the specified PE sections.
+    /// </summary>
+    /// <param name="peSections">The PE sections.</param>
+    /// <returns></returns>
+    public virtual List<IPESection>/*?*/ Mutate(List<IPESection>/*?*/ peSections) {
+      if (this.stopTraversal || peSections == null) return peSections;
+      for (int i = 0, n = peSections.Count; i < n; i++)
+        peSections[i] = this.Visit(peSections[i]);
+      return peSections;
+    }
+
+    /// <summary>
     /// Visits the specified type definition members.
     /// </summary>
     /// <param name="typeDefinitionMembers">The type definition members.</param>
@@ -7473,7 +7541,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (specializedNestedTypeReference != null)
         return this.Visit(specializedNestedTypeReference);
       // no matter whether this nestedTypeReference is a nested type definition or not, mutate and cache it. 
-      var result =  this.Mutate(nestedTypeReference);
+      var result = this.Mutate(nestedTypeReference);
       this.referenceCache.Add(nestedTypeReference, result);
       if (nestedTypeReference != result)
         this.referenceCache.Add(result, result);
@@ -8255,6 +8323,28 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Visits the (interface) IPESection. We first see if it is a mutable model node, if so, we 
+    /// visit the mutable node. If not, we just return the section.
+    /// </summary>
+    /// <param name="peSection"></param>
+    /// <returns></returns>
+    public virtual IPESection Visit(IPESection peSection) {
+      if (this.stopTraversal) return peSection;
+      var mutable = peSection as PESection;
+      if (mutable != null) return this.Mutate(mutable);
+      return peSection;
+    }
+
+    /// <summary>
+    /// Visits a mutable PE section.
+    /// </summary>
+    /// <param name="peSection">The PE section.</param>
+    /// <returns></returns>
+    public virtual PESection Mutate(PESection peSection) {
+      return peSection;
+    }
+
+    /// <summary>
     /// Visit p/invoke information.
     /// </summary>
     /// <param name="platformInvokeInformation"></param>
@@ -8319,7 +8409,6 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (propertyDefinition.Getter != null)
           this.Visit(propertyDefinition.Getter);
         this.Visit(propertyDefinition.Parameters);
-        this.Visit(propertyDefinition.ReturnValueAttributes);
         if (propertyDefinition.ReturnValueIsModified)
           this.Visit(propertyDefinition.ReturnValueCustomModifiers);
         if (propertyDefinition.Setter != null)
@@ -8345,7 +8434,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (propertyDefinition.Getter != null)
         propertyDefinition.Getter = this.Visit(propertyDefinition.Getter);
       propertyDefinition.Parameters = this.Mutate(propertyDefinition.Parameters);
-      propertyDefinition.ReturnValueAttributes = this.VisitPropertyReturnValueAttributes(propertyDefinition.ReturnValueAttributes);
       if (propertyDefinition.ReturnValueIsModified)
         propertyDefinition.ReturnValueCustomModifiers = this.Mutate(propertyDefinition.ReturnValueCustomModifiers);
       if (propertyDefinition.Setter != null)
@@ -8626,15 +8714,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <returns></returns>
     public virtual IWin32Resource Visit(IWin32Resource win32Resource) {
       return win32Resource;
-    }
-
-    /// <summary>
-    /// Visits the property return value attributes.
-    /// </summary>
-    /// <param name="customAttributes">The custom attributes.</param>
-    /// <returns></returns>
-    public virtual List<ICustomAttribute>/*?*/ VisitPropertyReturnValueAttributes(List<ICustomAttribute>/*?*/ customAttributes) {
-      return this.Mutate(customAttributes);
     }
 
     /// <summary>

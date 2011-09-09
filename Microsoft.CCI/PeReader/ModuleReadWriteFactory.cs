@@ -170,7 +170,7 @@ namespace Microsoft.Cci {
       }
       if (memberModuleList.Count == 0)
         return;
-      assembly.SetMemberModules(new EnumerableArrayWrapper<Module, IModule>(memberModuleList.ToArray(), Dummy.Module));
+      assembly.SetMemberModules(memberModuleList.ToArray());
     }
 
     void LoadedModule(Module module) {

@@ -773,6 +773,7 @@ namespace Microsoft.Cci {
       if (this.stopTraversal) return;
       //^ int oldCount = this.path.Count;
       this.path.Push(module);
+      this.Visit(module.UninterpretedSections);
       this.Visit(module.ModuleAttributes);
       this.Visit(module.AssemblyReferences);
       this.Visit(module.NamespaceRoot);
@@ -1151,6 +1152,29 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// Visits the specified PE sections.
+    /// </summary>
+    /// <param name="peSections">The PE sections.</param>
+    public virtual void Visit(IEnumerable<IPESection> peSections)
+      //^ ensures this.path.Count == old(this.path.Count);
+    {
+      if (this.stopTraversal) return;
+      //^ int oldCount = this.path.Count;
+      foreach (IPESection peSection in peSections) {
+        this.Visit(peSection);
+        if (this.stopTraversal) break;
+      }
+      //^ assume this.path.Count == oldCount; //True because all of the virtual methods of this class promise not decrease this.path.Count.
+    }
+
+    /// <summary>
+    /// Visits the specified PE section.
+    /// </summary>
+    /// <param name="peSection">The PE section.</param>
+    public virtual void Visit(IPESection peSection) {
+    }
+
+    /// <summary>
     /// Visits the specified platform invoke information.
     /// </summary>
     /// <param name="platformInvokeInformation">The platform invoke information.</param>
@@ -1520,6 +1544,7 @@ namespace Microsoft.Cci {
       if (this.stopTraversal) return;
       //^ int oldCount = this.path.Count;
       this.path.Push(unit);
+      this.Visit(unit.UninterpretedSections);
       this.Visit(unit.NamespaceRoot);
       this.Visit(unit.UnitReferences);
       //^ assume this.path.Count == oldCount+1; //True because all of the virtual methods of this class promise not decrease this.path.Count.
@@ -2017,6 +2042,12 @@ namespace Microsoft.Cci {
     /// Performs some computation with the given parameter type information.
     /// </summary>
     public virtual void Visit(IParameterTypeInformation parameterTypeInformation) {
+    }
+
+    /// <summary>
+    /// Performs some computation with the given PE section.
+    /// </summary>
+    public virtual void Visit(IPESection peSection) {
     }
 
     /// <summary>
@@ -2568,6 +2599,12 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// Performs some compuation with the given PE section.
+    /// </summary>
+    public virtual void Visit(IPESection peSection) {
+    }
+
+    /// <summary>
     /// Performs some compuation with the given platoform invoke information.
     /// </summary>
     public virtual void Visit(IPlatformInvokeInformation platformInvokeInformation) {
@@ -3014,6 +3051,10 @@ namespace Microsoft.Cci {
         Contract.Assume(false);
       }
 
+      public void Visit(IPESection peSection) {
+        Contract.Assume(false);
+      }
+
       public void Visit(IPlatformInvokeInformation platformInvokeInformation) {
         Contract.Assume(false);
       }
@@ -3099,6 +3140,7 @@ namespace Microsoft.Cci {
     /// Traverses the array type reference.
     /// </summary>
     public void Traverse(IArrayTypeReference arrayTypeReference) {
+      Contract.Requires(arrayTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(arrayTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(arrayTypeReference); //No need to dispatch. This call is already type specific.
       if (this.stopTraversal) return;
@@ -3111,6 +3153,7 @@ namespace Microsoft.Cci {
     /// Traverses the assembly.
     /// </summary>
     public void Traverse(IAssembly assembly) {
+      Contract.Requires(assembly != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(assembly);
       if (this.stopTraversal) return;
       this.TraverseChildren(assembly);
@@ -3123,6 +3166,7 @@ namespace Microsoft.Cci {
     /// Traverses the assembly reference.
     /// </summary>
     public void Traverse(IAssemblyReference assemblyReference) {
+      Contract.Requires(assemblyReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(assemblyReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(assemblyReference);
       if (this.stopTraversal) return;
@@ -3135,6 +3179,7 @@ namespace Microsoft.Cci {
     /// Traverses the custom attribute.
     /// </summary>
     public void Traverse(ICustomAttribute customAttribute) {
+      Contract.Requires(customAttribute != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(customAttribute);
       if (this.stopTraversal) return;
       this.TraverseChildren(customAttribute);
@@ -3146,6 +3191,7 @@ namespace Microsoft.Cci {
     /// Traverses the custom modifier.
     /// </summary>
     public void Traverse(ICustomModifier customModifier) {
+      Contract.Requires(customModifier != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(customModifier);
       if (this.stopTraversal) return;
       this.TraverseChildren(customModifier);
@@ -3158,6 +3204,7 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="definition"></param>
     public void Traverse(IDefinition definition) {
+      Contract.Requires(definition != null);
       definition.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3165,6 +3212,7 @@ namespace Microsoft.Cci {
     /// Traverses the event definition.
     /// </summary>
     public void Traverse(IEventDefinition eventDefinition) {
+      Contract.Requires(eventDefinition != null);
       //specialized events are simply traversed as if they were normal events
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(eventDefinition);
       if (this.stopTraversal) return;
@@ -3177,6 +3225,7 @@ namespace Microsoft.Cci {
     /// Traverses the field definition.
     /// </summary>
     public void Traverse(IFieldDefinition fieldDefinition) {
+      Contract.Requires(fieldDefinition != null);
       //specialized fields are simply traversed as if they were normal fields
       if (this.preorderVisitor != null) fieldDefinition.Dispatch(this.preorderVisitor);
       if (this.stopTraversal) return;
@@ -3189,6 +3238,7 @@ namespace Microsoft.Cci {
     /// Traverses the field reference.
     /// </summary>
     public void Traverse(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
       fieldReference.DispatchAsReference(this.dispatchingVisitor);
     }
 
@@ -3196,6 +3246,7 @@ namespace Microsoft.Cci {
     /// Traverses the unspecialized field reference.
     /// </summary>
     private void TraverseUnspecialized(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
       Contract.Requires(!(fieldReference is ISpecializedFieldReference));
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(fieldReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(fieldReference);
@@ -3209,6 +3260,7 @@ namespace Microsoft.Cci {
     /// Traverses the file reference.
     /// </summary>
     public void Traverse(IFileReference fileReference) {
+      Contract.Requires(fileReference != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(fileReference);
       if (this.stopTraversal) return;
       this.TraverseChildren(fileReference);
@@ -3220,6 +3272,7 @@ namespace Microsoft.Cci {
     /// Traverses the function pointer type reference.
     /// </summary>
     public void Traverse(IFunctionPointerTypeReference functionPointerTypeReference) {
+      Contract.Requires(functionPointerTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(functionPointerTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(functionPointerTypeReference);
       if (this.stopTraversal) return;
@@ -3232,6 +3285,7 @@ namespace Microsoft.Cci {
     /// Traverses the generic method instance reference.
     /// </summary>
     public void Traverse(IGenericMethodInstanceReference genericMethodInstanceReference) {
+      Contract.Requires(genericMethodInstanceReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(genericMethodInstanceReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(genericMethodInstanceReference);
       if (this.stopTraversal) return;
@@ -3244,6 +3298,7 @@ namespace Microsoft.Cci {
     /// Traverses the generic method parameter.
     /// </summary>
     public void Traverse(IGenericMethodParameter genericMethodParameter) {
+      Contract.Requires(genericMethodParameter != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(genericMethodParameter);
       if (this.stopTraversal) return;
       this.TraverseChildren(genericMethodParameter);
@@ -3255,6 +3310,7 @@ namespace Microsoft.Cci {
     /// Traverses the generic method parameter reference.
     /// </summary>
     public void Traverse(IGenericMethodParameterReference genericMethodParameterReference) {
+      Contract.Requires(genericMethodParameterReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(genericMethodParameterReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(genericMethodParameterReference);
       if (this.stopTraversal) return;
@@ -3267,6 +3323,7 @@ namespace Microsoft.Cci {
     /// Traverses the generic type instance reference.
     /// </summary>
     public void Traverse(IGenericTypeInstanceReference genericTypeInstanceReference) {
+      Contract.Requires(genericTypeInstanceReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(genericTypeInstanceReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(genericTypeInstanceReference);
       if (this.stopTraversal) return;
@@ -3279,6 +3336,7 @@ namespace Microsoft.Cci {
     /// Traverses the generic type parameter.
     /// </summary>
     public void Traverse(IGenericTypeParameter genericTypeParameter) {
+      Contract.Requires(genericTypeParameter != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(genericTypeParameter);
       if (this.stopTraversal) return;
       this.TraverseChildren(genericTypeParameter);
@@ -3290,6 +3348,7 @@ namespace Microsoft.Cci {
     /// Traverses the generic type parameter reference.
     /// </summary>
     public void Traverse(IGenericTypeParameterReference genericTypeParameterReference) {
+      Contract.Requires(genericTypeParameterReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(genericTypeParameterReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(genericTypeParameterReference);
       if (this.stopTraversal) return;
@@ -3302,6 +3361,7 @@ namespace Microsoft.Cci {
     /// Traverses the global field definition.
     /// </summary>
     public void Traverse(IGlobalFieldDefinition globalFieldDefinition) {
+      Contract.Requires(globalFieldDefinition != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(globalFieldDefinition);
       if (this.stopTraversal) return;
       this.TraverseChildren(globalFieldDefinition);
@@ -3313,6 +3373,7 @@ namespace Microsoft.Cci {
     /// Traverses the global method definition.
     /// </summary>
     public void Traverse(IGlobalMethodDefinition globalMethodDefinition) {
+      Contract.Requires(globalMethodDefinition != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(globalMethodDefinition);
       if (this.stopTraversal) return;
       this.TraverseChildren(globalMethodDefinition);
@@ -3324,6 +3385,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified local definition.
     /// </summary>
     public void Traverse(ILocalDefinition localDefinition) {
+      Contract.Requires(localDefinition != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(localDefinition)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(localDefinition);
       if (this.stopTraversal) return;
@@ -3336,6 +3398,7 @@ namespace Microsoft.Cci {
     /// Traverses the managed pointer type reference.
     /// </summary>
     public void Traverse(IManagedPointerTypeReference managedPointerTypeReference) {
+      Contract.Requires(managedPointerTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(managedPointerTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(managedPointerTypeReference);
       if (this.stopTraversal) return;
@@ -3348,6 +3411,7 @@ namespace Microsoft.Cci {
     /// Traverses the marshalling information.
     /// </summary>
     public void Traverse(IMarshallingInformation marshallingInformation) {
+      Contract.Requires(marshallingInformation != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(marshallingInformation);
       if (this.stopTraversal) return;
       this.TraverseChildren(marshallingInformation);
@@ -3359,6 +3423,7 @@ namespace Microsoft.Cci {
     /// Traverses the metadata constant.
     /// </summary>
     public void Traverse(IMetadataConstant constant) {
+      Contract.Requires(constant != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(constant);
       if (this.stopTraversal) return;
       this.TraverseChildren(constant);
@@ -3370,6 +3435,7 @@ namespace Microsoft.Cci {
     /// Traverses the metadata array creation expression.
     /// </summary>
     public void Traverse(IMetadataCreateArray createArray) {
+      Contract.Requires(createArray != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(createArray);
       if (this.stopTraversal) return;
       this.TraverseChildren(createArray);
@@ -3381,6 +3447,7 @@ namespace Microsoft.Cci {
     /// Traverses the metadata expression.
     /// </summary>
     public void Traverse(IMetadataExpression expression) {
+      Contract.Requires(expression != null);
       expression.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3388,6 +3455,7 @@ namespace Microsoft.Cci {
     /// Traverses the metadata named argument expression.
     /// </summary>
     public void Traverse(IMetadataNamedArgument namedArgument) {
+      Contract.Requires(namedArgument != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(namedArgument);
       if (this.stopTraversal) return;
       this.TraverseChildren(namedArgument);
@@ -3399,6 +3467,7 @@ namespace Microsoft.Cci {
     /// Traverses the metadata typeof expression.
     /// </summary>
     public void Traverse(IMetadataTypeOf typeOf) {
+      Contract.Requires(typeOf != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(typeOf);
       if (this.stopTraversal) return;
       this.TraverseChildren(typeOf);
@@ -3410,6 +3479,7 @@ namespace Microsoft.Cci {
     /// Traverses the method body.
     /// </summary>
     public virtual void Traverse(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
       if (!this.TraverseIntoMethodBodies) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(methodBody);
       if (this.stopTraversal) return;
@@ -3422,6 +3492,7 @@ namespace Microsoft.Cci {
     /// Traverses the method definition.
     /// </summary>
     public void Traverse(IMethodDefinition method) {
+      Contract.Requires(method != null);
       if (this.preorderVisitor != null) method.Dispatch(this.preorderVisitor);
       if (this.stopTraversal) return;
       this.TraverseChildren(method);
@@ -3433,6 +3504,7 @@ namespace Microsoft.Cci {
     /// Traverses the method implementation.
     /// </summary>
     public void Traverse(IMethodImplementation methodImplementation) {
+      Contract.Requires(methodImplementation != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(methodImplementation);
       this.Traverse(methodImplementation.ImplementedMethod);
       if (this.stopTraversal) return;
@@ -3445,10 +3517,12 @@ namespace Microsoft.Cci {
     /// Traverses the method reference.
     /// </summary>
     public void Traverse(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
       methodReference.DispatchAsReference(this.dispatchingVisitor);
     }
 
     private void TraverseUnspecialized(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(methodReference)) return;
       if (this.preorderVisitor != null) methodReference.DispatchAsReference(this.preorderVisitor);
       if (this.stopTraversal) return;
@@ -3461,6 +3535,7 @@ namespace Microsoft.Cci {
     /// Traverses the modified type reference.
     /// </summary>
     public void Traverse(IModifiedTypeReference modifiedTypeReference) {
+      Contract.Requires(modifiedTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(modifiedTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(modifiedTypeReference);
       if (this.stopTraversal) return;
@@ -3473,6 +3548,7 @@ namespace Microsoft.Cci {
     /// Traverses the module.
     /// </summary>
     public void Traverse(IModule module) {
+      Contract.Requires(module != null);
       var assembly = module as IAssembly;
       if (assembly != null) {
         this.Traverse(assembly);
@@ -3489,6 +3565,7 @@ namespace Microsoft.Cci {
     /// Traverses the module reference.
     /// </summary>
     public void Traverse(IModuleReference moduleReference) {
+      Contract.Requires(moduleReference != null);
       var assemblyReference = moduleReference as IAssemblyReference;
       if (assemblyReference != null) {
         this.Traverse(assemblyReference);
@@ -3506,6 +3583,7 @@ namespace Microsoft.Cci {
     /// Traverses the alias for a namespace type definition.
     /// </summary>
     public void Traverse(INamespaceAliasForType namespaceAliasForType) {
+      Contract.Requires(namespaceAliasForType != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(namespaceAliasForType);
       if (this.stopTraversal) return;
       this.TraverseChildren(namespaceAliasForType);
@@ -3517,6 +3595,7 @@ namespace Microsoft.Cci {
     /// Traverses the namespace definition.
     /// </summary>
     public void Traverse(INamespaceDefinition namespaceDefinition) {
+      Contract.Requires(namespaceDefinition != null);
       namespaceDefinition.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3524,6 +3603,7 @@ namespace Microsoft.Cci {
     /// Traverses the namespace member.
     /// </summary>
     public void Traverse(INamespaceMember namespaceMember) {
+      Contract.Requires(namespaceMember != null);
       namespaceMember.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3531,6 +3611,7 @@ namespace Microsoft.Cci {
     /// Traverses the namespace type definition.
     /// </summary>
     public void Traverse(INamespaceTypeDefinition namespaceTypeDefinition) {
+      Contract.Requires(namespaceTypeDefinition != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(namespaceTypeDefinition);
       if (this.stopTraversal) return;
       this.TraverseChildren(namespaceTypeDefinition);
@@ -3542,6 +3623,7 @@ namespace Microsoft.Cci {
     /// Traverses the namespace type reference.
     /// </summary>
     public void Traverse(INamespaceTypeReference namespaceTypeReference) {
+      Contract.Requires(namespaceTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(namespaceTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(namespaceTypeReference);
       if (this.stopTraversal) return;
@@ -3554,6 +3636,7 @@ namespace Microsoft.Cci {
     /// Traverses the nested alias for type.
     /// </summary>
     public void Traverse(INestedAliasForType nestedAliasForType) {
+      Contract.Requires(nestedAliasForType != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(nestedAliasForType);
       if (this.stopTraversal) return;
       this.TraverseChildren(nestedAliasForType);
@@ -3565,6 +3648,7 @@ namespace Microsoft.Cci {
     /// Traverses the nested type definition.
     /// </summary>
     public void Traverse(INestedTypeDefinition nestedTypeDefinition) {
+      Contract.Requires(nestedTypeDefinition != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(nestedTypeDefinition);
       if (this.stopTraversal) return;
       this.TraverseChildren(nestedTypeDefinition);
@@ -3576,10 +3660,12 @@ namespace Microsoft.Cci {
     /// Traverses the nested type reference.
     /// </summary>
     public void Traverse(INestedTypeReference nestedTypeReference) {
+      Contract.Requires(nestedTypeReference != null);
       nestedTypeReference.DispatchAsReference(this.dispatchingVisitor);
     }
 
     private void TraverseUnspecialized(INestedTypeReference nestedTypeReference) {
+      Contract.Requires(nestedTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(nestedTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(nestedTypeReference);
       if (this.stopTraversal) return;
@@ -3592,6 +3678,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested unit namespace.
     /// </summary>
     public void Traverse(INestedUnitNamespace nestedUnitNamespace) {
+      Contract.Requires(nestedUnitNamespace != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(nestedUnitNamespace);
       if (this.stopTraversal) return;
       this.TraverseChildren(nestedUnitNamespace);
@@ -3603,6 +3690,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested unit namespace reference.
     /// </summary>
     public void Traverse(INestedUnitNamespaceReference nestedUnitNamespaceReference) {
+      Contract.Requires(nestedUnitNamespaceReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(nestedUnitNamespaceReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(nestedUnitNamespaceReference);
       if (this.stopTraversal) return;
@@ -3615,6 +3703,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested unit set namespace.
     /// </summary>
     public void Traverse(INestedUnitSetNamespace nestedUnitSetNamespace) {
+      Contract.Requires(nestedUnitSetNamespace != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(nestedUnitSetNamespace);
       if (this.stopTraversal) return;
       this.TraverseChildren(nestedUnitSetNamespace);
@@ -3626,6 +3715,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified operation.
     /// </summary>
     public void Traverse(IOperation operation) {
+      Contract.Requires(operation != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(operation);
       if (this.stopTraversal) return;
       this.TraverseChildren(operation);
@@ -3637,6 +3727,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified operation exception information.
     /// </summary>
     public void Traverse(IOperationExceptionInformation operationExceptionInformation) {
+      Contract.Requires(operationExceptionInformation != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(operationExceptionInformation);
       if (this.stopTraversal) return;
       this.TraverseChildren(operationExceptionInformation);
@@ -3648,6 +3739,7 @@ namespace Microsoft.Cci {
     /// Traverses the parameter definition.
     /// </summary>
     public void Traverse(IParameterDefinition parameterDefinition) {
+      Contract.Requires(parameterDefinition != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(parameterDefinition)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(parameterDefinition);
       if (this.stopTraversal) return;
@@ -3660,6 +3752,7 @@ namespace Microsoft.Cci {
     /// Traverses the parameter type information.
     /// </summary>
     public void Traverse(IParameterTypeInformation parameterTypeInformation) {
+      Contract.Requires(parameterTypeInformation != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(parameterTypeInformation);
       if (this.stopTraversal) return;
       this.TraverseChildren(parameterTypeInformation);
@@ -3668,9 +3761,23 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// Traverses the PE section;
+    /// </summary>
+    /// <param name="peSection"></param>
+    public void Traverse(IPESection peSection) {
+      Contract.Requires(peSection != null);
+      if (this.preorderVisitor != null) this.preorderVisitor.Visit(peSection);
+      if (this.stopTraversal) return;
+      this.TraverseChildren(peSection);
+      if (this.stopTraversal) return;
+      if (this.postorderVisitor != null) this.postorderVisitor.Visit(peSection);
+    }
+
+    /// <summary>
     /// Traverses the specified platform invoke information.
     /// </summary>
     public void Traverse(IPlatformInvokeInformation platformInvokeInformation) {
+      Contract.Requires(platformInvokeInformation != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(platformInvokeInformation);
       if (this.stopTraversal) return;
       this.TraverseChildren(platformInvokeInformation);
@@ -3682,6 +3789,7 @@ namespace Microsoft.Cci {
     /// Traverses the pointer type reference.
     /// </summary>
     public void Traverse(IPointerTypeReference pointerTypeReference) {
+      Contract.Requires(pointerTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(pointerTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(pointerTypeReference);
       if (this.stopTraversal) return;
@@ -3694,6 +3802,7 @@ namespace Microsoft.Cci {
     /// Traverses the property definition.
     /// </summary>
     public void Traverse(IPropertyDefinition propertyDefinition) {
+      Contract.Requires(propertyDefinition != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(propertyDefinition)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(propertyDefinition);
       if (this.stopTraversal) return;
@@ -3706,6 +3815,7 @@ namespace Microsoft.Cci {
     /// Traverses the reference to a manifest resource.
     /// </summary>
     public void Traverse(IResourceReference resourceReference) {
+      Contract.Requires(resourceReference != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(resourceReference);
       if (this.stopTraversal) return;
       this.TraverseChildren(resourceReference);
@@ -3717,6 +3827,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified root unit namespace.
     /// </summary>
     public void Traverse(IRootUnitNamespace rootUnitNamespace) {
+      Contract.Requires(rootUnitNamespace != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(rootUnitNamespace);
       if (this.stopTraversal) return;
       this.TraverseChildren(rootUnitNamespace);
@@ -3728,6 +3839,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified root unit set namespace.
     /// </summary>
     public void Traverse(IRootUnitSetNamespace rootUnitSetNamespace) {
+      Contract.Requires(rootUnitSetNamespace != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(rootUnitSetNamespace);
       if (this.stopTraversal) return;
       this.TraverseChildren(rootUnitSetNamespace);
@@ -3739,6 +3851,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified root unit namespace reference.
     /// </summary>
     public void Traverse(IRootUnitNamespaceReference rootUnitNamespaceReference) {
+      Contract.Requires(rootUnitNamespaceReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(rootUnitNamespaceReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(rootUnitNamespaceReference);
       if (this.stopTraversal) return;
@@ -3751,6 +3864,7 @@ namespace Microsoft.Cci {
     /// Traverses the security attribute.
     /// </summary>
     public void Traverse(ISecurityAttribute securityAttribute) {
+      Contract.Requires(securityAttribute != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(securityAttribute);
       if (this.stopTraversal) return;
       this.TraverseChildren(securityAttribute);
@@ -3762,6 +3876,7 @@ namespace Microsoft.Cci {
     /// Traverses the specialized field reference.
     /// </summary>
     public void Traverse(ISpecializedFieldReference specializedFieldReference) {
+      Contract.Requires(specializedFieldReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(specializedFieldReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(specializedFieldReference);
       if (this.stopTraversal) return;
@@ -3774,6 +3889,7 @@ namespace Microsoft.Cci {
     /// Traverses the specialized method reference.
     /// </summary>
     public void Traverse(ISpecializedMethodReference specializedMethodReference) {
+      Contract.Requires(specializedMethodReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(specializedMethodReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(specializedMethodReference);
       if (this.stopTraversal) return;
@@ -3786,6 +3902,7 @@ namespace Microsoft.Cci {
     /// Traverses the specialized method reference.
     /// </summary>
     public void Traverse(ISpecializedNestedTypeReference specializedNestedTypeReference) {
+      Contract.Requires(specializedNestedTypeReference != null);
       if (!this.objectsThatHaveAlreadyBeenTraversed.Add(specializedNestedTypeReference)) return;
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(specializedNestedTypeReference);
       if (this.stopTraversal) return;
@@ -3798,6 +3915,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified type definition.
     /// </summary>
     public void Traverse(ITypeDefinition typeDefinition) {
+      Contract.Requires(typeDefinition != null);
       typeDefinition.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3805,6 +3923,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified type member.
     /// </summary>
     public void Traverse(ITypeDefinitionMember typeMember) {
+      Contract.Requires(typeMember != null);
       typeMember.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3812,6 +3931,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified type reference.
     /// </summary>
     public void Traverse(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
       typeReference.DispatchAsReference(this.dispatchingVisitor);
     }
 
@@ -3819,6 +3939,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified unit namespace definition.
     /// </summary>
     public void Traverse(IUnitNamespace namespaceDefinition) {
+      Contract.Requires(namespaceDefinition != null);
       namespaceDefinition.Dispatch(this.dispatchingVisitor);
     }
 
@@ -3826,6 +3947,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified unit namespace reference.
     /// </summary>
     public void Traverse(IUnitNamespaceReference unitNamespaceReference) {
+      Contract.Requires(unitNamespaceReference != null);
       unitNamespaceReference.DispatchAsReference(this.dispatchingVisitor);
     }
 
@@ -3833,6 +3955,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified unit reference.
     /// </summary>
     public void Traverse(IUnitReference unitReference) {
+      Contract.Requires(unitReference != null);
       unitReference.DispatchAsReference(this.dispatchingVisitor);
     }
 
@@ -3840,6 +3963,7 @@ namespace Microsoft.Cci {
     /// Traverses the Win32 resource.
     /// </summary>
     public void Traverse(IWin32Resource win32Resource) {
+      Contract.Requires(win32Resource != null);
       if (this.preorderVisitor != null) this.preorderVisitor.Visit(win32Resource);
       if (this.stopTraversal) return;
       this.TraverseChildren(win32Resource);
@@ -3851,6 +3975,7 @@ namespace Microsoft.Cci {
     /// Traverses the enumeration of aliases for types.
     /// </summary>
     public void Traverse(IEnumerable<IAliasForType> aliasesForTypes) {
+      Contract.Requires(aliasesForTypes != null);
       foreach (IAliasForType aliasForType in aliasesForTypes) {
         this.Traverse(aliasForType);
         if (this.stopTraversal) return;
@@ -3860,8 +3985,9 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Traverses the enumeration of aliases for types.
     /// </summary>
-    public void Traverse(IEnumerable<IAliasMember> aliasesForTypes) {
-      foreach (IAliasMember aliasMember in aliasesForTypes) {
+    public void Traverse(IEnumerable<IAliasMember> aliasMembers) {
+      Contract.Requires(aliasMembers != null);
+      foreach (IAliasMember aliasMember in aliasMembers) {
         this.Traverse(aliasMember);
         if (this.stopTraversal) return;
       }
@@ -3871,6 +3997,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified assembly references.
     /// </summary>
     public void Traverse(IEnumerable<IAssemblyReference> assemblyReferences) {
+      Contract.Requires(assemblyReferences != null);
       foreach (IAssemblyReference assemblyReference in assemblyReferences) {
         this.Traverse(assemblyReference);
         if (this.stopTraversal) return;
@@ -3881,6 +4008,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified custom attributes.
     /// </summary>
     public void Traverse(IEnumerable<ICustomAttribute> customAttributes) {
+      Contract.Requires(customAttributes != null);
       foreach (ICustomAttribute customAttribute in customAttributes) {
         this.Traverse(customAttribute);
         if (this.stopTraversal) return;
@@ -3891,6 +4019,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified custom modifiers.
     /// </summary>
     public void Traverse(IEnumerable<ICustomModifier> customModifiers) {
+      Contract.Requires(customModifiers != null);
       foreach (ICustomModifier customModifier in customModifiers) {
         this.Traverse(customModifier);
         if (this.stopTraversal) break;
@@ -3901,6 +4030,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified events.
     /// </summary>
     public void Traverse(IEnumerable<IEventDefinition> events) {
+      Contract.Requires(events != null);
       foreach (IEventDefinition eventDef in events) {
         this.Traverse(eventDef);
         if (this.stopTraversal) break;
@@ -3911,6 +4041,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified fields.
     /// </summary>
     public void Traverse(IEnumerable<IFieldDefinition> fields) {
+      Contract.Requires(fields != null);
       foreach (IFieldDefinition field in fields) {
         this.Traverse(field);
         if (this.stopTraversal) break;
@@ -3921,6 +4052,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified file references.
     /// </summary>
     public void Traverse(IEnumerable<IFileReference> fileReferences) {
+      Contract.Requires(fileReferences != null);
       foreach (IFileReference fileReference in fileReferences) {
         this.Traverse(fileReference);
         if (this.stopTraversal) break;
@@ -3931,6 +4063,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified generic parameters.
     /// </summary>
     public void Traverse(IEnumerable<IGenericMethodParameter> genericMethodParameters) {
+      Contract.Requires(genericMethodParameters != null);
       foreach (var genericMethodParameter in genericMethodParameters) {
         this.Traverse(genericMethodParameter);
         if (this.stopTraversal) break;
@@ -3941,6 +4074,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified generic parameters.
     /// </summary>
     public void Traverse(IEnumerable<IGenericTypeParameter> genericTypeParameters) {
+      Contract.Requires(genericTypeParameters != null);
       foreach (var genericTypeParameter in genericTypeParameters) {
         this.Traverse(genericTypeParameter);
         if (this.stopTraversal) break;
@@ -3951,6 +4085,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified local definitions.
     /// </summary>
     public void Traverse(IEnumerable<ILocalDefinition> localDefinitions) {
+      Contract.Requires(localDefinitions != null);
       foreach (ILocalDefinition localDefinition in localDefinitions) {
         this.Traverse(localDefinition);
         if (this.stopTraversal) break;
@@ -3961,6 +4096,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified expressions.
     /// </summary>
     public void Traverse(IEnumerable<IMetadataExpression> expressions) {
+      Contract.Requires(expressions != null);
       foreach (IMetadataExpression expression in expressions) {
         this.Traverse(expression);
         if (this.stopTraversal) break;
@@ -3971,6 +4107,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified named arguments.
     /// </summary>
     public void Traverse(IEnumerable<IMetadataNamedArgument> namedArguments) {
+      Contract.Requires(namedArguments != null);
       foreach (IMetadataNamedArgument namedArgument in namedArguments) {
         this.Traverse(namedArgument);
         if (this.stopTraversal) break;
@@ -3981,6 +4118,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified methods.
     /// </summary>
     public void Traverse(IEnumerable<IMethodDefinition> methods) {
+      Contract.Requires(methods != null);
       foreach (IMethodDefinition method in methods) {
         this.Traverse(method);
         if (this.stopTraversal) break;
@@ -3991,6 +4129,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified method implementations.
     /// </summary>
     public void Traverse(IEnumerable<IMethodImplementation> methodImplementations) {
+      Contract.Requires(methodImplementations != null);
       foreach (IMethodImplementation methodImplementation in methodImplementations) {
         this.Traverse(methodImplementation);
         if (this.stopTraversal) break;
@@ -4001,6 +4140,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified method references.
     /// </summary>
     public void Traverse(IEnumerable<IMethodReference> methodReferences) {
+      Contract.Requires(methodReferences != null);
       foreach (IMethodReference methodReference in methodReferences) {
         this.Traverse(methodReference);
         if (this.stopTraversal) break;
@@ -4011,6 +4151,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified modules.
     /// </summary>
     public void Traverse(IEnumerable<IModule> modules) {
+      Contract.Requires(modules != null);
       foreach (IModule module in modules) {
         this.Traverse(module);
         if (this.stopTraversal) break;
@@ -4021,6 +4162,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified module references.
     /// </summary>
     public void Traverse(IEnumerable<IModuleReference> moduleReferences) {
+      Contract.Requires(moduleReferences != null);
       foreach (IModuleReference moduleReference in moduleReferences) {
         this.Traverse(moduleReference);
         if (this.stopTraversal) break;
@@ -4031,6 +4173,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified named types.
     /// </summary>
     public void Traverse(IEnumerable<INamedTypeDefinition> types) {
+      Contract.Requires(types != null);
       foreach (INamedTypeDefinition type in types) {
         this.Traverse(type);
         if (this.stopTraversal) break;
@@ -4041,6 +4184,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified namespace members.
     /// </summary>
     public void Traverse(IEnumerable<INamespaceMember> namespaceMembers) {
+      Contract.Requires(namespaceMembers != null);
       foreach (INamespaceMember namespaceMember in namespaceMembers) {
         this.Traverse(namespaceMember);
         if (this.stopTraversal) break;
@@ -4051,6 +4195,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested types.
     /// </summary>
     public void Traverse(IEnumerable<INestedTypeDefinition> nestedTypes) {
+      Contract.Requires(nestedTypes != null);
       foreach (INestedTypeDefinition nestedType in nestedTypes) {
         this.Traverse(nestedType);
         if (this.stopTraversal) break;
@@ -4061,6 +4206,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified operations.
     /// </summary>
     public void Traverse(IEnumerable<IOperation> operations) {
+      Contract.Requires(operations != null);
       foreach (IOperation operation in operations) {
         this.Traverse(operation);
         if (this.stopTraversal) break;
@@ -4071,6 +4217,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified operation exception informations.
     /// </summary>
     public void Traverse(IEnumerable<IOperationExceptionInformation> operationExceptionInformations) {
+      Contract.Requires(operationExceptionInformations != null);
       foreach (IOperationExceptionInformation operationExceptionInformation in operationExceptionInformations) {
         this.Traverse(operationExceptionInformation);
         if (this.stopTraversal) break;
@@ -4081,6 +4228,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified parameters.
     /// </summary>
     public void Traverse(IEnumerable<IParameterDefinition> parameters) {
+      Contract.Requires(parameters != null);
       foreach (IParameterDefinition parameter in parameters) {
         this.Traverse(parameter);
         if (this.stopTraversal) break;
@@ -4091,8 +4239,20 @@ namespace Microsoft.Cci {
     /// Traverses the specified parameter type informations.
     /// </summary>
     public void Traverse(IEnumerable<IParameterTypeInformation> parameterTypeInformations) {
+      Contract.Requires(parameterTypeInformations != null);
       foreach (IParameterTypeInformation parameterTypeInformation in parameterTypeInformations) {
         this.Traverse(parameterTypeInformation);
+        if (this.stopTraversal) break;
+      }
+    }
+
+    /// <summary>
+    /// Traverses the specified PE sections.
+    /// </summary>
+    public void Traverse(IEnumerable<IPESection> peSections) {
+      Contract.Requires(peSections != null);
+      foreach (IPESection peSection in peSections) {
+        this.Traverse(peSection);
         if (this.stopTraversal) break;
       }
     }
@@ -4101,6 +4261,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified properties.
     /// </summary>
     public void Traverse(IEnumerable<IPropertyDefinition> properties) {
+      Contract.Requires(properties != null);
       foreach (IPropertyDefinition property in properties) {
         this.Traverse(property);
         if (this.stopTraversal) break;
@@ -4111,6 +4272,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified resource references.
     /// </summary>
     public void Traverse(IEnumerable<IResourceReference> resourceReferences) {
+      Contract.Requires(resourceReferences != null);
       foreach (IResourceReference resourceReference in resourceReferences) {
         this.Traverse(resourceReference);
         if (this.stopTraversal) break;
@@ -4121,6 +4283,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified security attributes.
     /// </summary>
     public void Traverse(IEnumerable<ISecurityAttribute> securityAttributes) {
+      Contract.Requires(securityAttributes != null);
       foreach (ISecurityAttribute securityAttribute in securityAttributes) {
         this.Traverse(securityAttribute);
         if (this.stopTraversal) break;
@@ -4132,6 +4295,7 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <remarks>Not used by the traverser itself.</remarks>
     public void Traverse(IEnumerable<ITypeDefinitionMember> typeMembers) {
+      Contract.Requires(typeMembers != null);
       foreach (ITypeDefinitionMember typeMember in typeMembers) {
         this.Traverse(typeMember);
         if (this.stopTraversal) break;
@@ -4142,6 +4306,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified type references.
     /// </summary>
     public void Traverse(IEnumerable<ITypeReference> typeReferences) {
+      Contract.Requires(typeReferences != null);
       foreach (ITypeReference typeReference in typeReferences) {
         this.Traverse(typeReference);
         if (this.stopTraversal) break;
@@ -4152,6 +4317,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified type references.
     /// </summary>
     public void Traverse(IEnumerable<IWin32Resource> win32Resources) {
+      Contract.Requires(win32Resources != null);
       foreach (IWin32Resource win32Resource in win32Resources) {
         this.Traverse(win32Resource);
         if (this.stopTraversal) break;
@@ -4162,6 +4328,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the alias for type.
     /// </summary>
     public virtual void TraverseChildren(IAliasForType aliasForType) {
+      Contract.Requires(aliasForType != null);
       if (this.stopTraversal) return;
       this.Traverse(aliasForType.AliasedType);
       if (this.stopTraversal) return;
@@ -4174,6 +4341,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the array type reference.
     /// </summary>
     public virtual void TraverseChildren(IArrayTypeReference arrayTypeReference) {
+      Contract.Requires(arrayTypeReference != null);
       this.TraverseChildren((ITypeReference)arrayTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(arrayTypeReference.ElementType);
@@ -4183,6 +4351,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the array type reference.
     /// </summary>
     public virtual void TraverseChildren(IAssembly assembly) {
+      Contract.Requires(assembly != null);
       this.Traverse(assembly.AssemblyAttributes);
       if (this.stopTraversal) return;
       this.Traverse(assembly.ExportedTypes);
@@ -4201,6 +4370,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the assembly reference.
     /// </summary>
     public virtual void TraverseChildren(IAssemblyReference assemblyReference) {
+      Contract.Requires(assemblyReference != null);
       this.TraverseChildren((IModuleReference)assemblyReference);
     }
 
@@ -4208,6 +4378,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the custom attribute.
     /// </summary>
     public virtual void TraverseChildren(ICustomAttribute customAttribute) {
+      Contract.Requires(customAttribute != null);
       this.Traverse(customAttribute.Arguments);
       if (this.stopTraversal) return;
       this.Traverse(customAttribute.Constructor);
@@ -4219,6 +4390,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the custom modifier.
     /// </summary>
     public virtual void TraverseChildren(ICustomModifier customModifier) {
+      Contract.Requires(customModifier != null);
       this.Traverse(customModifier.Modifier);
     }
 
@@ -4226,6 +4398,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the event definition.
     /// </summary>
     public virtual void TraverseChildren(IEventDefinition eventDefinition) {
+      Contract.Requires(eventDefinition != null);
       this.TraverseChildren((ITypeDefinitionMember)eventDefinition);
       if (this.stopTraversal) return;
       this.Traverse(eventDefinition.Accessors);
@@ -4245,6 +4418,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the field definition.
     /// </summary>
     public virtual void TraverseChildren(IFieldDefinition fieldDefinition) {
+      Contract.Requires(fieldDefinition != null);
       this.TraverseChildren((ITypeDefinitionMember)fieldDefinition);
       if (this.stopTraversal) return;
       if (fieldDefinition.IsCompileTimeConstant) {
@@ -4266,6 +4440,10 @@ namespace Microsoft.Cci {
     /// Traverses the children of the field reference.
     /// </summary>
     public virtual void TraverseChildren(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+      //field reference attributes are distinct from field definition attributes. When a definition serves as a reference, the reference is assumed to be unattributed.
+      if (!(fieldReference is IFieldDefinition))
+        this.Traverse(fieldReference.Attributes);
       this.Traverse(fieldReference.ContainingType);
       if (this.stopTraversal) return;
       if (fieldReference.IsModified) {
@@ -4279,6 +4457,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the file reference.
     /// </summary>
     public virtual void TraverseChildren(IFileReference fileReference) {
+      Contract.Requires(fileReference != null);
       //no children
     }
 
@@ -4286,6 +4465,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the function pointer type reference.
     /// </summary>
     public virtual void TraverseChildren(IFunctionPointerTypeReference functionPointerTypeReference) {
+      Contract.Requires(functionPointerTypeReference != null);
       this.TraverseChildren((ITypeReference)functionPointerTypeReference);
       this.Traverse(functionPointerTypeReference.Type);
       if (this.stopTraversal) return;
@@ -4301,6 +4481,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic method instance reference.
     /// </summary>
     public virtual void TraverseChildren(IGenericMethodInstanceReference genericMethodInstanceReference) {
+      Contract.Requires(genericMethodInstanceReference != null);
       this.TraverseChildren((IMethodReference)genericMethodInstanceReference);
       this.Traverse(genericMethodInstanceReference.Attributes);
       if (this.stopTraversal) return;
@@ -4322,6 +4503,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic method parameter.
     /// </summary>
     public virtual void TraverseChildren(IGenericMethodParameter genericMethodParameter) {
+      Contract.Requires(genericMethodParameter != null);
       this.TraverseChildren((IGenericParameter)genericMethodParameter);
     }
 
@@ -4329,6 +4511,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic method parameter reference.
     /// </summary>
     public virtual void TraverseChildren(IGenericMethodParameterReference genericMethodParameterReference) {
+      Contract.Requires(genericMethodParameterReference != null);
       this.TraverseChildren((IGenericParameterReference)genericMethodParameterReference);
       if (this.stopTraversal) return;
       this.Traverse(genericMethodParameterReference.DefiningMethod);
@@ -4338,6 +4521,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic parameter reference.
     /// </summary>
     public virtual void TraverseChildren(IGenericParameterReference genericParameterReference) {
+      Contract.Requires(genericParameterReference != null);
       this.TraverseChildren((ITypeReference)genericParameterReference);
     }
 
@@ -4345,6 +4529,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic parameter.
     /// </summary>
     public virtual void TraverseChildren(IGenericParameter genericParameter) {
+      Contract.Requires(genericParameter != null);
       this.TraverseChildren((INamedTypeDefinition)genericParameter);
       if (this.stopTraversal) return;
       this.Traverse(genericParameter.Constraints);
@@ -4354,6 +4539,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic type instance reference.
     /// </summary>
     public virtual void TraverseChildren(IGenericTypeInstanceReference genericTypeInstanceReference) {
+      Contract.Requires(genericTypeInstanceReference != null);
       this.TraverseChildren((ITypeReference)genericTypeInstanceReference);
       if (this.stopTraversal) return;
       this.Traverse(genericTypeInstanceReference.GenericType);
@@ -4365,6 +4551,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic type parameter.
     /// </summary>
     public virtual void TraverseChildren(IGenericTypeParameter genericTypeParameter) {
+      Contract.Requires(genericTypeParameter != null);
       this.TraverseChildren((IGenericParameter)genericTypeParameter);
     }
 
@@ -4372,6 +4559,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the generic type parameter reference.
     /// </summary>
     public virtual void TraverseChildren(IGenericTypeParameterReference genericTypeParameterReference) {
+      Contract.Requires(genericTypeParameterReference != null);
       this.TraverseChildren((IGenericParameterReference)genericTypeParameterReference);
       if (this.stopTraversal) return;
       this.Traverse(genericTypeParameterReference.DefiningType);
@@ -4381,6 +4569,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the global field definition.
     /// </summary>
     public virtual void TraverseChildren(IGlobalFieldDefinition globalFieldDefinition) {
+      Contract.Requires(globalFieldDefinition != null);
       this.TraverseChildren((IFieldDefinition)globalFieldDefinition);
     }
 
@@ -4388,6 +4577,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the global method definition.
     /// </summary>
     public virtual void TraverseChildren(IGlobalMethodDefinition globalMethodDefinition) {
+      Contract.Requires(globalMethodDefinition != null);
       this.TraverseChildren((IMethodDefinition)globalMethodDefinition);
     }
 
@@ -4395,6 +4585,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the specified local definition.
     /// </summary>
     public virtual void TraverseChildren(ILocalDefinition localDefinition) {
+      Contract.Requires(localDefinition != null);
       if (localDefinition.IsConstant)
         this.Traverse(localDefinition.CompileTimeValue);
       if (localDefinition.IsModified)
@@ -4407,6 +4598,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the managed pointer type reference.
     /// </summary>
     public virtual void TraverseChildren(IManagedPointerTypeReference managedPointerTypeReference) {
+      Contract.Requires(managedPointerTypeReference != null);
       this.TraverseChildren((ITypeReference)managedPointerTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(managedPointerTypeReference.TargetType);
@@ -4416,6 +4608,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the marshalling information.
     /// </summary>
     public virtual void TraverseChildren(IMarshallingInformation marshallingInformation) {
+      Contract.Requires(marshallingInformation != null);
       if (marshallingInformation.UnmanagedType == System.Runtime.InteropServices.UnmanagedType.CustomMarshaler) {
         this.Traverse(marshallingInformation.CustomMarshaller);
         if (this.stopTraversal) return;
@@ -4431,6 +4624,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the metadata constant.
     /// </summary>
     public virtual void TraverseChildren(IMetadataConstant constant) {
+      Contract.Requires(constant != null);
       this.TraverseChildren((IMetadataExpression)constant);
     }
 
@@ -4438,6 +4632,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the metadata array creation expression.
     /// </summary>
     public virtual void TraverseChildren(IMetadataCreateArray createArray) {
+      Contract.Requires(createArray != null);
       this.TraverseChildren((IMetadataExpression)createArray);
       if (this.stopTraversal) return;
       this.Traverse(createArray.ElementType);
@@ -4449,6 +4644,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the metadata expression.
     /// </summary>
     public virtual void TraverseChildren(IMetadataExpression expression) {
+      Contract.Requires(expression != null);
       this.Traverse(expression.Type);
     }
 
@@ -4456,6 +4652,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the metadata named argument expression.
     /// </summary>
     public virtual void TraverseChildren(IMetadataNamedArgument namedArgument) {
+      Contract.Requires(namedArgument != null);
       this.TraverseChildren((IMetadataExpression)namedArgument);
       if (this.stopTraversal) return;
       this.Traverse(namedArgument.ArgumentValue);
@@ -4465,6 +4662,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the metadata typeof expression.
     /// </summary>
     public virtual void TraverseChildren(IMetadataTypeOf typeOf) {
+      Contract.Requires(typeOf != null);
       this.TraverseChildren((IMetadataExpression)typeOf);
       if (this.stopTraversal) return;
       this.Traverse(typeOf.TypeToGet);
@@ -4474,6 +4672,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the method body.
     /// </summary>
     public virtual void TraverseChildren(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
       this.Traverse(methodBody.LocalVariables);
       if (this.stopTraversal) return;
       this.Traverse(methodBody.Operations);
@@ -4485,6 +4684,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the method definition.
     /// </summary>
     public virtual void TraverseChildren(IMethodDefinition method) {
+      Contract.Requires(method != null);
       this.TraverseChildren((ITypeDefinitionMember)method);
       if (this.stopTraversal) return;
       this.Traverse(method.ReturnValueAttributes);
@@ -4516,6 +4716,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the method implementation.
     /// </summary>
     public virtual void TraverseChildren(IMethodImplementation methodImplementation) {
+      Contract.Requires(methodImplementation != null);
       this.Traverse(methodImplementation.ImplementedMethod);
       if (this.stopTraversal) return;
       this.Traverse(methodImplementation.ImplementingMethod);
@@ -4525,7 +4726,10 @@ namespace Microsoft.Cci {
     /// Traverses the children of the method reference.
     /// </summary>
     public virtual void TraverseChildren(IMethodReference methodReference) {
-      this.Traverse(methodReference.Attributes);
+      Contract.Requires(methodReference != null);
+      //method reference attributes are distinct from method definition attributes. When a definition serves as a reference, the reference is assumed to be unattributed.
+      if (!(methodReference is IMethodDefinition))
+        this.Traverse(methodReference.Attributes);
       if (this.stopTraversal) return;
       this.Traverse(methodReference.ContainingType);
       if (this.stopTraversal) return;
@@ -4545,6 +4749,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the modified type reference.
     /// </summary>
     public virtual void TraverseChildren(IModifiedTypeReference modifiedTypeReference) {
+      Contract.Requires(modifiedTypeReference != null);
       this.TraverseChildren((ITypeReference)modifiedTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(modifiedTypeReference.CustomModifiers);
@@ -4556,6 +4761,9 @@ namespace Microsoft.Cci {
     /// Traverses the children of the module.
     /// </summary>
     public virtual void TraverseChildren(IModule module) {
+      Contract.Requires(module != null);
+      this.Traverse(module.UninterpretedSections);
+      if (this.stopTraversal) return;
       this.Traverse(module.ModuleAttributes);
       if (this.stopTraversal) return;
       this.Traverse(module.AssemblyReferences);
@@ -4571,6 +4779,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the module reference.
     /// </summary>
     public virtual void TraverseChildren(IModuleReference moduleReference) {
+      Contract.Requires(moduleReference != null);
       this.TraverseChildren((IUnitReference)moduleReference);
     }
 
@@ -4578,6 +4787,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the named type definition.
     /// </summary>
     public virtual void TraverseChildren(INamedTypeDefinition namedTypeDefinition) {
+      Contract.Requires(namedTypeDefinition != null);
       this.TraverseChildren((ITypeDefinition)namedTypeDefinition);
     }
 
@@ -4585,6 +4795,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the namespace alias for type.
     /// </summary>
     public virtual void TraverseChildren(INamespaceAliasForType namespaceAliasForType) {
+      Contract.Requires(namespaceAliasForType != null);
       this.TraverseChildren((IAliasForType)namespaceAliasForType);
     }
 
@@ -4592,6 +4803,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified namespace definition.
     /// </summary>
     public virtual void TraverseChildren(INamespaceDefinition namespaceDefinition) {
+      Contract.Requires(namespaceDefinition != null);
       this.Traverse(namespaceDefinition.Members);
     }
 
@@ -4599,6 +4811,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the namespace type definition.
     /// </summary>
     public virtual void TraverseChildren(INamespaceTypeDefinition namespaceTypeDefinition) {
+      Contract.Requires(namespaceTypeDefinition != null);
       this.TraverseChildren((INamedTypeDefinition)namespaceTypeDefinition);
     }
 
@@ -4606,6 +4819,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the namespace type reference.
     /// </summary>
     public virtual void TraverseChildren(INamespaceTypeReference namespaceTypeReference) {
+      Contract.Requires(namespaceTypeReference != null);
       this.TraverseChildren((ITypeReference)namespaceTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(namespaceTypeReference.ContainingUnitNamespace);
@@ -4615,6 +4829,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the nested alias for type.
     /// </summary>
     public virtual void TraverseChildren(INestedAliasForType nestedAliasForType) {
+      Contract.Requires(nestedAliasForType != null);
       this.TraverseChildren((IAliasForType)nestedAliasForType);
     }
 
@@ -4622,6 +4837,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the nested type definition.
     /// </summary>
     public virtual void TraverseChildren(INestedTypeDefinition nestedTypeDefinition) {
+      Contract.Requires(nestedTypeDefinition != null);
       this.TraverseChildren((INamedTypeDefinition)nestedTypeDefinition);
     }
 
@@ -4629,6 +4845,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the nested type reference.
     /// </summary>
     public virtual void TraverseChildren(INestedTypeReference nestedTypeReference) {
+      Contract.Requires(nestedTypeReference != null);
       this.TraverseChildren((ITypeReference)nestedTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(nestedTypeReference.ContainingType);
@@ -4639,6 +4856,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested unit namespace.
     /// </summary>
     public virtual void TraverseChildren(INestedUnitNamespace nestedUnitNamespace) {
+      Contract.Requires(nestedUnitNamespace != null);
       this.TraverseChildren((IUnitNamespace)nestedUnitNamespace);
     }
 
@@ -4646,6 +4864,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested unit namespace reference.
     /// </summary>
     public virtual void TraverseChildren(INestedUnitNamespaceReference nestedUnitNamespaceReference) {
+      Contract.Requires(nestedUnitNamespaceReference != null);
       this.TraverseChildren((IUnitNamespaceReference)nestedUnitNamespaceReference);
     }
 
@@ -4653,6 +4872,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified nested unit namespace.
     /// </summary>
     public virtual void TraverseChildren(INestedUnitSetNamespace nestedUnitSetNamespace) {
+      Contract.Requires(nestedUnitSetNamespace != null);
       this.TraverseChildren((IUnitSetNamespace)nestedUnitSetNamespace);
     }
 
@@ -4660,6 +4880,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified operation.
     /// </summary>
     public virtual void TraverseChildren(IOperation operation) {
+      Contract.Requires(operation != null);
       ITypeReference/*?*/ typeReference = operation.Value as ITypeReference;
       if (typeReference != null)
         this.Traverse(typeReference);
@@ -4689,6 +4910,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified operation exception information.
     /// </summary>
     public virtual void TraverseChildren(IOperationExceptionInformation operationExceptionInformation) {
+      Contract.Requires(operationExceptionInformation != null);
       if (operationExceptionInformation.HandlerKind == HandlerKind.Catch || operationExceptionInformation.HandlerKind == HandlerKind.Filter)
         this.Traverse(operationExceptionInformation.ExceptionType);
     }
@@ -4697,6 +4919,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the parameter definition.
     /// </summary>
     public virtual void TraverseChildren(IParameterDefinition parameterDefinition) {
+      Contract.Requires(parameterDefinition != null);
       this.Traverse(parameterDefinition.Attributes);
       if (this.stopTraversal) return;
       if (parameterDefinition.IsModified) {
@@ -4718,6 +4941,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the parameter type information.
     /// </summary>
     public virtual void TraverseChildren(IParameterTypeInformation parameterTypeInformation) {
+      Contract.Requires(parameterTypeInformation != null);
       if (parameterTypeInformation.IsModified) {
         this.Traverse(parameterTypeInformation.CustomModifiers);
         if (this.stopTraversal) return;
@@ -4726,9 +4950,17 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// Traverses the children of the PE section.
+    /// </summary>
+    public virtual void TraverseChildren(IPESection peSection) {
+      Contract.Requires(peSection != null);
+    }
+
+    /// <summary>
     /// Traverses the specified platform invoke information.
     /// </summary>
     public virtual void TraverseChildren(IPlatformInvokeInformation platformInvokeInformation) {
+      Contract.Requires(platformInvokeInformation != null);
       this.Traverse(platformInvokeInformation.ImportModule);
     }
 
@@ -4736,6 +4968,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the pointer type reference.
     /// </summary>
     public virtual void TraverseChildren(IPointerTypeReference pointerTypeReference) {
+      Contract.Requires(pointerTypeReference != null);
       this.TraverseChildren((ITypeReference)pointerTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(pointerTypeReference.TargetType);
@@ -4745,6 +4978,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the property definition.
     /// </summary>
     public virtual void TraverseChildren(IPropertyDefinition propertyDefinition) {
+      Contract.Requires(propertyDefinition != null);
       this.TraverseChildren((ITypeDefinitionMember)propertyDefinition);
       if (this.stopTraversal) return;
       this.Traverse(propertyDefinition.Accessors);
@@ -4759,7 +4993,6 @@ namespace Microsoft.Cci {
       }
       this.Traverse(propertyDefinition.Parameters);
       if (this.stopTraversal) return;
-      this.Traverse(propertyDefinition.ReturnValueAttributes);
       if (this.stopTraversal) return;
       if (propertyDefinition.Setter != null)
         this.Traverse(propertyDefinition.Setter);
@@ -4769,6 +5002,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the reference to a manifest resource.
     /// </summary>
     public virtual void TraverseChildren(IResourceReference resourceReference) {
+      Contract.Requires(resourceReference != null);
       this.Traverse(resourceReference.Attributes);
       if (this.stopTraversal) return;
       this.Traverse(resourceReference.DefiningAssembly);
@@ -4778,6 +5012,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified root unit namespace.
     /// </summary>
     public virtual void TraverseChildren(IRootUnitNamespace rootUnitNamespace) {
+      Contract.Requires(rootUnitNamespace != null);
       this.TraverseChildren((IUnitNamespace)rootUnitNamespace);
     }
 
@@ -4785,6 +5020,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified root unit namespace.
     /// </summary>
     public virtual void TraverseChildren(IRootUnitSetNamespace rootUnitSetNamespace) {
+      Contract.Requires(rootUnitSetNamespace != null);
       this.TraverseChildren((IUnitSetNamespace)rootUnitSetNamespace);
     }
 
@@ -4792,6 +5028,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified root unit namespace reference.
     /// </summary>
     public virtual void TraverseChildren(IRootUnitNamespaceReference rootUnitNamespaceReference) {
+      Contract.Requires(rootUnitNamespaceReference != null);
       this.TraverseChildren((IUnitNamespaceReference)rootUnitNamespaceReference);
     }
 
@@ -4799,6 +5036,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the security attribute.
     /// </summary>
     public virtual void TraverseChildren(ISecurityAttribute securityAttribute) {
+      Contract.Requires(securityAttribute != null);
       this.Traverse(securityAttribute.Attributes);
     }
 
@@ -4806,6 +5044,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the specialized field reference.
     /// </summary>
     public virtual void TraverseChildren(ISpecializedFieldReference specializedFieldReference) {
+      Contract.Requires(specializedFieldReference != null);
       this.TraverseChildren((IFieldReference)specializedFieldReference);
       if (this.stopTraversal) return;
       this.Traverse(specializedFieldReference.UnspecializedVersion);
@@ -4815,6 +5054,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the specialized method reference.
     /// </summary>
     public virtual void TraverseChildren(ISpecializedMethodReference specializedMethodReference) {
+      Contract.Requires(specializedMethodReference != null);
       this.TraverseChildren((IMethodReference)specializedMethodReference);
       if (this.stopTraversal) return;
       this.Traverse(specializedMethodReference.UnspecializedVersion);
@@ -4824,6 +5064,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the specialized nested type reference.
     /// </summary>
     public virtual void TraverseChildren(ISpecializedNestedTypeReference specializedNestedTypeReference) {
+      Contract.Requires(specializedNestedTypeReference != null);
       this.TraverseChildren((INestedTypeReference)specializedNestedTypeReference);
       if (this.stopTraversal) return;
       this.Traverse(specializedNestedTypeReference.UnspecializedVersion);
@@ -4833,6 +5074,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified type definition.
     /// </summary>
     public virtual void TraverseChildren(ITypeDefinition typeDefinition) {
+      Contract.Requires(typeDefinition != null);
       this.Traverse(typeDefinition.Attributes);
       if (this.stopTraversal) return;
       this.Traverse(typeDefinition.BaseClasses);
@@ -4867,6 +5109,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the type definition member.
     /// </summary>
     public virtual void TraverseChildren(ITypeDefinitionMember typeMember) {
+      Contract.Requires(typeMember != null);
       this.Traverse(typeMember.Attributes);
     }
 
@@ -4874,6 +5117,7 @@ namespace Microsoft.Cci {
     /// Traverses the children of the specified type reference.
     /// </summary>
     public virtual void TraverseChildren(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
       //type reference attributes are distinct from type definition attributes. When a definition serves as a reference, the reference is assumed to be unattributed.
       if (!(typeReference is ITypeDefinition))
         this.Traverse(typeReference.Attributes);
@@ -4883,6 +5127,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified unit namespace definition.
     /// </summary>
     public virtual void TraverseChildren(IUnitNamespace namespaceDefinition) {
+      Contract.Requires(namespaceDefinition != null);
       this.TraverseChildren((INamespaceDefinition)namespaceDefinition);
     }
 
@@ -4890,6 +5135,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified unit namespace definition.
     /// </summary>
     public virtual void TraverseChildren(IUnitSetNamespace unitSetNamespace) {
+      Contract.Requires(unitSetNamespace != null);
       this.TraverseChildren((INamespaceDefinition)unitSetNamespace);
     }
 
@@ -4897,6 +5143,7 @@ namespace Microsoft.Cci {
     /// Traverses the specified unit namespace reference.
     /// </summary>
     public virtual void TraverseChildren(IUnitNamespaceReference unitNamespaceReference) {
+      Contract.Requires(unitNamespaceReference != null);
       this.Traverse(unitNamespaceReference.Unit);
     }
 
@@ -4904,13 +5151,17 @@ namespace Microsoft.Cci {
     /// Traverses the children of the unit reference.
     /// </summary>
     public virtual void TraverseChildren(IUnitReference unitReference) {
-      //no children to traverse
+      Contract.Requires(unitReference != null);
+      //unit reference attributes are distinct from unit definition attributes. When a definition serves as a reference, the reference is assumed to be unattributed.
+      if (!(unitReference is IUnit))
+        this.Traverse(unitReference.Attributes);
     }
 
     /// <summary>
     /// Traverses the children of the Win32 resource.
     /// </summary>
     public virtual void TraverseChildren(IWin32Resource win32Resource) {
+      Contract.Requires(win32Resource != null);
       //no children to traverse
     }
 
@@ -4918,6 +5169,7 @@ namespace Microsoft.Cci {
     /// Traverses any attributes that describe how the namespace type definition implements its interfaces.
     /// </summary>
     public virtual void TraverseInterfaceImplementationAttributes(INamespaceTypeDefinition namespaceTypeDefinition) {
+      Contract.Requires(namespaceTypeDefinition != null);
       foreach (var iface in namespaceTypeDefinition.Interfaces) {
         this.Traverse(namespaceTypeDefinition.AttributesFor(iface));
         if (this.stopTraversal) break;

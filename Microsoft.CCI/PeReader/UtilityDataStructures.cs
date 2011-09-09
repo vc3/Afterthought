@@ -102,9 +102,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
     #endregion
   }
 
-  internal sealed class EnumberableMemoryBlockWrapper : IEnumerable<byte> {
+  internal sealed class EnumerableMemoryBlockWrapper : IEnumerable<byte> {
     internal readonly MemoryBlock MemBlock;
-    internal EnumberableMemoryBlockWrapper(
+    internal EnumerableMemoryBlockWrapper(
       MemoryBlock memBlock
     ) {
       this.MemBlock = memBlock;

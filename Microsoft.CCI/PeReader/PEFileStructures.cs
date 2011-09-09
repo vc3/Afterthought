@@ -874,6 +874,18 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     internal Characteristics Characteristics;
   }
 
+  internal class PeDebugDirectory {
+    public uint Characteristics;
+    public uint TimeDateStamp;
+    public ushort MajorVersion;
+    public ushort MinorVersion;
+    public uint Type;
+    public uint SizeOfData;
+    public uint AddressOfRawData;
+    public uint PointerToRawData;
+    public byte[] Data;
+  }
+
   internal struct OptionalHeaderStandardFields {
     internal PEMagic PEMagic;
     internal byte MajorLinkerVersion;

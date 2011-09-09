@@ -33,7 +33,7 @@ namespace Microsoft.Cci {
     List<Operation> operations = new List<Operation>();
     List<ILocalScope>/*?*/ iteratorScopes;
     List<ILGeneratorScope> scopes = new List<ILGeneratorScope>();
-    Stack<ILGeneratorScope> scopeStack = new Stack<ILGeneratorScope>(); //TODO: write own stack so that dependecy on System.dll can go.
+    Stack<ILGeneratorScope> scopeStack = new Stack<ILGeneratorScope>();
     Stack<TryBody> tryBodyStack = new Stack<TryBody>();
 
     /// <summary>
@@ -64,6 +64,27 @@ namespace Microsoft.Cci {
       //^ requires local.MethodDefinition == this.method;
       if (this.scopeStack.Count == 0) this.BeginScope();
       this.scopeStack.Peek().locals.Add(local);
+    }
+
+    /// <summary>
+    /// Adds an exception handler entry to the generated body. This intended for IL rewriting scenarios and should not be used in conjunction with methods such as BeginCatchBlock,
+    /// which are intended for CodeModel to IL generation scenarios. The calls to AddExceptionHandler should result in a list of handlers that 
+    /// satisfies CLI rules with respect to ordering and nesting.
+    /// </summary>
+    /// <param name="kind">The kind of handler being added.</param>
+    /// <param name="exceptionType">The type of exception this handler will handle (may be Dummy.TypeReference).</param>
+    /// <param name="tryStart">A label identifying the first instruction in the try body.</param>
+    /// <param name="tryEnd">A label identifying the first instruction following the try body.</param>
+    /// <param name="handlerStart">A label identifying the first instruction in the handler body.</param>
+    /// <param name="handlerEnd">A label identifying the first instruction following the handler body.</param>
+    /// <param name="filterStart">A label identifying the first instruction of the filter decision block. May be null.</param>
+    public void AddExceptionHandlerInformation(HandlerKind kind, ITypeReference exceptionType, ILGeneratorLabel tryStart, ILGeneratorLabel tryEnd,
+      ILGeneratorLabel handlerStart, ILGeneratorLabel handlerEnd, ILGeneratorLabel/*?*/ filterStart) {
+      var handler = new ExceptionHandler() {
+        Kind = kind, ExceptionType = exceptionType, TryStart = tryStart, TryEnd = tryEnd,
+        HandlerStart = handlerStart, HandlerEnd = handlerEnd, FilterDecisionStart = filterStart
+      };
+      this.handlers.Add(handler);
     }
 
     /// <summary>
@@ -257,6 +278,68 @@ namespace Microsoft.Cci {
       }
       this.operations.Add(new Operation(opcode, this.offset, loc, null));
       this.offset += SizeOfOperationCode(opcode);
+    }
+
+    /// <summary>
+    /// Calls a type specific overload of Emit, based on the runtime type of the given object. Use this when copying IL operations.
+    /// </summary>
+    /// <param name="opcode">The Intermediate Language (IL) instruction to be put onto the stream.</param>
+    /// <param name="value">An argument that parameterizes the IL instruction at compile time (not a runtime operand for the instruction).</param>
+    public void Emit(OperationCode opcode, object value) {
+      switch (System.Convert.GetTypeCode(value)) {
+        case TypeCode.Byte: this.Emit(opcode, (byte)value); break;
+        case TypeCode.Double: this.Emit(opcode, (double)value); break;
+        case TypeCode.Single: this.Emit(opcode, (float)value); break;
+        case TypeCode.Int32: this.Emit(opcode, (int)value); break;
+        case TypeCode.Int64: this.Emit(opcode, (long)value); break;
+        case TypeCode.SByte: this.Emit(opcode, (sbyte)value); break;
+        case TypeCode.Int16: this.Emit(opcode, (short)value); break;
+        case TypeCode.String: this.Emit(opcode, (string)value); break;
+        case TypeCode.Empty: this.Emit(opcode); break;
+
+        default:
+          var fieldReference = value as IFieldReference;
+          if (fieldReference != null) {
+            this.Emit(opcode, fieldReference);
+            break;
+          }
+          var label = value as ILGeneratorLabel;
+          if (label != null) {
+            this.Emit(opcode, label);
+            break;
+          }
+          var labels = value as ILGeneratorLabel[];
+          if (labels != null) {
+            this.Emit(opcode, labels);
+            break;
+          }
+          var local = value as ILocalDefinition;
+          if (local != null) {
+            this.Emit(opcode, local);
+            break;
+          }
+          var meth = value as IMethodReference;
+          if (meth != null) {
+            this.Emit(opcode, meth);
+            break;
+          }
+          var param = value as IParameterDefinition;
+          if (param != null) {
+            this.Emit(opcode, param);
+            break;
+          }
+          var sig = value as ISignature;
+          if (sig != null) {
+            this.Emit(opcode, sig);
+            break;
+          }
+          var type = value as ITypeReference;
+          if (type != null) {
+            this.Emit(opcode, type);
+            break;
+          }
+          throw new InvalidOperationException();
+      }
     }
 
     /// <summary>
@@ -746,24 +829,29 @@ namespace Microsoft.Cci {
 
   internal class ExceptionHandler : IOperationExceptionInformation {
 
+    internal ExceptionHandler() {
+    }
+
     internal ExceptionHandler(HandlerKind kind, TryBody tryBlock, ILGeneratorLabel handlerStart) {
       this.ExceptionType = Dummy.TypeReference;
-      this.kind = kind;
+      this.Kind = kind;
       this.HandlerStart = handlerStart;
       this.tryBlock = tryBlock;
     }
 
+    internal HandlerKind Kind;
     internal ITypeReference ExceptionType;
-    internal ILGeneratorLabel FilterDecisionStart;
+    internal ILGeneratorLabel/*?*/ TryStart;
+    internal ILGeneratorLabel/*?*/ TryEnd;
     internal ILGeneratorLabel HandlerEnd;
     internal ILGeneratorLabel HandlerStart;
-    readonly HandlerKind kind;
-    readonly TryBody tryBlock;
+    internal ILGeneratorLabel/*?*/ FilterDecisionStart;
+    TryBody/*?*/ tryBlock;
 
     #region IOperationExceptionInformation Members
 
     HandlerKind IOperationExceptionInformation.HandlerKind {
-      get { return this.kind; }
+      get { return this.Kind; }
     }
 
     ITypeReference IOperationExceptionInformation.ExceptionType {
@@ -771,11 +859,17 @@ namespace Microsoft.Cci {
     }
 
     uint IOperationExceptionInformation.TryStartOffset {
-      get { return this.tryBlock.start.Offset; }
+      get {
+        if (this.TryStart != null) return this.TryStart.Offset;
+        return this.tryBlock.start.Offset;
+      }
     }
 
     uint IOperationExceptionInformation.TryEndOffset {
-      get { return this.tryBlock.end.Offset; }
+      get {
+        if (this.TryEnd != null) return this.TryEnd.Offset;
+        return this.tryBlock.end.Offset;
+      }
     }
 
     uint IOperationExceptionInformation.FilterDecisionStartOffset {
@@ -1126,6 +1220,31 @@ namespace Microsoft.Cci {
     }
     readonly IName namespaceName;
 
+  }
+
+  internal class Stack<T> {
+
+    T[] elements = new T[16];
+
+    internal int Count { get; set; }
+
+    internal T Peek() {
+      return this.elements[this.Count-1];
+    }
+
+    internal T Pop() {
+      var i = this.Count-1;
+      this.Count = i;
+      return this.elements[i];
+    }
+
+    internal void Push(T element) {
+      if (this.Count == this.elements.Length)
+        Array.Resize(ref this.elements, this.elements.Length*2);
+      var i = this.Count;
+      this.Count = i+1;
+      this.elements[i] = element;
+    }
   }
 
 }

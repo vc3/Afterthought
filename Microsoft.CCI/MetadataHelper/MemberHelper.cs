@@ -203,6 +203,7 @@ namespace Microsoft.Cci {
       Contract.Ensures(Contract.ForAll(Contract.Result<IEnumerable<IMethodDefinition>>(), x => x != null));
 
       if (!implementingMethod.IsVirtual) yield break;
+      if (implementingMethod.Visibility != TypeMemberVisibility.Public) yield break;
       if (implementingMethod.ContainingTypeDefinition.IsInterface) yield break;
       List<uint> explicitImplementations = null;
       foreach (IMethodImplementation methodImplementation in implementingMethod.ContainingTypeDefinition.ExplicitImplementationOverrides) {
@@ -403,29 +404,31 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Returns true if the two signatures match according to the criteria of the CLR loader.
     /// </summary>
-    public static bool SignaturesAreEqual(ISignature signature1, ISignature signature2) {
+    public static bool SignaturesAreEqual(ISignature signature1, ISignature signature2, bool resolveTypes = false) {
       Contract.Requires(signature1 != null);
       Contract.Requires(signature2 != null);
 
       if (signature1.CallingConvention != signature2.CallingConvention) return false;
       if (signature1.ReturnValueIsByRef != signature2.ReturnValueIsByRef) return false;
       if (signature1.ReturnValueIsModified != signature2.ReturnValueIsModified) return false;
-      if (!TypeHelper.TypesAreEquivalent(signature1.Type, signature2.Type)) return false;
-      return IteratorHelper.EnumerablesAreEqual(signature1.Parameters, signature2.Parameters, ParameterInformationComparer);
+      if (!TypeHelper.TypesAreEquivalent(signature1.Type, signature2.Type, resolveTypes)) return false;
+      return IteratorHelper.EnumerablesAreEqual(signature1.Parameters, signature2.Parameters,
+        resolveTypes ? ResolvingParameterInformationComparer : ParameterInformationComparer);
     }
 
     /// <summary>
     /// Returns true if the two generic method signatures match according to the criteria of the CLR loader.
     /// </summary>
-    public static bool GenericMethodSignaturesAreEqual(ISignature method1, ISignature method2) {
+    public static bool GenericMethodSignaturesAreEqual(ISignature method1, ISignature method2, bool resolveTypes = false) {
       Contract.Requires(method1 != null);
       Contract.Requires(method2 != null);
 
       if (method1.CallingConvention != method2.CallingConvention) return false;
       if (method1.ReturnValueIsByRef != method2.ReturnValueIsByRef) return false;
       if (method1.ReturnValueIsModified != method2.ReturnValueIsModified) return false;
-      if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(method1.Type, method2.Type)) return false;
-      return IteratorHelper.EnumerablesAreEqual(method1.Parameters, method2.Parameters, GenericMethodParameterEqualityComparer);
+      if (!TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(method1.Type, method2.Type, resolveTypes)) return false;
+      return IteratorHelper.EnumerablesAreEqual(method1.Parameters, method2.Parameters,
+        resolveTypes ? ResolvingGenericMethodParameterEqualityComparer : GenericMethodParameterEqualityComparer);
     }
 
     /// <summary>
@@ -434,9 +437,19 @@ namespace Microsoft.Cci {
     public readonly static GenericMethodParameterInformationComparer GenericMethodParameterEqualityComparer = new GenericMethodParameterInformationComparer();
 
     /// <summary>
+    /// A static instance of type GenericMethodParameterInformationComparer, which will resolve types if necessary.
+    /// </summary>
+    public readonly static GenericMethodParameterInformationComparer ResolvingGenericMethodParameterEqualityComparer = new GenericMethodParameterInformationComparer(true);
+
+    /// <summary>
     /// A static instance of type ParameterInformationComparer.
     /// </summary>
     public readonly static ParameterInformationComparer ParameterInformationComparer = new ParameterInformationComparer();
+
+    /// <summary>
+    /// A static instance of type ParameterInformationComparer that will resolve types during the comparison.
+    /// </summary>
+    public readonly static ParameterInformationComparer ResolvingParameterInformationComparer = new ParameterInformationComparer(true);
   }
 
   /// <summary>
@@ -652,15 +665,15 @@ namespace Microsoft.Cci {
       Contract.Requires(typeToSearch != null);
       Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
 
-      IMethodDefinition result = TypeHelper.GetMethod(typeToSearch, this);
+      IMethodDefinition result = TypeHelper.GetMethod(typeToSearch, this, true);
       if (result != null) return result;
       foreach (ITypeReference baseClass in typeToSearch.BaseClasses) {
-        result = TypeHelper.GetMethod(baseClass.ResolvedType, this);
+        result = TypeHelper.GetMethod(baseClass.ResolvedType, this, true);
         if (result != Dummy.Method) return result;
       }
       if (typeToSearch.IsInterface) {
         foreach (ITypeReference baseInterface in typeToSearch.Interfaces) {
-          result = TypeHelper.GetMethod(baseInterface.ResolvedType, this);
+          result = TypeHelper.GetMethod(baseInterface.ResolvedType, this, true);
           if (result != Dummy.Method) return result;
         }
       }
@@ -779,6 +792,16 @@ namespace Microsoft.Cci {
   public class GenericMethodParameterInformationComparer : IEqualityComparer<IParameterTypeInformation> {
 
     /// <summary>
+    /// An object that compares to instances of IParameterTypeInformation for equality using the assumption
+    /// that two generic method type parameters are equivalent if their parameter list indices are the same.
+    /// </summary>
+    public GenericMethodParameterInformationComparer(bool resolveTypes = false) {
+      this.resolveTypes = true;
+    }
+
+    bool resolveTypes;
+
+    /// <summary>
     /// Returns true if the given two instances if IParameterTypeInformation are equivalent.
     /// </summary>
     public bool Equals(IParameterTypeInformation x, IParameterTypeInformation y) {
@@ -787,7 +810,7 @@ namespace Microsoft.Cci {
       if (x.IsByReference != y.IsByReference) return false;
       if (x.IsModified != y.IsModified) return false;
       //TODO: compare modifiers
-      return TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(x.Type, y.Type);
+      return TypeHelper.TypesAreEquivalentAssumingGenericMethodParametersAreEquivalentIfTheirIndicesMatch(x.Type, y.Type, this.resolveTypes);
     }
 
     /// <summary>
@@ -806,6 +829,16 @@ namespace Microsoft.Cci {
   public class ParameterInformationComparer : IEqualityComparer<IParameterTypeInformation> {
 
     /// <summary>
+    /// An object that compares to instances of IParameterTypeInformation for equality.
+    /// </summary>
+    /// <param name="resolveTypes"></param>
+    public ParameterInformationComparer(bool resolveTypes = false) {
+      this.resolveTypes = resolveTypes;
+    }
+
+    bool resolveTypes;
+
+    /// <summary>
     /// Returns true if the given two instances if IParameterTypeInformation are equivalent.
     /// </summary>
     public bool Equals(IParameterTypeInformation x, IParameterTypeInformation y) {
@@ -814,7 +847,7 @@ namespace Microsoft.Cci {
       if (x.IsByReference != y.IsByReference) return false;
       if (x.IsModified != y.IsModified) return false;
       //TODO: compare modifiers
-      return TypeHelper.TypesAreEquivalent(x.Type, y.Type);
+      return TypeHelper.TypesAreEquivalent(x.Type, y.Type, this.resolveTypes);
     }
 
     /// <summary>
@@ -1158,14 +1191,18 @@ namespace Microsoft.Cci {
       Contract.Requires(sb != null);
 
       IParameterDefinition def = param as IParameterDefinition;
-      if (def != null && (formattingOptions & NameFormattingOptions.ParameterModifiers) != 0) {
-        if (def.IsOut) sb.Append("out ");
-        else if (def.IsParameterArray) sb.Append("params ");
-        else if (def.IsByReference) sb.Append("ref ");
+      if ((formattingOptions & NameFormattingOptions.ParameterModifiers) != 0) {
+        if (def != null) {
+          if (def.IsOut) sb.Append("out ");
+          else if (def.IsParameterArray) sb.Append("params ");
+          else if (def.IsByReference) sb.Append("ref ");
+        } else {
+          if (param.IsByReference) sb.Append("ref ");
+        }
       }
       sb.Append(this.typeNameFormatter.GetTypeName(param.Type, formattingOptions & ~(NameFormattingOptions.MemberKind|NameFormattingOptions.DocumentationIdMemberKind)));
-      if (def != null && (formattingOptions & NameFormattingOptions.FormattingForDocumentationId) != 0) {
-        if (def.IsByReference) sb.Append("@");
+      if ((formattingOptions & NameFormattingOptions.FormattingForDocumentationId) != 0) {
+        if (param.IsByReference) sb.Append("@");
       }
       if (def != null && (formattingOptions & NameFormattingOptions.ParameterName) != 0) {
         sb.Append(" ");
