@@ -37,4 +37,12 @@ namespace Afterthought.Amender
 		Function = 512,
 		HasResultParameter = 1024
 	}
+
+	internal static class MethodDelegateTypeExtensions
+	{
+		public static bool HasFlag(this MethodDelegateType type, MethodDelegateType value)
+		{
+			return (type & value) > 0;
+		}
+	}
 }

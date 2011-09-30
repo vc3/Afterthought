@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Afterthought.Amender</RootNamespace>
     <AssemblyName>Afterthought.Amender</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
@@ -56,14 +56,12 @@
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Build" />
     <Reference Include="Microsoft.Build.Framework" />
-    <Reference Include="Microsoft.Build.Utilities.v4.0" />
+    <Reference Include="Microsoft.Build.Utilities.v3.5" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
@@ -158,8 +156,6 @@
     <Compile Include="Microsoft.CCI\PeWriter\MemoryStream.cs" />
     <Compile Include="Microsoft.CCI\PeWriter\PdbWriterInterface.cs" />
     <Compile Include="Microsoft.CCI\PeWriter\PeWriter.cs" />
-    <Compile Include="Microsoft.CCI\ReflectionEmitter\Emitter.cs" />
-    <Compile Include="Microsoft.CCI\ReflectionEmitter\Mapper.cs" />
     <Compile Include="Microsoft.CCI\SourceModel\DummyObjects.cs" />
     <Compile Include="Microsoft.CCI\SourceModel\Implementations.cs" />
     <Compile Include="Microsoft.CCI\SourceModel\Interfaces.cs" />
