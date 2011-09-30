@@ -36,11 +36,21 @@ namespace Afterthought.Amender
 		Dictionary<string, ITypeAmendment> typeAmendments;
 		ITypeDefinition iTypeAmendment;
 		ITypeDefinition iAmendmentAttribute;
+		Dictionary<System.Reflection.Assembly, IAssembly> resolvedAssemblies = new Dictionary<System.Reflection.Assembly, IAssembly>();
 		Dictionary<Type, ITypeDefinition> resolvedTypes = new Dictionary<Type, ITypeDefinition>();
+		Dictionary<ITypeDefinition, Type> resolvedTypeDefs = new Dictionary<ITypeDefinition, Type>();
 
-		internal AssemblyAmender(IMetadataHost host, PdbReader pdbReader, IEnumerable<ITypeAmendment> typeAmendments)
+		internal AssemblyAmender(IMetadataHost host, PdbReader pdbReader, IEnumerable<ITypeAmendment> typeAmendments, IEnumerable<System.Reflection.Assembly> assemblies)
 			: base(host, true)
 		{
+			// Preload assemblies
+			foreach (var assembly in assemblies)
+			{
+				var assemblyDef = ResolveAssembly(assembly);
+				foreach (var reference in assemblyDef.AssemblyReferences.Select(a => a.ResolvedAssembly).Where(a => a.Name.Value != "" && !a.Name.Value.StartsWith("mscorlib")))
+					CacheAssembly(System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value), reference);
+			}
+
 			this.typeAmendments = typeAmendments.ToDictionary(w => w.Type.FullName);
 			iTypeAmendment = ResolveType(typeof(ITypeAmendment));
 			iAmendmentAttribute = ResolveType(typeof(IAmendmentAttribute));
@@ -1997,57 +2007,87 @@ namespace Afterthought.Amender
 				ITypeDefinition elementTypeDef = ResolveType(type.GetElementType());
 				typeDef = Vector.GetVector(elementTypeDef, host.InternFactory);
 			}
-			else
+
+			// Generic types
+			else if (type.IsGenericType && !type.IsGenericTypeDefinition)
 			{
+				var genericType = type.GetGenericTypeDefinition();
+				var genericTypeDef = ResolveType(genericType);
 
-				System.Reflection.Assembly assembly = type.Assembly;
-
-				// See if the assembly is already loaded
-				IAssembly assemblyDef = null;
-				if (assembly.FullName.StartsWith("mscorlib") && TargetRuntimeVersion.StartsWith("v2"))
-					assemblyDef = host.FindAssembly(host.CoreAssemblySymbolicIdentity);
-				else
-				{
-					foreach (var unit in host.LoadedUnits)
-					{
-						if (unit.Name.Value == assembly.FullName)
-						{
-							assemblyDef = (IAssembly)unit;
-							break;
-						}
-					}
-				}
-
-				// Otherwise, load the assembly
-				if (assemblyDef == null)
-					assemblyDef = (IAssembly)host.LoadUnitFrom(assembly.Location);
-
-				// Handle generic types
-				if (type.IsGenericType && !type.IsGenericTypeDefinition)
-				{
-					var genericType = type.GetGenericTypeDefinition();
-					var genericTypeDef = assemblyDef.GetAllTypes()
-						.OfType<INamedTypeDefinition>()
-						.Where(t => AreEquivalent(t, genericType))
-						.FirstOrDefault();
-
-					// Return the generic type
-					typeDef = GenericTypeInstance.GetGenericTypeInstance(genericTypeDef, type.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeReference>(), host.InternFactory);
-				}
-
-				// Otherwise, just find the type
-				else
-					typeDef = assemblyDef.GetAllTypes()
-						.OfType<INamedTypeDefinition>()
-						.Where(t => AreEquivalent(t, type))
-						.FirstOrDefault();
+				// Return the generic type
+				typeDef = GenericTypeInstance.GetGenericTypeInstance((INamedTypeReference)genericTypeDef, type.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeReference>(), host.InternFactory);
 			}
+
+			// Otherwise, just find the type
+			else
+				typeDef = ResolveAssembly(type.Assembly).GetAllTypes()
+					.OfType<INamedTypeDefinition>()
+					.Where(t => GetTypeName(t) == type.FullName)
+					.FirstOrDefault();
 
 			// Cache an return the resolved type definition
 			resolvedTypes[type] = typeDef;
+			resolvedTypeDefs[typeDef] = type;
+
 			return typeDef;
 		}
 
+		IAssembly ResolveAssembly(System.Reflection.Assembly assembly)
+		{
+			IAssembly assemblyDef = null;
+			if (resolvedAssemblies.TryGetValue(assembly, out assemblyDef))
+				return assemblyDef;
+
+			if (assembly.FullName.StartsWith("mscorlib") && TargetRuntimeVersion.StartsWith("v2"))
+				assemblyDef = host.FindAssembly(host.CoreAssemblySymbolicIdentity);
+			else
+			{
+				foreach (var unit in host.LoadedUnits)
+				{
+					if (unit.Name.Value == assembly.FullName)
+					{
+						assemblyDef = (IAssembly)unit;
+						break;
+					}
+				}
+			}
+
+			// Otherwise, load the assembly
+			if (assemblyDef == null)
+				assemblyDef = (IAssembly)host.LoadUnitFrom(assembly.Location);
+
+			// Cache the assembly
+			CacheAssembly(assembly, assemblyDef);
+
+			return assemblyDef;
+		}
+
+		/// <summary>
+		/// Caches the specified assembly mapping and preloads type mappings for all types in the assembly.
+		/// </summary>
+		/// <param name="assembly"></param>
+		/// <param name="assemblyDef"></param>
+		void CacheAssembly(System.Reflection.Assembly assembly, IAssembly assemblyDef)
+		{
+			// Avoid processing the same assembly more than once
+			if (resolvedAssemblies.ContainsKey(assembly))
+				return;
+
+			// Cache the resolved assembly
+			resolvedAssemblies.Add(assembly, assemblyDef);
+
+			// Preload all types in the assembly
+			foreach (var typeDef in assemblyDef.GetAllTypes())
+			{
+				Type type = assembly.GetType(GetTypeName(typeDef), false);
+				if (type != null)
+				{
+					resolvedTypes[type] = typeDef;
+					resolvedTypeDefs[typeDef] = type;
+				}
+			}
+		}
+	
 		/// <summary>
 		/// Gets the <see cref="IFieldDefinition"/> that corresponds to the specified <see cref="FieldInfo"/>.
 		/// </summary>
@@ -2110,24 +2150,26 @@ namespace Afterthought.Amender
 		/// <param name="typeDef"></param>
 		/// <param name="type"></param>
 		/// <returns></returns>
-		internal static bool AreEquivalent(INamedTypeDefinition typeDef, Type type)
+		internal bool AreEquivalent(ITypeReference typeRef, Type type)
 		{
-
-			return GetTypeName(typeDef) == type.FullName;
+			Type mappedType;
+			return (resolvedTypeDefs.TryGetValue(typeRef.ResolvedType, out mappedType) && type == mappedType) || TypeHelper.TypesAreEquivalent(typeRef, ResolveType(type));
 		}
 
 		/// <summary>
 		/// Gets the name of the specified <see cref="INamedTypeDefinition"/> consistent with the naming
 		/// conventions used by the System.Reflection namespace.
 		/// </summary>
-		/// <param name="typeDef"></param>
+		/// <param name="typeRef"></param>
 		/// <returns></returns>
-		static string GetTypeName(INamedTypeDefinition typeDef)
+		static string GetTypeName(ITypeReference typeRef)
 		{
-			if (typeDef is INestedTypeDefinition)
-				return GetTypeName((INamedTypeDefinition)((INestedTypeDefinition)typeDef).ContainingTypeDefinition) + "+" + typeDef.Name.Value + (typeDef.MangleName ? "`" + typeDef.GenericParameterCount : "");
+			if (typeRef is INestedTypeReference)
+				return GetTypeName(((INestedTypeReference)typeRef).ContainingType) + "+" + ((INestedTypeReference)typeRef).Name.Value + (((INestedTypeReference)typeRef).MangleName && ((INestedTypeReference)typeRef).GenericParameterCount > 0 ? "`" + ((INestedTypeReference)typeRef).GenericParameterCount : "");
+			else if (typeRef is INamedTypeReference)
+				return typeRef.ToString() + (((INamedTypeReference)typeRef).MangleName && ((INamedTypeReference)typeRef).GenericParameterCount > 0 ? "`" + ((INamedTypeReference)typeRef).GenericParameterCount : "");
 			else
-				return typeDef.ToString() + (typeDef.MangleName ? "`" + typeDef.GenericParameterCount : "");
+				return typeRef.ToString();
 		}
 
 		/// <summary>
@@ -2145,7 +2187,7 @@ namespace Afterthought.Amender
 				fieldDef.Name.Value == field.Name &&
 
 				// Ensure field types match
-				TypeHelper.TypesAreEquivalent(fieldDef.Type, ResolveType(field.FieldType));
+				AreEquivalent(fieldDef.Type, field.FieldType);
 		}
 
 
@@ -2164,7 +2206,7 @@ namespace Afterthought.Amender
 				propertyDef.Name.Value == property.Name &&
 
 				// Ensure property types match
-				TypeHelper.TypesAreEquivalent(propertyDef.Type, ResolveType(property.PropertyType)) &&
+				AreEquivalent(propertyDef.Type, property.PropertyType) &&
 
 				// Ensure parameter counts match
 				propertyDef.Parameters.Count() == property.GetIndexParameters().Length &&
@@ -2198,7 +2240,7 @@ namespace Afterthought.Amender
 					!(method is System.Reflection.MethodInfo) ||
 					(
 						// Ensure return types match
-						TypeHelper.TypesAreEquivalent(methodDef.Type, ResolveType(((System.Reflection.MethodInfo)method).ReturnType)) &&
+						AreEquivalent(methodDef.Type, ((System.Reflection.MethodInfo)method).ReturnType) &&
 
 						// Ensure generic parameter types match
 						method.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeDefinition>().SequenceEqual(methodDef.GenericParameters.Cast<IGenericParameterReference>().Select(p => p.ResolvedType)) &&
@@ -2224,7 +2266,7 @@ namespace Afterthought.Amender
 				eventDef.Name.Value == eventInfo.Name &&
 
 				// Ensure event handler types match
-				TypeHelper.TypesAreEquivalent(eventDef.Type, ResolveType(eventInfo.EventHandlerType));
+				AreEquivalent(eventDef.Type, eventInfo.EventHandlerType);
 		}
 
 		/// <summary>

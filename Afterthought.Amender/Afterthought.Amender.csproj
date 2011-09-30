@@ -25,9 +25,10 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;LITTLEENDIAN</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -67,11 +68,102 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Amender.cs" />
     <Compile Include="AssemblyAmender.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DelegateType.cs" />
     <Compile Include="ILAmender.cs" />
+    <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\ControlFlowInferencer.cs" />
+    <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\DataFlowInferencer.cs" />
+    <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\Graph.cs" />
+    <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\TypeInferencer.cs" />
+    <Compile Include="Microsoft.CCI\ILGenerator\ILGenerator.cs" />
+    <Compile Include="Microsoft.CCI\ILGenerator\MethodBody.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\AttributeHelper.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\CommandLineOptions.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\Core.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\GlobalAssemblyCache.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\MemberHelper.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\Members.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\PlatformTypes.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\TypeHelper.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\Types.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\UnitHelper.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\UnmanagedFileIO.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\UtilityDataStructures.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\Validator.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\Visitors.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Core.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\DummyObjects.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Expressions.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Members.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Miscellaneous.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Namespaces.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Types.cs" />
+    <Compile Include="Microsoft.CCI\MetadataModel\Units.cs" />
+    <Compile Include="Microsoft.CCI\Microsoft.Contracts\Contracts.cs" />
+    <Compile Include="Microsoft.CCI\Microsoft.Contracts\ContractsEx.cs" />
+    <Compile Include="Microsoft.CCI\Microsoft.Contracts\RuntimeContracts.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Copier.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Expressions.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Members.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Miscellaneous.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Mutator.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Namespaces.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Types.cs" />
+    <Compile Include="Microsoft.CCI\MutableMetadataModel\Units.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\BitAccess.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\BitSet.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\CvInfo.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\DataStream.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\DbiDbgHdr.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\DbiHeader.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\DbiModuleInfo.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\DbiSecCon.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\IntHashTable.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\MsfDirectory.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbConstant.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbDebugException.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbException.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbFile.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbFileHeader.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbFunction.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbLine.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbLines.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbReader.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbScope.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbSlot.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbSource.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\SourceLocationProvider.cs" />
+    <Compile Include="Microsoft.CCI\PdbWriter\GlobalSuppressions.cs" />
+    <Compile Include="Microsoft.CCI\PdbWriter\ISymbolWriter.cs" />
+    <Compile Include="Microsoft.CCI\PdbWriter\Writer.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\Attributes.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\BinaryObjectModel.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\CoreTypes.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\Errors.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\ILReader.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\ModuleReadWriteFactory.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\PEFileReader.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\PEFileStructures.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\PEFileToObjectModel.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\Types.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\UnmanagedReadWrite.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\UtilityDataStructures.cs" />
+    <Compile Include="Microsoft.CCI\PeReader\WindowsRuntimeHost.cs" />
+    <Compile Include="Microsoft.CCI\PeWriter\BinaryWriter.cs" />
+    <Compile Include="Microsoft.CCI\PeWriter\GlobalSuppressions.cs" />
+    <Compile Include="Microsoft.CCI\PeWriter\IMetadata.cs" />
+    <Compile Include="Microsoft.CCI\PeWriter\MemoryStream.cs" />
+    <Compile Include="Microsoft.CCI\PeWriter\PdbWriterInterface.cs" />
+    <Compile Include="Microsoft.CCI\PeWriter\PeWriter.cs" />
+    <Compile Include="Microsoft.CCI\ReflectionEmitter\Emitter.cs" />
+    <Compile Include="Microsoft.CCI\ReflectionEmitter\Mapper.cs" />
+    <Compile Include="Microsoft.CCI\SourceModel\DummyObjects.cs" />
+    <Compile Include="Microsoft.CCI\SourceModel\Implementations.cs" />
+    <Compile Include="Microsoft.CCI\SourceModel\Interfaces.cs" />
+    <Compile Include="Microsoft.CCI\SourceModel\SourceModelHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -79,42 +171,6 @@
     <ProjectReference Include="..\Afterthought\Afterthought.csproj">
       <Project>{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}</Project>
       <Name>Afterthought</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\ILGenerator\ILGenerator.csproj">
-      <Project>{08156C78-403A-4112-AD81-8646AC51CD2F}</Project>
-      <Name>ILGenerator</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\MetadataHelper\MetadataHelper.csproj">
-      <Project>{4A34A3C5-6176-49D7-A4C5-B2B671247F8F}</Project>
-      <Name>MetadataHelper</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\MetadataModel\MetadataModel.csproj">
-      <Project>{33CAB640-0D03-43DF-81BD-22CDC6C0A597}</Project>
-      <Name>MetadataModel</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\MutableMetadataModel\MutableMetadataModel.csproj">
-      <Project>{319E151C-8F33-49E7-81C9-30F02F9BA90A}</Project>
-      <Name>MutableMetadataModel</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\PdbReader\PdbReader.csproj">
-      <Project>{A6A31B03-7C3D-4DE6-AA73-BE88116BC40A}</Project>
-      <Name>PdbReader</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\PdbWriter\PdbWriter.csproj">
-      <Project>{6D83F687-ABB5-40B3-915E-CA53DA0EB7F3}</Project>
-      <Name>PdbWriter</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\PeReader\PeReader.csproj">
-      <Project>{34B9A0CE-DF18-4CBC-8F7A-90C2B74338D5}</Project>
-      <Name>PeReader</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\PeWriter\PeWriter.csproj">
-      <Project>{304A8B0B-851B-4AA6-A17D-5F87F39C5E5C}</Project>
-      <Name>PeWriter</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Microsoft.CCI\SourceModel\SourceModel.csproj">
-      <Project>{4B0054FD-124A-4037-9965-BDB55E6BF389}</Project>
-      <Name>SourceModel</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -126,38 +182,11 @@
     <None Include="NuGet\Uninstall.ps1" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\Microsoft.CCI\MetadataHelper\bin\Debug\Microsoft.Cci.MetadataHelper.dll">
-      <Link>Dependencies\Microsoft.Cci.MetadataHelper.dll</Link>
-    </EmbeddedResource>
+    <EmbeddedResource Include="Microsoft.CCI\MetadataHelper\ErrorMessages.resx" />
+    <EmbeddedResource Include="Microsoft.CCI\PeReader\PeReaderErrorMessages.resx" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\Microsoft.CCI\ILGenerator\bin\Debug\Microsoft.Cci.ILGenerator.dll">
-      <Link>Dependencies\Microsoft.Cci.ILGenerator.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\MetadataModel\bin\Debug\Microsoft.Cci.MetadataModel.dll">
-      <Link>Dependencies\Microsoft.Cci.MetadataModel.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\Microsoft.Contracts\bin\Debug\Microsoft.Contracts.dll">
-      <Link>Dependencies\Microsoft.Contracts.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\MutableMetadataModel\bin\Debug\Microsoft.Cci.MutableMetadataModel.dll">
-      <Link>Dependencies\Microsoft.Cci.MutableMetadataModel.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\PdbReader\bin\Debug\Microsoft.Cci.PdbReader.dll">
-      <Link>Dependencies\Microsoft.Cci.PdbReader.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\PdbWriter\bin\Debug\Microsoft.Cci.PdbWriter.dll">
-      <Link>Dependencies\Microsoft.Cci.PdbWriter.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\PeReader\bin\Debug\Microsoft.Cci.PeReader.dll">
-      <Link>Dependencies\Microsoft.Cci.PeReader.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\PeWriter\bin\Debug\Microsoft.Cci.PeWriter.dll">
-      <Link>Dependencies\Microsoft.Cci.PeWriter.dll</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\Microsoft.CCI\SourceModel\bin\Debug\Microsoft.Cci.SourceModel.dll">
-      <Link>Dependencies\Microsoft.Cci.SourceModel.dll</Link>
-    </EmbeddedResource>
+    <Folder Include="Dependencies\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

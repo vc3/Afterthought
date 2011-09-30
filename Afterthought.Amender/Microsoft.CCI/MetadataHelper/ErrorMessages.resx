@@ -1,0 +1,396 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AliasedTypeDoesNotBelongToAModule" xml:space="preserve">
+    <value>The type referenced by this alias does not come from a module of this assembly.</value>
+  </data>
+  <data name="ContainingAliasNotListedInExportedTypes" xml:space="preserve">
+    <value>This type alias is referenced as the parent of an exported type alias, but does not itself appear in the ExportedTypes property of the assembly.</value>
+  </data>
+  <data name="EmptyName" xml:space="preserve">
+    <value>This node may not have an empty name.</value>
+  </data>
+  <data name="ExportedTypeBelongsToManifestModule" xml:space="preserve">
+    <value>This type alias references a type that is defined in the module that contains the assembly manifest. The public types of such modules are already exported and should not be explicitly exported via the ExportedTypes collection of the assembly.</value>
+  </data>
+  <data name="IncompleteNode" xml:space="preserve">
+    <value>The node has not been fully initialized. Property {0} has a dummy value.</value>
+  </data>
+  <data name="InvalidCulture" xml:space="preserve">
+    <value>The assembly culture string "{0}" does not match one of the strings allowed by the specification.</value>
+  </data>
+  <data name="NonPublicTypeAlias" xml:space="preserve">
+    <value>A nested type can only be aliased (exported) if it is public.</value>
+  </data>
+  <data name="NotPosixName" xml:space="preserve">
+    <value>The name "{0}" is not POSIX compliant because it contains a colon, forward-slash, backslash, or period.</value>
+  </data>
+  <data name="ReferenceToTypeAlias" xml:space="preserve">
+    <value>Imported type aliases may not appear directly in the metadata model. Instead refer to the aliased type via the value of the IAliasForType.AliasedType property.</value>
+  </data>
+  <data name="UnexpectedAliasMember" xml:space="preserve">
+    <value>This type alias member is not itself a nested type alias.</value>
+  </data>
+  <data name="UnknownAssemblyFlags" xml:space="preserve">
+    <value>The assembly's Flags property has bits set that are not valid according to the specification.</value>
+  </data>
+  <data name="AbstractMethodMayNotBeSealedPlatformInvokeOrForwardReference" xml:space="preserve">
+    <value>An abstract method may not be marked as being sealed or as a platform invoke method or as being a forward reference.</value>
+  </data>
+  <data name="AbstractMethodsMustBeVirtual" xml:space="preserve">
+    <value>An abstract method must be marked as being virtual.</value>
+  </data>
+  <data name="AutoLayoutTypesCannotSpecifySize" xml:space="preserve">
+    <value>The size of a type can only be specified if the type does not have its LayoutKind set to Auto.</value>
+  </data>
+  <data name="ConstantFieldMustBeStatic" xml:space="preserve">
+    <value>This field is a compile time constant but it is not marked as static.</value>
+  </data>
+  <data name="ConstraintMayNotBeVoid" xml:space="preserve">
+    <value>A constraint on a generic parameter may not reference System.Void.</value>
+  </data>
+  <data name="ConstructorInInterface" xml:space="preserve">
+    <value>Constructor methods may not be members of interface types.</value>
+  </data>
+  <data name="ConstructorsMustNotReturnValues" xml:space="preserve">
+    <value>Constructor methods may not return values. I.e. their return type must be System.Void.</value>
+  </data>
+  <data name="ContainingTypeDefinitionNotVisited" xml:space="preserve">
+    <value>This type member is being visited before its parent is being visited, which can only happen if its ContainingTypeDefinition value is not valid.</value>
+  </data>
+  <data name="CustomAttributeConstructorIsBadReference" xml:space="preserve">
+    <value>The custom attribute's Constructor property references a method that resolves to something other than a constructor.</value>
+  </data>
+  <data name="CustomAttributeTypeIsNotConstructorContainer" xml:space="preserve">
+    <value>The Type of the custom attribute is not the same as the containing type of the custom attribute's Constructor.</value>
+  </data>
+  <data name="DeclarativeSecurityOnInterfacesIsIgnored" xml:space="preserve">
+    <value>Declarative security annotations on interface types are ignored by the CLR.</value>
+  </data>
+  <data name="DerivedTypeHasDifferentLayoutFromBaseType" xml:space="preserve">
+    <value>A derived type with LayoutKind other than Auto must have the same LayoutKind as its base type, unless its base type is System.Object.</value>
+  </data>
+  <data name="DuplicateAssemblyReference" xml:space="preserve">
+    <value>The module's assembly references list contains a duplicate entry.</value>
+  </data>
+  <data name="DuplicateConstraint" xml:space="preserve">
+    <value>This constraint has already been encountered during the traversal of its defining generic parameters' Constraints collection.</value>
+  </data>
+  <data name="DuplicateDefinition" xml:space="preserve">
+    <value>This definition has already been encountered during the traversal of the module being validated.</value>
+  </data>
+  <data name="DuplicateEntryInAllTypes" xml:space="preserve">
+    <value>The list of types returned by calling GetAllTypes on the module being validated contains a duplicate entry.</value>
+  </data>
+  <data name="DuplicateEvent" xml:space="preserve">
+    <value>This event is listed more than once, or has the same name as another event of its containing type definition.</value>
+  </data>
+  <data name="DuplicateField" xml:space="preserve">
+    <value>This field is listed more than once, or has the same name and signature as another field of its containing type definition.</value>
+  </data>
+  <data name="DuplicateFileReference" xml:space="preserve">
+    <value>This file reference instance occurs more than once, or has the same file name as another file reference in the Files collection of its contaiing assembly.</value>
+  </data>
+  <data name="DuplicateGenericTypeParameter" xml:space="preserve">
+    <value>This generic type parameter occurs more than once, or has the same InternedKey as another type parameter, in the GenericParameters collection of its defining type.</value>
+  </data>
+  <data name="DuplicateInterface" xml:space="preserve">
+    <value>This interface occurs more than once, or there is another interface with same InternedKey, in the Interfaces collection of the type definition.</value>
+  </data>
+  <data name="DuplicateMethodGenericTypeParameter" xml:space="preserve">
+    <value>This generic method type parameter occurs more than once, or has the same InternedKey as another type parameter, in the GenericParameters collection of its defining method.</value>
+  </data>
+  <data name="DuplicateResource" xml:space="preserve">
+    <value>This resource reference occurs more than once, or there is another reference with the same name, in the Resources collection of the assembly.</value>
+  </data>
+  <data name="EnumerationCountIsInconsistentWithCountProperty" xml:space="preserve">
+    <value>The actual number of elements is not the same as the number of elements specified by the {0} property.</value>
+  </data>
+  <data name="ExplicitOverrideDoesNotMatchSignatureOfOverriddenMethod" xml:space="preserve">
+    <value>This method implementation (or explicit override) has an implemeting method that does not match the signature of the implemented method.</value>
+  </data>
+  <data name="FieldMayNotBeConstantAndReadonly" xml:space="preserve">
+    <value>A field may not be both a compile time constant and readonly.</value>
+  </data>
+  <data name="FieldOffsetNotNaturallyAlignedForObjectRef" xml:space="preserve">
+    <value>The offset of this field must be naturally aligned because its value is an object reference.</value>
+  </data>
+  <data name="FieldReferenceResolvesToDifferentField" xml:space="preserve">
+    <value>This field reference resolves to a field definition with a different InternedKey value.</value>
+  </data>
+  <data name="GenericConstructor" xml:space="preserve">
+    <value>This method is a constructor but is also generic. That is not allowed.</value>
+  </data>
+  <data name="GenericParameterCountDoesNotMatchGenericParameters" xml:space="preserve">
+    <value>The value of GenericParameterCount does not match the number of parameters in the GenericParameters collection.</value>
+  </data>
+  <data name="GetAllTypesIsIncomplete" xml:space="preserve">
+    <value>A type definition is being visited that is not an element of the list returned by calling GetAllTypes on the module being validated.</value>
+  </data>
+  <data name="InstanceConstructorMayNotBeStatic" xml:space="preserve">
+    <value>An instance constructor (a method with the name .ctor) may not be marked as static. After all, it is supposed initialize its this object...</value>
+  </data>
+  <data name="InvalidAlignment" xml:space="preserve">
+    <value>The given type alignment, {0}, is invalid. A valid alignment is one of 0, 1, 2, 4, 8, 16, 32, 64, 128.</value>
+  </data>
+  <data name="InvalidCustomModifier" xml:space="preserve">
+    <value>Only references to named types may appear in custom modifiers.</value>
+  </data>
+  <data name="InvalidGlobalFieldVisibility" xml:space="preserve">
+    <value>This global field has a visibility that only makes sense for type members.</value>
+  </data>
+  <data name="InvalidMetadataConstant" xml:space="preserve">
+    <value>The value of a IMetadataConstant instance must be a bool, char, number, string, or a null object.</value>
+  </data>
+  <data name="MappedFieldDoesNotHaveAValidType" xml:space="preserve">
+    <value>This field is mapped to a static data area in its PE file, but its type is not a value type or it has fields that are not public or that contain pointers into the managed heap.</value>
+  </data>
+  <data name="MemberDisagreesAboutContainer" xml:space="preserve">
+    <value>This member definition thinks its containing definition is a different object than the one listing it as a member.</value>
+  </data>
+  <data name="MethodCannotBeAnOverride" xml:space="preserve">
+    <value>This method is not virtual, or it has no body, so it cannot serve as the explicit override or implementation of a base class or interface method.</value>
+  </data>
+  <data name="MethodGenericTypeParameterCountMismatch" xml:space="preserve">
+    <value>The value of GenericParameterCount does not match the number of parameters in the GenericParameters collection of the method.</value>
+  </data>
+  <data name="MethodMarkedAsHavingDeclarativeSecurityHasNoSecurityAttributes" xml:space="preserve">
+    <value>This method definition is marked has having declarative security, but it has no security attributes and no SuppressUnmanagedCodeSecurityAttribute.</value>
+  </data>
+  <data name="MethodParameterCountDoesNotAgreeWithTheActualNumberOfParameters" xml:space="preserve">
+    <value>The value of ParameterCount does not match the number of parameters in the Parameters collection.</value>
+  </data>
+  <data name="MethodsCalledWithExplicitThisParametersMustNotBeStatic" xml:space="preserve">
+    <value>A method that are called with an explicit this parameter (via a function pointer) must actually have a this parameter.</value>
+  </data>
+  <data name="MethodsNamedLikeConstructorsMustBeMarkedAsRuntimeSpecial" xml:space="preserve">
+    <value>A method named .ctor or .cctor must also be marked as special name and runtime special.</value>
+  </data>
+  <data name="MethodWithSecurityAttributesMustBeMarkedAsHavingDeclarativeSecurity" xml:space="preserve">
+    <value>The method definition is not marked as having declarative security, but it has security attributes or a SuppressUnmanagedCodeSecurityAttribute.</value>
+  </data>
+  <data name="NamedArgumentNameDoesNotMatchNameOfResolvedFieldOrProperty" xml:space="preserve">
+    <value>The named argument's name does not match the name of the field or property that the argument resolves to.</value>
+  </data>
+  <data name="NamedArgumentTypeDoesNotMatchTypeOfResolvedFieldOrProperty" xml:space="preserve">
+    <value>The named argument's Type does not match the Type of the field or property that the argument resolves to.</value>
+  </data>
+  <data name="NonStaticPlatformInvokeMethod" xml:space="preserve">
+    <value>This method has platform invoke information but it is not marked as static.</value>
+  </data>
+  <data name="NotPosixAssemblyName" xml:space="preserve">
+    <value>The assembly name "{0}" is not POSIX compliant because it contains a colon, forward-slash, backslash, or period.</value>
+  </data>
+  <data name="OnlySequentialLayoutTypesCanSpecificyAlignment" xml:space="preserve">
+    <value>Only types that have LayoutKind set to SequentialLayout are permitted to specify a non zero value for Alignment.</value>
+  </data>
+  <data name="ReferenceToTypeMemberWithOtherVisibility" xml:space="preserve">
+    <value>The given type member reference resolves to a type member (i.e. method or field) that has Other visibility (visible only to the compiler).</value>
+  </data>
+  <data name="RuntimeSpecialMustAlsoBeSpecialName" xml:space="preserve">
+    <value>A RuntimeSpecial member must also have its SpecialName flag set.</value>
+  </data>
+  <data name="SealedNewSlotOrOverrideMethodsMustAlsoBeVirtual" xml:space="preserve">
+    <value>It only makes sense to mark a method as sealed, new slot or access checked on override, if the method is virtual.</value>
+  </data>
+  <data name="SelfReference" xml:space="preserve">
+    <value>An assembly may not reference the file that contains the assembly's manifest module (the one being analyzed).</value>
+  </data>
+  <data name="SingleFileAssemblyHasExportedTypes" xml:space="preserve">
+    <value>A single file assembly may not explicitly export types. The public types of the manifest module of any assembly are exported by default.</value>
+  </data>
+  <data name="SpecialMethodsMayNotHaveCompilerControlledVisibility" xml:space="preserve">
+    <value>A method marked as SpecialName or as RuntimeSpecial may not be visible only to the compiler.</value>
+  </data>
+  <data name="StaticConstructorMayNotHaveParameters" xml:space="preserve">
+    <value>A static constructor may not have any parameters since it is invoked implicitly.</value>
+  </data>
+  <data name="StaticConstructorMustBeStatic" xml:space="preserve">
+    <value>Uhm, a static constructor (a method with the name .cctor) must be marked as being static, because well, its a static constructor.</value>
+  </data>
+  <data name="StaticMethodMayNotBeSealedVirtualOrNewSlot" xml:space="preserve">
+    <value>A static method may not be marked as sealed, virtual, new slot.</value>
+  </data>
+  <data name="StructsSizeMustBeLessThanOneMegaByte" xml:space="preserve">
+    <value>The given size, {0}, is too large for a value type (struct). The size must be less than 1 MByte (0x100000).</value>
+  </data>
+  <data name="SynchronizedValueTypeMethod" xml:space="preserve">
+    <value>A method defined by a value type operates on an object without identity, therefore it makes no sense to mark it as synchronized.</value>
+  </data>
+  <data name="TypeReferenceResolvesToDifferentType" xml:space="preserve">
+    <value>Resolving the type reference results in a type with a different InternedKey from the type reference and no aliasing is involved.</value>
+  </data>
+  <data name="MayNotOverrideInaccessibleMethod" xml:space="preserve">
+    <value>The method being implemented by an explicit override is not visible to the class doing the overriding, which is not allowed.</value>
+  </data>
+  <data name="EnumDoesNotHaveAnInstanceField" xml:space="preserve">
+    <value>An enum type must have a single instance field of an integral type.</value>
+  </data>
+  <data name="EnumInstanceFieldNotUnique" xml:space="preserve">
+    <value>An enum type may only have a single instance field.</value>
+  </data>
+  <data name="EnumInstanceFieldTypeNotIntegral" xml:space="preserve">
+    <value>The instance field of an enum must be of an integral type.</value>
+  </data>
+  <data name="EventTypeMustBeClass" xml:space="preserve">
+    <value>The type of an event may not be an interface or a value type.</value>
+  </data>
+  <data name="InvalidSecurityAction" xml:space="preserve">
+    <value>The security action value is not valid.</value>
+  </data>
+  <data name="InvalidTypeMemberVisibility" xml:space="preserve">
+    <value>The value of the ITypeMember.Visibility is not valid.</value>
+  </data>
+  <data name="MetadataConstantTypeMismatch" xml:space="preserve">
+    <value>This metadata constant value has a type that is incompatible with the type of the field, parameter or property.</value>
+  </data>
+  <data name="SecurityActionMismatch" xml:space="preserve">
+    <value>The security action of the security attribute is not compatible with the definition to which the attribute is applied.</value>
+  </data>
+  <data name="SecurityAttributeOnInterface" xml:space="preserve">
+    <value>Security attributes on interfaces are ignored by the security system.</value>
+  </data>
+  <data name="StaticFieldsMayNotHaveLayout" xml:space="preserve">
+    <value>A static field should not have layout information since it does not contribute to the layout of its containing type.</value>
+  </data>
+  <data name="TypeReferenceResolvesToDifferentTypeFromAlias" xml:space="preserve">
+    <value>Resolving the type reference results in a type with a different InternedKey from the resolved value of the TypeAlias property.</value>
+  </data>
+  <data name="ArraysMarshalledToFieldsCannotSpecifyElementCountParameter" xml:space="preserve">
+    <value>It makes no sense for the marshalling information for a field to specify which parameter to use for the element count of an array value.</value>
+  </data>
+  <data name="MarshalledArraysMustHaveSizeKnownAtCompileTime" xml:space="preserve">
+    <value>Fields whose values are marshalled to unmanaged arrays, must specify the size of the array at compile time since there is no place in the unmanaged array for the marshaller to store the number of elements.</value>
+  </data>
+  <data name="MarshallingInformationIsInvalid" xml:space="preserve">
+    <value>IMarshallingInformation.{0} has an invalid value.</value>
+  </data>
+  <data name="ParameterCannotBeMarshalledAsByValArray" xml:space="preserve">
+    <value>Only field values can be marshalled as ByVal (fixed length) arrays.</value>
+  </data>
+  <data name="ParameterIndexIsInvalid" xml:space="preserve">
+    <value>The index of the parameter to contain the size of the variable portion of an array that is marshalled as an unmanaged array is out of range.</value>
+  </data>
+  <data name="ParameterMarshalledArraysMustHaveSizeKnownAtCompileTime" xml:space="preserve">
+    <value>Parameters whose values are marshalled to unmanaged arrays and for which the marshalling information does not specify a parameter to convey the number of array elements, must specify the size of the array at compile time since there is no place in the unmanaged array for the marshaller to store the number of elements.</value>
+  </data>
+  <data name="NumberOfElementsSpecifiedExplicitlyAsWellAsByAParameter" xml:space="preserve">
+    <value>The size of the array passed in this parameter is specified explicitly as well as via another (size) parameter. This is probably a mistake.</value>
+  </data>
+</root>

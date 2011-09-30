@@ -27,26 +27,16 @@ namespace Afterthought.Amender
 	{
 		static int Main(string[] args)
 		{
-			// Register an assembly resolver to load embedded CCI assemblies
-			AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
-			{
-				var assemblyName = "Afterthought.Amender.Dependencies." + new AssemblyName(e.Name).Name + ".dll";
-				if (System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceInfo(assemblyName) != null)
-				{
-					using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(assemblyName))
-					{
-						var assemblyData = new Byte[stream.Length];
-						stream.Read(assemblyData, 0, assemblyData.Length);
-						return System.Reflection.Assembly.Load(assemblyData);
-					}
-				}
-
-				return null;
-			};
-
 			try
 			{
-				Amend(args);
+				var targetAssembly = args[0];
+				var amendmentAssemblies = args.Skip(1).Where(p => File.Exists(p)).ToArray();
+				var referencePaths = args.Skip(1).Where(p => Directory.Exists(p)).ToArray();
+
+				if (amendmentAssemblies.Length + referencePaths.Length + 1 != args.Length)
+					throw new ArgumentException("Invalid file or directory");
+
+				Amend(targetAssembly, amendmentAssemblies, referencePaths);
 			}
 			catch (Exception e)
 			{
@@ -56,124 +46,124 @@ namespace Afterthought.Amender
 			return 0;
 		} 
 
-		internal static void Amend(params string[] targets)
+		/// <summary>
+		/// Amends the specified target assembly, optionally using assembly amendments defined in the 
+		/// specified amendment assemblies.
+		/// </summary>
+		/// <param name="targetAssembly"></param>
+		/// <param name="amendmentAssemblies"></param>
+		internal static void Amend(string targetAssembly, string[] amendmentAssemblies, string[] referenceAssemblies)
 		{
-			// Ensure that at least one target assembly was specified
-			if (targets == null || targets.Length == 0)
-				throw new ArgumentException("At least one target assembly must be specified.");
+			// Verify the target assembly exists
+			targetAssembly = Path.GetFullPath(targetAssembly);
+			if (!File.Exists(targetAssembly))
+				throw new ArgumentException("The specified target assembly, " + targetAssembly + ", does not exist.");
 
-			// Ensure that the target assemblies exist
-			for (int i = 0; i < targets.Length; i++)
+			// Verify the amendment assemblies exist
+			if (amendmentAssemblies == null)
+				amendmentAssemblies = new string[0];
+			for (int i = 0; i < amendmentAssemblies.Length; i++)
 			{
-				var path = targets[i] = Path.GetFullPath(targets[i]);
+				var path = amendmentAssemblies[i] = Path.GetFullPath(amendmentAssemblies[i]);
 				if (!File.Exists(path))
-					throw new ArgumentException("The specified target assembly, " + path + ", does not exist.");
+					throw new ArgumentException("The specified amendment assembly, " + path + ", does not exist.");
 			}
+
+			// Verify that the target has not already been amended
+			var afterthoughtTracker = targetAssembly + ".afterthought";
+			if (File.Exists(afterthoughtTracker) && File.GetLastWriteTime(targetAssembly) == File.GetLastWriteTime(afterthoughtTracker))
+				return;
 
 			// Determine the set of target directories and backup locations
-			var directories = targets
-				.Select(path => Path.GetDirectoryName(path).ToLower())
-				.Distinct()
-				.Select(directory => new { SourcePath = directory, BackupPath = Directory.CreateDirectory(Path.Combine(directory, "Backup")).FullName });
+			var targetWriteTime = File.GetLastWriteTime(targetAssembly);
+			var backupTargetAssembly = targetAssembly + ".backup";
+			var targetDirectory = Path.GetDirectoryName(targetAssembly);
+			File.Delete(backupTargetAssembly);
+			File.Move(targetAssembly, backupTargetAssembly);
 
-			// Determine the set of dlls, pdbs, and backup files
-			var assemblies = targets
-				.Select(dllPath => new
-				{
-					DllPath = dllPath,
-					DllBackupPath = Path.Combine(Path.Combine(Path.GetDirectoryName(dllPath), "Backup"), Path.GetFileName(dllPath)),
-					PdbPath = Path.Combine(Path.GetDirectoryName(dllPath), Path.GetFileNameWithoutExtension(dllPath) + ".pdb"),
-					PdbBackupPath = Path.Combine(Path.Combine(Path.GetDirectoryName(dllPath), "Backup"), Path.GetFileNameWithoutExtension(dllPath) + ".pdb")
-				});
+			// Build up a set of paths with resolving assemblies
+			var referencePaths = new Dictionary<string, string>();
+			foreach (string path in amendmentAssemblies
+				.Union(referenceAssemblies)
+				.Union(Directory.GetFiles(targetDirectory).Where(p => p.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && p != targetAssembly)))
+				referencePaths[Path.GetFileName(path)] = path;
 
-			// Backup the directories containing the targeted dll and pdb files
-			foreach (var directory in directories)
-			{
-				foreach (var file in Directory.GetFiles(directory.SourcePath))
-				{
-					if (file.ToLower().EndsWith("exe") || file.ToLower().EndsWith("dll") || file.ToLower().EndsWith("pdb"))
-					{
-						var backupPath = Path.Combine(directory.BackupPath, Path.GetFileName(file));
-						if (File.Exists(backupPath))
-							File.SetAttributes(backupPath, File.GetAttributes(backupPath) & ~FileAttributes.ReadOnly);
-						File.Copy(file, backupPath, true);
-					}
-				}
-			}
-
-			// Register an assembly resolver to look in backup folders when resolving assemblies
+			// Register an assembly resolver to look in assembly directories when resolving assemblies
 			AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
 			{
-				var assemblyName = new AssemblyName(e.Name).Name + ".dll";
-
-				// First see if the assembly is located in one of the target backup directories
-				foreach (var directory in directories)
-				{
-					var dependency = Path.Combine(directory.BackupPath, assemblyName);
-					if (File.Exists(dependency))
-						return System.Reflection.Assembly.LoadFrom(dependency);
-				}
+				var assemblyName = new System.Reflection.AssemblyName(e.Name).Name + ".dll";
+				string referencePath;
+				if (referencePaths.TryGetValue(assemblyName, out referencePath))
+					return System.Reflection.Assembly.LoadFrom(referencePath);
 
 				return null;
 			};
 
 			// Get the set of amendments to apply from all of the specified assemblies
-			var amendments = AmendmentAttribute.GetAmendments(assemblies.Select(a => System.Reflection.Assembly.LoadFrom(a.DllBackupPath)).ToArray()).ToList();
+			var assemblies = new System.Reflection.Assembly[] { System.Reflection.Assembly.LoadFrom(backupTargetAssembly) }.Union(amendmentAssemblies.Select(a => System.Reflection.Assembly.LoadFrom(a)));
+			var amendments = AmendmentAttribute.GetAmendments(assemblies.First(), assemblies.Skip(1).ToArray()).ToList();
 
 			// Exit immediately if there are no amendments in the target assemblies
 			if (amendments.Count == 0)
 				return;
 
-			// Process each target assembly individually
-			foreach (var assembly in assemblies)
+			// Amend the target assembly
+
+			Console.Write("Amending " + Path.GetFileName(targetAssembly));
+			var start = DateTime.Now;
+
+			using (var host = new PeReader.DefaultHost())
 			{
-				var assemblyAmendments = amendments.Where(a => a.Type.Assembly.Location == assembly.DllBackupPath).ToArray();
-				if (assemblyAmendments.Length == 0)
-					continue;
+				// Load the target assembly
+				IModule module = host.LoadUnitFrom(backupTargetAssembly) as IModule;
+				if (module == null || module == Dummy.Module || module == Dummy.Assembly)
+					throw new ArgumentException(backupTargetAssembly + " is not a PE file containing a CLR assembly, or an error occurred when loading it.");
 
-				Console.Write("Amending " + Path.GetFileName(assembly.DllPath));
-				var start = DateTime.Now;
+				// Copy the assembly to enable it to be mutated
+				module = new MetadataDeepCopier(host).Copy(module);
 
-				using (var host = new PeReader.DefaultHost())
+				// Load the debug file if it exists
+				PdbReader pdbReader = null;
+				var pdbFile = Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(targetAssembly) + ".pdb");
+				var backupPdbFile = pdbFile + ".backup";
+				if (File.Exists(pdbFile))
 				{
-					// Load the target assembly
-					IModule module = host.LoadUnitFrom(assembly.DllBackupPath) as IModule;
-					if (module == null || module == Dummy.Module || module == Dummy.Assembly)
-						throw new ArgumentException(assembly.DllBackupPath + " is not a PE file containing a CLR assembly, or an error occurred when loading it.");
-
-					// Copy the assembly to enable it to be mutated
-					module = new MetadataDeepCopier(host).Copy(module);
-
-					// Load the debug file if it exists
-					PdbReader pdbReader = null;
-					if (File.Exists(assembly.PdbBackupPath))
+					File.Delete(backupPdbFile);
+					File.Move(pdbFile, backupPdbFile);
+					using (var pdbStream = File.OpenRead(backupPdbFile))
 					{
-						using (var pdbStream = File.OpenRead(assembly.PdbBackupPath))
-						{
-							pdbReader = new PdbReader(pdbStream, host);
-						}
+						pdbReader = new PdbReader(pdbStream, host);
 					}
+				}
 					
-					// Amend and persist the target assembly
-					using (pdbReader)
-					{
-						// Create and execute a new assembly amender
-						AssemblyAmender amender = new AssemblyAmender(host, pdbReader, assemblyAmendments);
-						amender.TargetRuntimeVersion = module.TargetRuntimeVersion;
-						module = amender.Visit(module);
+				// Amend and persist the target assembly
+				using (pdbReader)
+				{
+					// Create and execute a new assembly amender
+					AssemblyAmender amender = new AssemblyAmender(host, pdbReader, amendments, assemblies);
+					amender.TargetRuntimeVersion = module.TargetRuntimeVersion;
+					module = amender.Visit(module);
 
-						// Save the amended assembly back to the original directory
-						using (var pdbWriter = pdbReader != null ? new PdbWriter(assembly.PdbPath, pdbReader) : null)
+					// Save the amended assembly back to the original directory
+					using (var pdbWriter = pdbReader != null ? new PdbWriter(pdbFile, pdbReader) : null)
+					{
+						using (var dllStream = File.Create(targetAssembly))
 						{
-							using (var dllStream = File.Create(assembly.DllPath))
-							{
-								PeWriter.WritePeToStream(module, host, dllStream, pdbReader, null, pdbWriter);
-							}
+							PeWriter.WritePeToStream(module, host, dllStream, pdbReader, null, pdbWriter);
 						}
 					}
 				}
-				Console.WriteLine(" (" + DateTime.Now.Subtract(start).TotalSeconds.ToString("0.000") + " seconds)");
+
+				File.SetLastWriteTime(targetAssembly, targetWriteTime);
+				if (pdbReader != null)
+					File.SetLastWriteTime(pdbFile, targetWriteTime);
 			}
+
+			Console.WriteLine(" (" + DateTime.Now.Subtract(start).TotalSeconds.ToString("0.000") + " seconds)");
+
+			// Set the last write time of the afterthought tracker to match the amended assembly to prevent accidental reamending
+			File.WriteAllText(afterthoughtTracker, "");
+			File.SetLastWriteTime(afterthoughtTracker, File.GetLastWriteTime(targetAssembly));
 		}
 	}
 }

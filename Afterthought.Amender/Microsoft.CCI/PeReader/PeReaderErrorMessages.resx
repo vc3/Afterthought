@@ -1,0 +1,259 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="COFFHeaderTooSmall" xml:space="preserve">
+    <value>COFF header missing or truncated</value>
+    <comment>A valid PE file must have a COFF header. This error indicates that there is insufficient data in the file after the initial PE header fields for the COFF header structure</comment>
+  </data>
+  <data name="COR20HeaderTooSmall" xml:space="preserve">
+    <value>CLR header missing or truncated</value>
+    <comment>A .net assembly requires a valid CLR header. This error indicates there is insufficient data remaining in the file for the CLR header.</comment>
+  </data>
+  <data name="DosHeader" xml:space="preserve">
+    <value>DOS signature expected</value>
+    <comment>A valid PE file should start with the MS-DOS signature bytes 'MZ'</comment>
+  </data>
+  <data name="FileSizeTooSmall" xml:space="preserve">
+    <value>The size of file is too small to hold the PEFile information.</value>
+    <comment>The file size is insufficient to accomodate a valid Portable Executable header</comment>
+  </data>
+  <data name="IllegalTablesInCompressedMetadataStream" xml:space="preserve">
+    <value>CLR metadata table header specifies a compressed data stream but this is not consistent with its table format</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables with a header. This error indicates that the header is specifying a compressed stream which is not consistent with the table format.</comment>
+  </data>
+  <data name="MetadataHeaderTooSmall" xml:space="preserve">
+    <value>CLR metadata directory header is truncated</value>
+    <comment>A .net managed assembly should contain a metadata directory which consists of some header information and some data streams. This error indicates that there is insufficient data in the metadata directory to contain even CLR metadata directory header.</comment>
+  </data>
+  <data name="MetadataSignature" xml:space="preserve">
+    <value>Invalid CLR metadata directory signature</value>
+    <comment>A .net managed assembly header should contain a metadata directory which consists of some header information and some data streams. This error indicates that the signature marker in the metadata directory does not have the correct value.</comment>
+  </data>
+  <data name="MetadataTableHeaderTooSmall" xml:space="preserve">
+    <value>CLR metadata table header information is truncated</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables. This error indicates that there is insufficient data in the file to contain even the header information for the metadata tables.</comment>
+  </data>
+  <data name="MetadataTablesTooSmall" xml:space="preserve">
+    <value>CLR metadata tables are truncated</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables with a header. This error indicates that there is insufficient data in the file for the expected metadata tables.</comment>
+  </data>
+  <data name="NestedClassParentError" xml:space="preserve">
+    <value>Parent of nested type could not be found in the type universe</value>
+  </data>
+  <data name="NotEnoughSpaceForBlobStream" xml:space="preserve">
+    <value>CLR metadata string stream is truncated</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to read a "blob" stream that there was less than the expected amount of data in the stream</comment>
+  </data>
+  <data name="NotEnoughSpaceForCOR20HeaderTableDirectory" xml:space="preserve">
+    <value>CLR managed header information is truncated</value>
+    <comment>A .net managed assembly header should contain a header section with information such as the corflags, and header table information consisting of a series of offsets and sizes of various CLR directories in the image, e.g. the resource directories/. This error indicates that there is insufficient space in the remained of the file for the expected header information.</comment>
+  </data>
+  <data name="NotEnoughSpaceForGUIDStream" xml:space="preserve">
+    <value>CLR metadata guid stream is truncated</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to read a "guid" stream that there was less than the expected amount of data in the stream</comment>
+  </data>
+  <data name="NotEnoughSpaceForMetadataDirectory" xml:space="preserve">
+    <value>CLR metadata directory information is truncated</value>
+    <comment>A .net managed assembly header should a contain metadata directory. This error indicates that there is insufficient data in the file to contain the metadata directory at the offset (and of the size) specified in the CLR header.</comment>
+  </data>
+  <data name="NotEnoughSpaceForMetadataStream" xml:space="preserve">
+    <value>CLR metadata compressed stream is truncated</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to read a "compressed" stream that there was less than the expected amount of data in the stream</comment>
+  </data>
+  <data name="NotEnoughSpaceForStreamHeaderName" xml:space="preserve">
+    <value>Stream header name in the CLR metadata directory information is truncated</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to read the stream headers there was insufficient data in the file to read the name of the stream to the length specified in the corresponding header.</comment>
+  </data>
+  <data name="NotEnoughSpaceForStringStream" xml:space="preserve">
+    <value>CLR metadata string stream is truncated</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to read a "string" stream that there was less than the expected amount of data in the stream</comment>
+  </data>
+  <data name="NotEnoughSpaceForUserStringStream" xml:space="preserve">
+    <value>CLR metadata user string stream is truncated</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to read a "user string" stream that there was less than the expected amount of data in the stream.</comment>
+  </data>
+  <data name="NotEnoughSpaceForVersionString" xml:space="preserve">
+    <value>CLR metadata directory version string is truncated</value>
+    <comment>A .net managed assembly should contain a metadata directory with a header that in turn contains a version string. This error indicates that there is insufficient data in the metadata directory header for the version string.</comment>
+  </data>
+  <data name="OptionalHeaderDirectoryEntriesTooSmall" xml:space="preserve">
+    <value>PE header table directory information is truncated</value>
+    <comment>The PE header should contain a series of offsets and sizes of various directories in the image, e.g. the import and export tables. This error indicates that there is insufficient space in the remainder of the file for the expected sequence of directory offset/size pairs.</comment>
+  </data>
+  <data name="OptionalHeaderNTAdditionalFields32TooSmall" xml:space="preserve">
+    <value>Extended 32-bit NT PE header is truncated</value>
+    <comment>The PE magic field indicates that the extra PE header fields for a 32-bit assembly should be present, but are not</comment>
+  </data>
+  <data name="OptionalHeaderNTAdditionalFields64TooSmall" xml:space="preserve">
+    <value>Extended 64-bit NT PE header is truncated</value>
+    <comment>The PE magic field indicates that the extra PE header fields for a 64-bit assembly should be present, but are not</comment>
+  </data>
+  <data name="OptionalHeaderStandardFields32TooSmall" xml:space="preserve">
+    <value>Extended 32-bit PE header is truncated</value>
+    <comment>The PE magic field indicates that the extra PE header fields for a 32-bit assembly should be present, but are not</comment>
+  </data>
+  <data name="OptionalHeaderStandardFields64TooSmall" xml:space="preserve">
+    <value>Extended 64-bit PE header is truncated</value>
+    <comment>The PE magic field indicates that the extra PE header fields for a 64-bit assembly should be present, but are not</comment>
+  </data>
+  <data name="PESignature" xml:space="preserve">
+    <value>Invalid PE signature</value>
+    <comment>A valid PE file must have a signature value of PE00 at offset 0x3c</comment>
+  </data>
+  <data name="SectionHeadersTooSmall" xml:space="preserve">
+    <value>PE section header information is truncated or missing</value>
+    <comment>A valid COFF header should contain a variable length array of section header information, one per section in the image. This error indicates that there is insufficient data in the remaineder of the file even for the header information for the number of sections the header declares.</comment>
+  </data>
+  <data name="SomeRequiredTablesNotSorted" xml:space="preserve">
+    <value>CLR metadata table header sort flag is not consistent with its table format</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables with a header. This error indicates that the header's sort flag is inconsistent with respect to its table format. Note that this is a non-fatal error.</comment>
+  </data>
+  <data name="StorageHeaderTooSmall" xml:space="preserve">
+    <value>CLR metadata directory storage header information is truncated</value>
+    <comment>A .net managed assembly should contain a metadata directory which in turn contains a storage header structure to specify some flags and the number of metadata streams in the directory. This error indicates that there is insufficient data in the metadata directory header for the storage header</comment>
+  </data>
+  <data name="StreamHeaderTooSmall" xml:space="preserve">
+    <value>CLR metadata stream header is truncated</value>
+    <comment>A .net managed assembly should contain a metadata directory which in turn contains a variable number of metadata streams. This error indicates that there was insufficient data in the file for the headers for the expected number of streams.</comment>
+  </data>
+  <data name="TableRowCountSpaceTooSmall" xml:space="preserve">
+    <value>CLR metadata stream header table row counts missing or truncated</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables with a header. The header finishes with a variable length array which should contain a row count for each table.</comment>
+  </data>
+  <data name="UnknownILInstruction" xml:space="preserve">
+    <value>Unrecognized IL instruction</value>
+    <comment>Illegal op code</comment>
+  </data>
+  <data name="UnknownMetadataStream" xml:space="preserve">
+    <value>Unrecognized CLR metadata stream type</value>
+    <comment>A .net managed assembly contains a metadata directory which in turn contains a variable number of metadata streams. This error indicates that when attempting to a stream that it was of an unrecognised type.</comment>
+  </data>
+  <data name="UnknownPEMagic" xml:space="preserve">
+    <value>Unrecognized PE format magic number</value>
+    <comment>The so-called PE Magic field identifies whether the image is in 32 or 64-bit formats. This error indicates that the value of the magic number is unexpected</comment>
+  </data>
+  <data name="UnknownTables" xml:space="preserve">
+    <value>CLR metadata table header version number is not consistent with its table format</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables with a header. This error indicates that the header is specifying a version number that does not match the table format it specifies in another field.</comment>
+  </data>
+  <data name="UnknownVersionOfMetadata" xml:space="preserve">
+    <value>Unrecognized CLR metadata table header version number</value>
+    <comment>A .net managed assembly header should contain a sequence of metadata tables with a header. This error indicates that the header is specifying a version number that is unrecognised.</comment>
+  </data>
+</root>

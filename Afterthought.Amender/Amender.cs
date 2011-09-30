@@ -12,6 +12,7 @@
 using Microsoft.Build;
 using Microsoft.Build.Framework;
 using System;
+using System.Linq;
 using Microsoft.Build.Utilities;
 
 namespace Afterthought.Amender
@@ -21,13 +22,17 @@ namespace Afterthought.Amender
 		public override bool Execute()
 		{
 			DateTime start = DateTime.Now;
-			Log.LogMessage("Amending {0}", AssemblyLocation);
-			Program.Amend(AssemblyLocation);
-			Log.LogMessage("Amending Complete ({0:000})", DateTime.Now.Subtract(start).TotalSeconds);
+			Log.LogMessage(MessageImportance.High, "Amending {0}", TargetAssembly.Select(a => a.ItemSpec).ToArray());
+			Program.Amend(TargetAssembly.First().ItemSpec, AmendmentAssemblies.Select(a => a.ItemSpec).ToArray(), ReferenceAssemblies.Select(a => a.ItemSpec).ToArray());
+			Log.LogMessage(MessageImportance.High, "Amending Complete ({0:0.000} seconds)", DateTime.Now.Subtract(start).TotalSeconds);
 			return true;
 		}
 
 		[Required]
-		public string AssemblyLocation { get; set; }
+		public ITaskItem[] TargetAssembly { get; set; }
+
+		public ITaskItem[] AmendmentAssemblies { get; set; }
+
+		public ITaskItem[] ReferenceAssemblies { get; set; }
 	}
 }

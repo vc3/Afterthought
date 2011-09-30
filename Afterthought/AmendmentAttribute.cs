@@ -44,22 +44,26 @@ namespace Afterthought
 		/// </summary>
 		/// <param name="assembly"></param>
 		/// <returns></returns>
-		public static IEnumerable<ITypeAmendment> GetAmendments(params Assembly[] assemblies)
+		public static IEnumerable<ITypeAmendment> GetAmendments(Assembly target, params Assembly[] amendments)
 		{
 			// Start by finding all assembly amenders
-			var assemblyAmenders = assemblies.SelectMany(a => a.GetCustomAttributes(true)).OfType<IAmendmentAttribute>().ToArray();
+			var assemblyAmenders = target
+				.GetCustomAttributes(true)
+				.OfType<IAmendmentAttribute>()
+				.ToList();
 
-			foreach (var assembly in assemblies)
+			if (amendments != null && amendments.Length > 0)
+				assemblyAmenders.AddRange(amendments.SelectMany(a => a.GetCustomAttributes(true).OfType<IAmendmentAttribute>()));
+
+			// The process all types in the target assembly
+			foreach (var type in target.GetTypes())
 			{
-				foreach (var type in assembly.GetTypes())
+				// Process all type and assembly-level amendments
+				foreach (var amendment in 
+					type.GetCustomAttributes(true).OfType<IAmendmentAttribute>().SelectMany(attr => attr.GetAmendments(type))
+					.Concat(assemblyAmenders.SelectMany(a => a.GetAmendments(type))))
 				{
-					// Process all type and assembly-level amendments
-					foreach (var amendment in 
-						type.GetCustomAttributes(true).OfType<IAmendmentAttribute>().SelectMany(attr => attr.GetAmendments(type))
-						.Concat(assemblyAmenders.SelectMany(a => a.GetAmendments(type))))
-					{
-						yield return amendment;
-					}
+					yield return amendment;
 				}
 			}
 		}
