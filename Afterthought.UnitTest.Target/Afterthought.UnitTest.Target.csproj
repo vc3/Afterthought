@@ -12,14 +12,10 @@
     <AssemblyName>Afterthought.UnitTest.Target</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -64,6 +60,6 @@
   <PropertyGroup>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/debug/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
+    <PostBuildEvent>$(SolutionDir)Afterthought.Amender.3.5/bin/debug/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
 </Project>
