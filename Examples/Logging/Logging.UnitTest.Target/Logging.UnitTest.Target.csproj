@@ -51,7 +51,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)Afterthought.Amender.4.0\bin\debug\Afterthought.Amender.exe "$(TargetPath)" "$(SolutionDir)Examples\Logging\Logging.Amender\bin\debug\Logging.Amender.dll"</PostBuildEvent>
+    <PostBuildEvent>$(SolutionDir)Afterthought.Amender\bin\debug\Afterthought.Amender.exe "$(TargetPath)" "$(SolutionDir)Examples\Logging\Logging.Amender\bin\debug\Logging.Amender.dll"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

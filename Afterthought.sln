@@ -60,7 +60,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityFramework", "Examples
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54} = {FF39EADC-9D3C-40EB-A0EA-60C76C560D54}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Afterthought.Amender", "Afterthought.Amender.3.5\Afterthought.Amender.csproj", "{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Afterthought.Amender", "Afterthought.Amender\Afterthought.Amender.csproj", "{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}"
 EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
@@ -109,9 +109,9 @@ Global
 		SccProjectTopLevelParentUniqueName11 = Afterthought.sln
 		SccProjectName11 = Examples/NotifyPropertyChanged/NotifyPropertyChanged
 		SccLocalPath11 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged
-		SccProjectUniqueName12 = Afterthought.Amender.3.5\\Afterthought.Amender.csproj
-		SccProjectName12 = Afterthought.Amender.3.5
-		SccLocalPath12 = Afterthought.Amender.3.5
+		SccProjectUniqueName12 = Afterthought.Amender\\Afterthought.Amender.csproj
+		SccProjectName12 = Afterthought.Amender
+		SccLocalPath12 = Afterthought.Amender
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CompilerOnly|Any CPU = CompilerOnly|Any CPU

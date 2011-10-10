@@ -60,6 +60,6 @@
   <PropertyGroup>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)Afterthought.Amender.3.5/bin/debug/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
+    <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/debug/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
 </Project>
