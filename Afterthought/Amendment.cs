@@ -96,7 +96,7 @@ namespace Afterthought
 			{
 				Type[] parameters = GetType().BaseType.GetGenericArguments().Concat(method.GetParameters().Select(p => p.ParameterType)).ToArray();
 				var type = GetType().BaseType.GetNestedTypes().Where(t => t.BaseType.Name == "Method" && t.GetGenericArguments().Length == parameters.Length).FirstOrDefault();
-				if (type != null)
+				if (type != null && !parameters.Any(p => p.IsByRef))
 					this.Methods.Add((Amendment.Method)type.MakeGenericType(parameters).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(MethodInfo) }, null).Invoke(new object[] { method }));
 				else
 					this.Methods.Add(new Method(method));
