@@ -48,7 +48,11 @@ namespace Afterthought.Amender
 			{
 				var assemblyDef = ResolveAssembly(assembly);
 				foreach (var reference in assemblyDef.AssemblyReferences.Select(a => a.ResolvedAssembly).Where(a => a.Name.Value != "" && !a.Name.Value.StartsWith("mscorlib")))
-					CacheAssembly(System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value), reference);
+				{
+					var assemblyRef = System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value);
+					if (assemblyRef != null)
+						CacheAssembly(assemblyRef, reference);
+				}
 			}
 
 			this.typeAmendments = typeAmendments.ToDictionary(w => w.Type.FullName);
