@@ -10,27 +10,10 @@ namespace NotifyPropertyChanged.UnitTest.Target
 	/// Example of a type that already implements <see cref="INotifyPropertyChanged"/>.
 	/// </summary>
 	[NotifyPropertyChanged]
-	public class Soda : INotifyPropertyChanged
+	public class Soda
 	{
-		public event PropertyChangedEventHandler PropertyChanged;
-
 		public int Cans { get; set; }
 
-		string type;
-		public string Type
-		{
-			get
-			{
-				return type;
-			}
-			set
-			{
-				if (type != value)
-				{
-					type = value;
-					PropertyChanged(this, new PropertyChangedEventArgs("Type"));
-				}
-			}
-		}
+		public string Type { get; set; }
 	}
 }

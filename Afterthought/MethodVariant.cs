@@ -367,7 +367,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -770,7 +770,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -1173,7 +1173,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -1576,7 +1576,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -1979,7 +1979,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -2382,7 +2382,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -2785,7 +2785,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -3188,7 +3188,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -3591,7 +3591,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -3994,7 +3994,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)
@@ -4397,7 +4397,7 @@ namespace Afterthought
 					return this;
 				}
 
-				public Enumeration Catch<TResult, TException>(CatchMethod<TException, TResult> @catch)
+				public Enumeration Catch<TException, TResult>(CatchMethod<TException, TResult> @catch)
 					where TException : Exception
 				{
 					foreach (var method in methods)

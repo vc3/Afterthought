@@ -184,6 +184,17 @@ namespace Afterthought.UnitTest.Target
 			return (long)Sum(this, "Sum4", new object[] { values }, 0);
 		}
 
+
+		/// <summary>
+		/// Will be amended to swallow overflow errors.
+		/// </summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
+		public int Sum5(int[] values)
+		{
+			return values.Sum();
+		}
+
 		public static object Sum(Calculator c, string methodName, object[] parameters, object result)
 		{
 			return ((int[])parameters[0]).Sum();
@@ -208,18 +219,15 @@ namespace Afterthought.UnitTest.Target
 				Thread.Sleep(110);
 				return values.Sum();
 			}
-			catch (ApplicationException e)
+			catch (OverflowException e)
 			{
-				return TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, values);
+				return TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, e, values);
 			}
 			finally
 			{
 				TestAmendment<Calculator>.FinallySlowSum2(this, stopwatch, values);
 			}
 		}
-
- 
-
 
 		public event EventHandler Calculate;
 	}

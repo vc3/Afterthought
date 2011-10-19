@@ -37,9 +37,17 @@ namespace Afterthought.UnitTest.Target
 				.WithParams<int[]>()
 				.Before((T instance, ref int[] values)
 					=> { var s = new Stopwatch(); s.Start(); return s; })
-				.Catch<Exception>((instance, exception, stopwatch, values) => values.Sum())
+				.Catch<OverflowException, int>((instance, stopwatch, exception, values)
+					=> { instance.Result = (int)stopwatch.ElapsedMilliseconds; return Int32.MaxValue; })
 				.Finally((instance, stopwatch, values)
 					=> instance.Result = (int)stopwatch.ElapsedMilliseconds);
+
+			// Modify Sum5 to swallow overflow errors
+			Methods
+				.Named("Sum5")
+				.WithParams<int[]>()
+				.Catch<OverflowException, int>((instance, exception, values)
+					=> Int32.MaxValue);
 
 			// Modify Multiply to also set the Result property to the resulting value
 			Methods
@@ -266,10 +274,9 @@ namespace Afterthought.UnitTest.Target
 			return stopwatch;
 		}
 
-		internal static int CatchSlowSum2(T instance, Stopwatch stopwatch, int[] values)
+		internal static int CatchSlowSum2(T instance, Stopwatch stopwatch, OverflowException e, int[] values)
 		{
-			instance.Result = (int)stopwatch.ElapsedMilliseconds;
-			return instance.Result;
+			return Int32.MaxValue;
 		}
 
 		internal static void FinallySlowSum2(T instance, Stopwatch stopwatch, int[] values)

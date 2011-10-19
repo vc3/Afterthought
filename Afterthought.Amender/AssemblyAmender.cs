@@ -1491,7 +1491,7 @@ namespace Afterthought.Amender
 			if (methodAmendment.Catch != null || methodAmendment.Finally != null)
 			{
 				bool hasReturnValue = !TypeHelper.TypesAreEquivalent(methodBody.MethodDefinition.Type, host.PlatformType.SystemVoid);
-				LocalDefinition result = null;
+				ILocalDefinition result = null;
 
 				// Store the result before starting the catch/finally blocks
 				if (hasReturnValue)
@@ -1499,7 +1499,6 @@ namespace Afterthought.Amender
 					result = new LocalDefinition() { Name = host.NameTable.GetNameFor("_result_"), Type = methodBody.MethodDefinition.Type };
 					methodBody.LocalVariables.Add(result);
 					il.Emit(OperationCode.Stloc, result);
-					il.Emit(OperationCode.Ldloc, result);
 				}
 
 				// Skip to the return statement
@@ -1522,6 +1521,10 @@ namespace Afterthought.Amender
 
 					// Call the catch delegate
 					CallMethodDelegate(methodBody, methodAmendment.Catch, false, il, null, MethodDelegateType.Catch, context, exception);
+
+					// Store the new result if the method has a return value
+					if (hasReturnValue)
+						il.Emit(OperationCode.Stloc, result);
 
 					// Exit the catch block
 					il.Emit(OperationCode.Leave_S, exit);
