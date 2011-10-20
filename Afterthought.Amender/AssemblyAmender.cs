@@ -2025,6 +2025,11 @@ namespace Afterthought.Amender
 				typeDef = GenericTypeInstance.GetGenericTypeInstance((INamedTypeReference)genericTypeDef, type.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeReference>(), host.InternFactory);
 			}
 
+			// Generic parameter
+			else if (type.IsGenericParameter)
+			{
+			}
+
 			// Otherwise, just find the type
 			else
 				typeDef = ResolveAssembly(type.Assembly).GetAllTypes()

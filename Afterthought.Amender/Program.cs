@@ -104,8 +104,8 @@ namespace Afterthought.Amender
 			var amendments = AmendmentAttribute.GetAmendments(assemblies.First(), assemblies.Skip(1).ToArray()).ToList();
 
 			// Exit immediately if there are no amendments in the target assemblies
-			if (amendments.Count == 0)
-				return;
+			//if (amendments.Count == 0)
+			//    return;
 
 			// Amend the target assembly
 
@@ -145,11 +145,12 @@ namespace Afterthought.Amender
 					module = amender.Visit(module);
 
 					// Save the amended assembly back to the original directory
+					var localScopeProvider = pdbReader == null ? null : new ILGenerator.LocalScopeProvider(pdbReader);
 					using (var pdbWriter = pdbReader != null ? new PdbWriter(pdbFile, pdbReader) : null)
 					{
 						using (var dllStream = File.Create(targetAssembly))
 						{
-							PeWriter.WritePeToStream(module, host, dllStream, pdbReader, null, pdbWriter);
+							PeWriter.WritePeToStream(module, host, dllStream, pdbReader, localScopeProvider, pdbWriter);
 						}
 					}
 				}

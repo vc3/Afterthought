@@ -200,6 +200,11 @@ namespace Afterthought.UnitTest.Target
 			return ((int[])parameters[0]).Sum();
 		}
 
+		public decimal Sum<T>(IEnumerable<T> values, Func<T, decimal> conversion)
+		{
+			return values.Sum(conversion);
+		}
+
 		/// <summary>
 		/// Takes over 100 milliseconds to sum the input values.  Will be amended to time this via a context.
 		/// </summary>

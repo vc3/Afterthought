@@ -49,6 +49,13 @@ namespace Afterthought.UnitTest.Target
 				.Catch<OverflowException, int>((instance, exception, values)
 					=> Int32.MaxValue);
 
+			// Amend a generic method
+			//Methods
+			//    .Named("Sum")
+			//    .Where(m => m.MethodInfo != null && m.MethodInfo.IsGenericMethodDefinition)
+			//    .After((T instance, string method, object[] parameters, object result) 
+			//        => { instance.Result = (int)result; return result; });
+
 			// Modify Multiply to also set the Result property to the resulting value
 			Methods
 				.Named("Add")

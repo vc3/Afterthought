@@ -196,5 +196,15 @@ namespace Afterthought.UnitTest
 			// Verify that the execution time was measured and saved to result
 			Assert.AreEqual(Int32.MaxValue, sum);
 		}
+
+		//[TestMethod]
+		//public void AfterGenericMethodDefinition()
+		//{
+		//    Calculator.Result = 0;
+
+		//    Calculator.Sum(new float[] { 1.5F, 4F, 3.5F }, f => (decimal)f);
+
+		//    Assert.AreEqual(9, Calculator.Result);
+		//}
 	}
 }
