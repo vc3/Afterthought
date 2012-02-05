@@ -12,6 +12,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Cci.MutableCodeModel;
 using Microsoft.Cci;
@@ -20,6 +22,9 @@ using System.Runtime.Serialization;
 using System.IO;
 using Afterthought;
 using System.Collections;
+using Assembly = Microsoft.Cci.MutableCodeModel.Assembly;
+using MethodBody = Microsoft.Cci.MutableCodeModel.MethodBody;
+using Module = Microsoft.Cci.MutableCodeModel.Module;
 
 namespace Afterthought.Amender
 {
@@ -272,8 +277,10 @@ namespace Afterthought.Amender
 					}
 
 					// Determine if the property needs to be implicitly implemented as an auto property
-					else if (!Properties.Values.Any(p => p.Implements == property))
-						AddProperty(type, Afterthought.Amendment.Property.Implement(typeAmendment.Type, property));
+                    else if (!Properties.Values.Any(p => p.Implements == property))
+                    {
+						AddProperty(type, Amendment.Property.Implement(typeAmendment.Type, property, typeAmendment.ImplicitlyImplementedInterfaces.All(ii => ii != interfaceType)));
+                    }
 				}
 
 				// Process all interface methods
@@ -292,7 +299,7 @@ namespace Afterthought.Amender
 					// TODO: Implicitly implement missing interface methods by throwing a not implemented exception
 					//// Determine if the method needs to be implicitly implemented
 					//else if (!Methods.Values.Any(m => m.Implements == method))
-					//    AddMethod(type, Afterthought.Amendment.Method.Implement(typeAmendment.Type, method));
+                        //AddMethod(type, Afterthought.Amendment.Method.Implement(typeAmendment.Type, method));
 				}
 
 				// Process all interface events
@@ -367,13 +374,13 @@ namespace Afterthought.Amender
 			return null;
 		}
 
-		/// <summary>
-		/// Adds a new property to a type definition.
-		/// </summary>
-		/// <param name="type"></param>
-		/// <param name="property"></param>
-		/// <returns></returns>
-		PropertyDefinition AddProperty(NamedTypeDefinition type, IPropertyAmendment property)
+	    /// <summary>
+	    /// Adds a new property to a type definition.
+	    /// </summary>
+	    /// <param name="type"></param>
+	    /// <param name="property"></param>
+	    /// <returns></returns>
+	    PropertyDefinition AddProperty(NamedTypeDefinition type, IPropertyAmendment property)
 		{
 			var propertyType = ResolveType(property.Type);
 			bool isInterface = property.Implements != null;
@@ -381,11 +388,11 @@ namespace Afterthought.Amender
 			// Add the property
 			var propertyDef = new PropertyDefinition()
 			{
-				Name = host.NameTable.GetNameFor(property.Name),
+				Name = property.IsExplicitImplementation || property.Implements == null ? host.NameTable.GetNameFor(property.Name) : host.NameTable.GetNameFor(property.Implements.Name),
 				Type = propertyType,
 				ContainingTypeDefinition = type,
 				CallingConvention = CallingConvention.HasThis,
-				Visibility = isInterface ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
+                Visibility = isInterface && property.IsExplicitImplementation ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
 				Accessors = new List<IMethodReference>()
 			};
 			if (type.Properties == null)
@@ -400,15 +407,15 @@ namespace Afterthought.Amender
 				{
 					ContainingTypeDefinition = type,
 					Type = propertyType,
-					Name = host.NameTable.GetNameFor((isInterface ? property.Implements.DeclaringType.FullName + "." : "") +
-							"get_" + (isInterface ? property.Implements.Name : property.Name)),
+                    Name = host.NameTable.GetNameFor((isInterface && property.Implements != null && property.IsExplicitImplementation ? property.Implements.DeclaringType.FullName + "." : "") +
+                            "get_" + ((isInterface || property.IsExplicitImplementation) && property.Implements != null ? property.Implements.Name : property.Name)),
 					IsSpecialName = true,
 					IsHiddenBySignature = true,
 					IsCil = true,
 					IsNewSlot = isInterface,
 					IsVirtual = isInterface,
 					IsSealed = isInterface,
-					Visibility = isInterface ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
+                    Visibility = isInterface && property.IsExplicitImplementation ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
 					CallingConvention = CallingConvention.HasThis,
 					InternFactory = host.InternFactory,
 					Body = new MethodBody()
@@ -434,15 +441,15 @@ namespace Afterthought.Amender
 					{
 						ContainingTypeDefinition = type,
 						Type = host.PlatformType.SystemVoid,
-						Name = host.NameTable.GetNameFor((isInterface ? property.Implements.DeclaringType.FullName + "." : "") +
-								"set_" + (isInterface ? property.Implements.Name : property.Name)),
+                        Name = host.NameTable.GetNameFor((isInterface && property.Implements != null && property.IsExplicitImplementation ? property.Implements.DeclaringType.FullName + "." : "") +
+                            "set_" + ((isInterface || property.IsExplicitImplementation) && property.Implements != null ? property.Implements.Name : property.Name)),
 						IsSpecialName = true,
 						IsHiddenBySignature = true,
 						IsCil = true,
 						IsNewSlot = isInterface,
 						IsVirtual = isInterface,
 						IsSealed = isInterface,
-						Visibility = isInterface ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
+                        Visibility = isInterface && property.IsExplicitImplementation ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
 						CallingConvention = CallingConvention.HasThis,
 						InternFactory = host.InternFactory,
 						Body = new MethodBody(),
@@ -471,9 +478,10 @@ namespace Afterthought.Amender
 				// Add the backing field
 				var backingField = new FieldDefinition()
 				{
-					Name = host.NameTable.GetNameFor(GetBackingFieldName(property)),
+                    Name = host.NameTable.GetNameFor((isInterface && !property.IsExplicitImplementation && property.Implements != null) ? GetBackingFieldName(property.Implements) : GetBackingFieldName(property)),
 					Type = propertyType,
 					InternFactory = host.InternFactory,
+                    
 				};
 				if (type.Fields == null)
 					type.Fields = new List<IFieldDefinition>();
@@ -1067,7 +1075,7 @@ namespace Afterthought.Amender
 				else if (propertyAmendment.PropertyInfo == null)
 				{
 					// Get the previously created backing field for this property
-					var backingField = GetCurrentType().Fields.Where(f => f.Name.Value == GetBackingFieldName(propertyAmendment)).First();
+                    var backingField = GetCurrentType().Fields.First(f => f.Name.Value == GetBackingFieldName(propertyAmendment) || (propertyAmendment.Implements != null && f.Name.Value == GetBackingFieldName(propertyAmendment.Implements)));
 
 					// Default getter
 					if (propertyAmendment.LazyInitializer == null)
@@ -1256,7 +1264,7 @@ namespace Afterthought.Amender
 					il.Emit(OperationCode.Ldarg_1);
 
 					// Save to backing field
-					il.Emit(OperationCode.Stfld, GetCurrentType().Fields.Where(f => f.Name.Value == GetBackingFieldName(propertyAmendment)).First());
+                    il.Emit(OperationCode.Stfld, GetCurrentType().Fields.First(f => f.Name.Value == GetBackingFieldName(propertyAmendment) || (propertyAmendment.Implements != null && f.Name.Value == GetBackingFieldName(propertyAmendment.Implements))));
 
 					// Return
 					il.Emit(OperationCode.Ret);
@@ -2420,11 +2428,26 @@ namespace Afterthought.Amender
 		/// </summary>
 		/// <param name="property"></param>
 		/// <returns></returns>
-		string GetBackingFieldName(IPropertyAmendment property)
-		{
-			// Return backing field name consistent with C# compiler conventions
-			return "<" + property.Name + ">k__BackingField";
-		}
+        string GetBackingFieldName(IPropertyAmendment property)
+        {
+		    return GetBackingFieldName(property.Name);
+        }
+
+        /// <summary>
+        /// Gets the name of the private backing field to use for new generated properties.
+        /// </summary>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        private string GetBackingFieldName(PropertyInfo property)
+        {
+            return GetBackingFieldName(property.Name);
+        }
+
+        private string GetBackingFieldName(string propertyName)
+        {
+            // Return backing field name consistent with C# compiler conventions
+            return "<" + propertyName + ">k__BackingField";
+        }
 	}
 
 	internal class GenericMethod

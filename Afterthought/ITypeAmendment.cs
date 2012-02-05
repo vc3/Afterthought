@@ -11,8 +11,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Afterthought
 {
@@ -21,6 +19,8 @@ namespace Afterthought
 		Type Type { get; }
 
 		IEnumerable<Type> Interfaces { get; }
+
+		IEnumerable<Type> ImplicitlyImplementedInterfaces { get; }
 
 		IEnumerable<IConstructorAmendment> Constructors { get; }
 
