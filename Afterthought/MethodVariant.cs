@@ -819,6 +819,11 @@ namespace Afterthought
 			{
 				return Add(new Method<P1>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1)) });
 			}
+
+            public Method<P1> AddPropertyIndexerGetter<P1, TResult>(Method<P1>.ImplementMethod<TResult> implementation)
+            {
+                return Add(new Method<P1>("get_Item") { ImplementationMethod = implementation.Method });
+            }
 		}
 	}
 
