@@ -272,7 +272,7 @@ namespace Afterthought.Amender
 					}
 
 					// Determine if the property needs to be implicitly implemented as an auto property
-					else if (!Properties.Values.Any(p => p.Implements == property) && property.Name != "Item")
+                    else if (!Properties.Values.Any(p => p.Implements == property) && !(property.Name == "Item" && property.GetIndexParameters().Length > 0))
 						AddProperty(type, Afterthought.Amendment.Property.Implement(typeAmendment.Type, property));
 				}
 
