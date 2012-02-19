@@ -2099,12 +2099,18 @@ namespace Afterthought.Amender
 			// Preload all types in the assembly
 			foreach (var typeDef in assemblyDef.GetAllTypes())
 			{
-				Type type = assembly.GetType(GetTypeName(typeDef), false);
-				if (type != null)
-				{
-					resolvedTypes[type] = typeDef;
-					resolvedTypeDefs[typeDef] = type;
-				}
+			    try
+			    {
+                    Type type = assembly.GetType(GetTypeName(typeDef), false);
+                    if (type != null)
+                    {
+                        resolvedTypes[type] = typeDef;
+                        resolvedTypeDefs[typeDef] = type;
+                    }
+			    }
+			    catch (TypeLoadException tle){
+                    // Silently ignore it : http://aspnet.codeplex.com/workitem/8666
+               }
 			}
 		}
 	
