@@ -45,8 +45,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bar.cs" />
+    <Compile Include="CustomAmendAttribute.cs" />
+    <Compile Include="ExplicitImplementationAttribute.cs" />
+    <Compile Include="ExplicitInterfaceAmendment.cs" />
     <Compile Include="IExplicitInterface.cs" />
-    <Compile Include="ExplicitOrImplicitInterfaceAmendment.cs" />
+    <Compile Include="ImplicitImplementationAttribute.cs" />
+    <Compile Include="ImplicitInterfaceAmendment.cs" />
     <Compile Include="IImplicitInterface.cs" />
     <Compile Include="ILog.cs" />
     <Compile Include="IMath.cs" />

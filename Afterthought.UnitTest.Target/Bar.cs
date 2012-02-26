@@ -1,6 +1,7 @@
 ﻿namespace Afterthought.UnitTest.Target
 {
-    [Amendment(typeof(ExplicitOrImplicitInterfaceAmendment<>))]
+    [ExplicitImplementation]
+    [ImplicitImplementation]
     public class Bar
     {
         public int Id { get; set; }
