@@ -9,9 +9,13 @@ namespace Afterthought.UnitTest
     public class ExplicitOrImplicitInterfaceTests
     {
 
+        private Bar _bar;
+
         [TestInitialize]
         public void InitializeCalculator()
-        { }
+        {
+            _bar = new Bar();
+        }
 
         /// <summary>
         /// Tests implicitly implemented interface's property.
@@ -37,6 +41,34 @@ namespace Afterthought.UnitTest
             // Assert that ExplicitProperty property is implemented explicitly.
             Assert.IsNotNull(typeof (Bar).GetExplicitlyImplementedProperty(typeof (IExplicitInterface),
                                                                            string.Format("{0}.{1}", typeof (IExplicitInterface).FullName, explicitPropertyInfo.Name)));
+        }
+
+        /// <summary>
+        /// Tests that Explicit properties can be setted.
+        /// </summary>
+        [TestMethod]
+        public void CanSetExplicitProperties()
+        {
+            Assert.IsInstanceOfType(_bar, typeof(IExplicitInterface));
+
+            ((IExplicitInterface)_bar).ExplicitProperty = -1;
+
+            // Assert that the value is now -1
+            Assert.AreEqual(-1, ((IExplicitInterface)_bar).ExplicitProperty);
+        }
+
+        /// <summary>
+        /// Tests that Implicit properties can be setted.
+        /// </summary>
+        [TestMethod]
+        public void CanSetImplicitProperties()
+        {
+            Assert.IsInstanceOfType(_bar, typeof(IImplicitInterface));
+
+            ((IImplicitInterface)_bar).ImplicitProperty = -2;
+
+            // Assert that the value is now -2
+            Assert.AreEqual(-2, ((IImplicitInterface)_bar).ImplicitProperty);
         }
     }
 }
