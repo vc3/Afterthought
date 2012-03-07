@@ -38,5 +38,6 @@ namespace Afterthought
 
 		MethodInfo AfterSet { get; }
 
+	    bool IsExplicitImplementation { get; }
 	}
 }

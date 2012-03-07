@@ -37,6 +37,18 @@ namespace Afterthought
 				this.PropertyInfo = property;
 			}
 
+            protected Property(string name, bool isExplicitImpl)
+                : this(name)
+            {
+                _isExplicitImplementation = isExplicitImpl;
+            }
+
+            internal Property(PropertyInfo property, bool isExplicitImpl)
+                : this(property)
+            {
+                _isExplicitImplementation = isExplicitImpl;
+            }
+
 			public abstract Type Type { get; }
 
 			public PropertyInfo PropertyInfo { get; private set; }
@@ -68,8 +80,14 @@ namespace Afterthought
 
 			MethodInfo IPropertyAmendment.AfterSet { get { return AfterSetMethod; } }
 
-			PropertyInfo implements;
-			internal PropertyInfo Implements
+		    private readonly bool _isExplicitImplementation = true;
+		    public bool IsExplicitImplementation
+		    {
+                get { return _isExplicitImplementation; }
+		    }
+
+		    PropertyInfo implements;
+		    internal PropertyInfo Implements
 			{
 				get
 				{
@@ -110,24 +128,38 @@ namespace Afterthought
 			/// <returns></returns>
 			public static Property Create(Type instanceType, Type propertyType, string name)
 			{
-				Type amendmentType = typeof(Amendment<,>).MakeGenericType(instanceType, instanceType);
-				Type propertyAmendmentType = amendmentType.GetNestedType("Property`1").MakeGenericType(instanceType, instanceType, propertyType);
-				return (Property)propertyAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string) }, null).Invoke(new object[] { name });
+			    return Create(instanceType, propertyType, name, true);
 			}
 
-			/// <summary>
-			/// Creates a new <see cref="Property"/> that implements the specified interface property.
-			/// </summary>
-			/// <param name="instanceType"></param>
-			/// <param name="interfaceProperty"></param>
-			/// <returns></returns>
-			public static Property Implement(Type instanceType, PropertyInfo interfaceProperty)
+		    /// <summary>
+		    /// Creates a concrete property with the specified instance type, property type, and name.
+		    /// </summary>
+		    /// <param name="instanceType"></param>
+		    /// <param name="propertyType"></param>
+		    /// <param name="name"></param>
+		    /// <param name="explicitImplementation"> </param>
+		    /// <returns></returns>
+		    private static Property Create(Type instanceType, Type propertyType, string name, bool explicitImplementation)
+            {
+                Type amendmentType = typeof(Amendment<,>).MakeGenericType(instanceType, instanceType);
+                Type propertyAmendmentType = amendmentType.GetNestedType("Property`1").MakeGenericType(instanceType, instanceType, propertyType);
+                return (Property)propertyAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string), typeof(bool) }, null).Invoke(new object[] { name, explicitImplementation });
+            }
+
+		    /// <summary>
+		    /// Creates a new <see cref="Property"/> that implements the specified interface property.
+		    /// </summary>
+		    /// <param name="instanceType"></param>
+		    /// <param name="interfaceProperty"></param>
+		    /// <param name="explicitImplementation"> </param>
+		    /// <returns></returns>
+		    public static Property Implement(Type instanceType, PropertyInfo interfaceProperty, bool explicitImplementation = true)
 			{
 				// Ensure the property is declared on an interface
-				if (!interfaceProperty.DeclaringType.IsInterface)
+				if (interfaceProperty.DeclaringType == null || !interfaceProperty.DeclaringType.IsInterface)
 					throw new ArgumentException("Only interface properties may be implemented.");
 
-				var property = Create(instanceType, interfaceProperty.PropertyType, interfaceProperty.Name);
+				var property = Create(instanceType, interfaceProperty.PropertyType, interfaceProperty.Name, explicitImplementation);
 				property.Implements = interfaceProperty;
 				return property;
 			}
@@ -149,6 +181,14 @@ namespace Afterthought
 			internal Property(PropertyInfo prop)
 				: base(prop)
 			{ }
+
+            internal Property(string name, bool isExplicitImpl)
+                : base(name, isExplicitImpl)
+            { }
+
+            internal Property(PropertyInfo property, bool isExplicitImpl)
+                : base(property, isExplicitImpl)
+            {}
 
 			public override Type Type
 			{

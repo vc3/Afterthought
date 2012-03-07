@@ -45,12 +45,24 @@
     </CodeAnalysisDependentAssemblyPaths>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AttributeTests.cs" />
-    <Compile Include="ConstructorTests.cs" />
-    <Compile Include="MethodTests.cs" />
-    <Compile Include="InterfaceTests.cs" />
+    <Compile Include="AttributeTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ConstructorTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ExplicitOrImplicitInterfaceTests.cs" />
+    <Compile Include="InterfaceTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MethodTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="PropertyTests.cs" />
+    <Compile Include="PropertyTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TypeExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Afterthought.UnitTest.Target\Afterthought.UnitTest.Target.csproj">

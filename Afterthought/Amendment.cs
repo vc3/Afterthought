@@ -12,7 +12,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reflection;
 
 namespace Afterthought
@@ -48,6 +47,7 @@ namespace Afterthought
 	public partial class Amendment<TType, TAmended> : Amendment, ITypeAmendment
 	{
 		List<Type> interfaces = new List<Type>();
+        List<Type> _implicitImplementedInterface = new List<Type>();
 
 		#region Constructors
 
@@ -81,11 +81,11 @@ namespace Afterthought
 			}
 
 			// Properties
-			this.Properties = new PropertyList();
+			Properties = new PropertyList();
 			foreach (var propertyInfo in Type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
 			{
 				Type propertyAmendmentType = amendmentType.GetNestedType("Property`1").MakeGenericType(Type, AmendedType, propertyInfo.PropertyType);
-				Property property = (Property)propertyAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(PropertyInfo) }, null).Invoke(new object[] { propertyInfo });
+                Property property = (Property)propertyAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(PropertyInfo)}, null).Invoke(new object[] { propertyInfo});
 				Properties.Add(property);
 			}
 
@@ -148,12 +148,18 @@ namespace Afterthought
 
 		#region Methods
 
-		/// <summary>
-		/// Allows subclasses to implement interfaces for the types being amended.
-		/// </summary>
-		/// <typeparam name="TInterface"></typeparam>
-		/// <param name="members"></param>
-		public void Implement<TInterface>(params InterfaceMember[] members)
+        public void Implement<TInterface>(params InterfaceMember[] members)
+        {
+            Implement<TInterface>(true, members);
+        }
+
+	    /// <summary>
+	    /// Allows subclasses to implement interfaces for the types being amended.
+	    /// </summary>
+	    /// <typeparam name="TInterface"></typeparam>
+	    /// <param name="explicitImplementation"> </param>
+	    /// <param name="members"></param>
+	    public void Implement<TInterface>(bool explicitImplementation, params InterfaceMember[] members)
 		{
 			var interfaceType = typeof(TInterface);
 
@@ -163,6 +169,8 @@ namespace Afterthought
 
 			// Track the interface being implemented
 			interfaces.Add(interfaceType);
+            if(!explicitImplementation)
+                _implicitImplementedInterface.Add(interfaceType);
 
 			// Add members that implement the interface
 			if (members != null)
@@ -245,6 +253,14 @@ namespace Afterthought
 				return interfaces;
 			}
 		}
+
+        IEnumerable<Type> ITypeAmendment.ImplicitlyImplementedInterfaces
+        {
+            get
+            {
+                return _implicitImplementedInterface;
+            }
+        }
 
 		IEnumerable<IFieldAmendment> ITypeAmendment.Fields
 		{

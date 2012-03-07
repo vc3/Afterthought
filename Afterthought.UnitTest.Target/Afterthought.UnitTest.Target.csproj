@@ -44,11 +44,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bar.cs" />
+    <Compile Include="Calculator.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CustomAmendAttribute.cs" />
+    <Compile Include="ExplicitImplementationAttribute.cs" />
+    <Compile Include="ExplicitInterfaceAmendment.cs" />
+    <Compile Include="IExplicitInterface.cs" />
+    <Compile Include="ImplicitImplementationAttribute.cs" />
+    <Compile Include="ImplicitInterfaceAmendment.cs" />
+    <Compile Include="IImplicitInterface.cs" />
     <Compile Include="ILog.cs" />
     <Compile Include="IMath.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Calculator.cs" />
-    <Compile Include="TestAmendment.cs" />
+    <Compile Include="TestAmendment.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Afterthought\Afterthought.csproj">
@@ -64,5 +76,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/debug/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>del $(TargetDir)*.*.dll.afterthought</PreBuildEvent>
   </PropertyGroup>
 </Project>
