@@ -140,7 +140,7 @@ namespace Afterthought.Amender
 
 			// Get the Amendment for the current type definition
 			ITypeAmendment typeAmendment;
-			typeAmendments.TryGetValue(type.ToString(), out typeAmendment);
+			typeAmendments.TryGetValue(GetTypeName(type), out typeAmendment);
 
 			// Exit immediately if the type is not being amended
 			if (typeAmendment == null)

@@ -53,14 +53,14 @@ namespace Afterthought
 				.ToList();
 
 			if (amendments != null && amendments.Length > 0)
-				assemblyAmenders.AddRange(amendments.SelectMany(a => a.GetCustomAttributes(true).OfType<IAmendmentAttribute>()));
+				assemblyAmenders.AddRange(amendments.SelectMany(a => a.GetCustomAttributes(false).OfType<IAmendmentAttribute>()));
 
 			// The process all types in the target assembly
 			foreach (var type in target.GetTypes())
 			{
 				// Process all type and assembly-level amendments
 				foreach (var amendment in 
-					type.GetCustomAttributes(true).OfType<IAmendmentAttribute>().SelectMany(attr => attr.GetAmendments(type))
+					type.GetCustomAttributes(false).OfType<IAmendmentAttribute>().SelectMany(attr => attr.GetAmendments(type))
 					.Concat(assemblyAmenders.SelectMany(a => a.GetAmendments(type))))
 				{
 					yield return amendment;
