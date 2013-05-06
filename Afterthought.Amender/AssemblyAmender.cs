@@ -1167,6 +1167,10 @@ namespace Afterthought.Amender
 						{
 							// Add local variable to store the current value of the property
 							var currentValue = new LocalDefinition() { Name = host.NameTable.GetNameFor("_cv_"), Type = propertyDef.Type };
+
+							if (methodBody.LocalVariables == null)
+								methodBody.LocalVariables = new List<ILocalDefinition>();
+
 							methodBody.LocalVariables.Add(currentValue);
 
 							// Store the current value in a local variable
