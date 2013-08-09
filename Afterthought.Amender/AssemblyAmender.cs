@@ -83,7 +83,10 @@ namespace Afterthought.Amender
 		/// <returns></returns>
 		public override NamespaceTypeDefinition Mutate(NamespaceTypeDefinition namespaceTypeDefinition)
 		{
-			return AmendType(namespaceTypeDefinition) ? base.Mutate(namespaceTypeDefinition) : namespaceTypeDefinition;
+			var amended = AmendType(namespaceTypeDefinition);
+			var result = base.Mutate(namespaceTypeDefinition);
+
+			return amended ? result : namespaceTypeDefinition;
 		}
 
 		/// <summary>
@@ -122,7 +125,10 @@ namespace Afterthought.Amender
 		/// <returns></returns>
 		public override NestedTypeDefinition Mutate(NestedTypeDefinition nestedTypeDefinition)
 		{
-			return AmendType(nestedTypeDefinition) ? base.Mutate(nestedTypeDefinition) : nestedTypeDefinition;
+			var amended = AmendType(nestedTypeDefinition);
+			var result = base.Mutate(nestedTypeDefinition);
+
+			return amended ? result : nestedTypeDefinition;
 		}
 
 		/// <summary>

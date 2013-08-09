@@ -5,22 +5,22 @@ using System.Text;
 
 namespace Afterthought.UnitTest.Target
 {
-    public class Nested
-    {
-        [Amendment(typeof(TestNestedAmendment<>))]
-        public class Example
-        {
-            public Example()
-            {
-                
-            }
+	public class Nested
+	{
+		[Amendment(typeof(TestNestedAmendment<>))]
+		public class Example
+		{
+			public Example()
+			{
+				
+			}
 
-            public int Result { get; set; }
+			public int Result { get; set; }
 
-            public int Add(int x, int y)
-            {
-                return 0;
-            }
-        }
-    }
+			public int Add(int x, int y)
+			{
+				return 0;
+			}
+		}
+	}
 }
