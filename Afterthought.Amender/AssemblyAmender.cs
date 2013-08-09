@@ -272,7 +272,7 @@ namespace Afterthought.Amender
 					}
 
 					// Determine if the property needs to be implicitly implemented as an auto property
-					else if (!Properties.Values.Any(p => p.Implements == property))
+                    else if (!Properties.Values.Any(p => p.Implements == property) && !(property.Name == "Item" && property.GetIndexParameters().Length > 0))
 						AddProperty(type, Afterthought.Amendment.Property.Implement(typeAmendment.Type, property));
 				}
 
@@ -283,7 +283,7 @@ namespace Afterthought.Amender
 					var methodDef = ResolveMethod(interfaceDef, method);
 
 					// Determine if the interface method is already implemented by the type
-					var existingMethod = type.Methods == null ? null : type.Methods.Where(m => AreEquivalent(m, method) && m.Visibility == TypeMemberVisibility.Public).FirstOrDefault();
+                    var existingMethod = type.Methods == null ? null : type.Methods.Where(m => AreEquivalent(m, method) && (m.Visibility == TypeMemberVisibility.Public || (method.Name == "get_Item" && m.IsSpecialName && m.Visibility == TypeMemberVisibility.Private))).FirstOrDefault();
 
 					// Mark the existing method as implementing the interface
 					if (existingMethod != null)
@@ -886,7 +886,7 @@ namespace Afterthought.Amender
 			}
 
 			// Properties
-			else if (methodDef.IsHiddenBySignature && methodDef.IsSpecialName && (methodName.StartsWith("get_") || methodName.StartsWith("set_")))
+			else if (methodDef.IsHiddenBySignature && methodDef.IsSpecialName && !methodName.StartsWith("get_Item") && (methodName.StartsWith("get_") || methodName.StartsWith("set_")))
 			{
 				// Determine which property is being mutated
 				IPropertyDefinition propertyDef = typeDef.Properties == null ? null : typeDef.Properties
@@ -2243,13 +2243,13 @@ namespace Afterthought.Amender
 			return
 
 				// Ensure method names match
-				methodDef.Name.Value == method.Name &&
+                (methodDef.Name.Value == method.Name || (method.Name == "get_Item" && methodDef.IsSpecialName &&  methodDef.Name.Value.EndsWith(method.Name))) &&
 
 				// Ensure parameter counts match
 				methodDef.ParameterCount == method.GetParameters().Length &&
 
 				// Ensure parameter types match
-				method.GetParameters().Select(p => ResolveType(p.ParameterType)).Cast<ITypeDefinition>().SequenceEqual(methodDef.Parameters.Select(p => p.Type.ResolvedType)) &&
+				((method.Name == "get_Item" && methodDef.IsSpecialName) || method.GetParameters().Select(p => ResolveType(p.ParameterType)).Cast<ITypeDefinition>().SequenceEqual(methodDef.Parameters.Select(p => p.Type.ResolvedType))) &&
 
 				(
 					// Method specific tests
@@ -2342,6 +2342,7 @@ namespace Afterthought.Amender
 
 			// Determine if the target method uses the object array or explicit parameter syntax
 			if (parameters[1].ParameterType == typeof(string) && // Method Name
+                parameters.Length > 2 &&
 				parameters[delegateType.HasFlag(MethodDelegateType.WithContext) && !delegateType.HasFlag(MethodDelegateType.Before) ? 3 : 2].ParameterType == typeof(object[]) && // Method Parameters
 				(!delegateType.HasFlag(MethodDelegateType.HasResultParameter) || (parameters[parameters.Length - 1].ParameterType == typeof(object) && method.ReturnType == typeof(object)))) // Method Result
 				delegateType |= MethodDelegateType.ArraySyntax;
