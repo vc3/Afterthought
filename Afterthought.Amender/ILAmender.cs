@@ -130,6 +130,30 @@ namespace Afterthought.Amender
 			EmitOperations(operations.Count - 1);
 		}
 
+		private ILGeneratorLabel GetLabel(IOperation op)
+		{
+			ILGeneratorLabel label;
+			if (op.Location is IILLocation)
+				MarkSequencePoint(op.Location);
+
+			// Mark operation if it is a label for a branch
+			offset2Label.TryGetValue(op.Offset, out label);
+			return label;
+
+		}
+
+		internal void GoToEndOfOperations()
+		{
+			var op = Operations.First();
+			var label = GetLabel(op);
+
+			if (label != null)
+			{
+				Operations.Clear();
+				MarkLabel(label);
+			}
+		}
+
 		/// <summary>
 		/// Emits the specified number of operations from the original method body.
 		/// </summary>

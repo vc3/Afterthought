@@ -171,6 +171,79 @@ namespace Afterthought.UnitTest
 		}
 
 		/// <summary>
+		/// Tests amending code before an existing property setter and
+		/// without affecting or being effected by conditional logic.
+		/// </summary>
+		[TestMethod]
+		public void BeforeSet_SetMatchesInitalValue()
+		{
+			int initialValue = Calculator.Random6;
+			
+			Assert.AreEqual(initialValue, 1);
+			Assert.AreNotEqual(int.MaxValue, Calculator.Result);
+			
+			Calculator.Random6 = initialValue;
+
+			Assert.AreEqual(int.MaxValue, Calculator.Result);
+			Assert.AreNotEqual(initialValue, Calculator.Random6);
+		}
+
+		/// <summary>
+		/// Tests amending code before an existing property setter and
+		/// without affecting or being effected by conditional logic.
+		/// </summary>
+		[TestMethod]
+		public void BeforeSet_SetDoesNotMatchInitalValue()
+		{
+			int defaultValue = Calculator.Random6;
+
+			Assert.AreEqual(defaultValue, 1);
+			Assert.AreNotEqual(int.MaxValue, Calculator.Result);
+
+			int expectedValue;
+			Calculator.Random6 = expectedValue = 2;
+
+			Assert.AreEqual(int.MaxValue, Calculator.Result);
+			Assert.AreEqual(expectedValue, Calculator.Random6);
+		}
+
+		/// <summary>
+		/// Tests amending code after an existing property setter and
+		/// without affecting or being effected by conditional logic.
+		/// </summary>
+		[TestMethod]
+		public void AfterSet_SetMatchesInitalValue()
+		{
+			int defaultValue = Calculator.Random7;
+			Assert.AreEqual(defaultValue, 1);
+
+			Assert.AreNotEqual(int.MaxValue, Calculator.Result);
+			Calculator.Random7 = defaultValue;
+
+			Assert.AreEqual(int.MaxValue, Calculator.Result);
+			Assert.AreNotEqual(defaultValue, Calculator.Random7);
+		}
+
+		/// <summary>
+		/// Tests amending code after an existing property setter and
+		/// without affecting or being effected by conditional logic.
+		/// </summary>
+		[TestMethod]
+		public void AfterSet_SetDoesNotMatchInitalValue()
+		{
+			int defaultValue = Calculator.Random7;
+
+			Assert.AreEqual(defaultValue, 1);
+			Assert.AreNotEqual(int.MaxValue, Calculator.Result);
+
+			int expectedValue;
+			Calculator.Random7 = expectedValue = 2;
+
+			Assert.AreEqual(int.MaxValue, Calculator.Result);
+			Assert.AreEqual(expectedValue, Calculator.Random7);
+		}
+
+		/// <summary>
 		/// Tests amending code before an existing property setter without
 		/// being passed the original value of the property.
 		/// </summary>
@@ -199,8 +272,7 @@ namespace Afterthought.UnitTest
 			Calculator.Add = 2;
 			Assert.AreEqual(4, Calculator.Add);
 		}
-
-
+		
 		/// <summary>
 		/// Tests amending code before an existing property setter without
 		/// being passed the original value of the property.

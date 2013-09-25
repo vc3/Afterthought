@@ -35,7 +35,12 @@ namespace Afterthought.UnitTest
 		[TestMethod]
 		public void AddConstructor()
 		{
-			
+			//Add constructor not implemented
+			//int expectedValue = 5;
+			//Assert.AreNotEqual(expectedValue, Calculator.Result);
+
+			//Calculator = new Calculator(expectedValue);
+			//Assert.AreEqual(expectedValue, Calculator.Result);
 		}
 
 		/// <summary>
@@ -98,6 +103,71 @@ namespace Afterthought.UnitTest
 		[TestMethod]
 		public void ImplementConstructor()
 		{
+		}
+
+		/// <summary>
+		/// Tests modifying an existing constructor to run code before the original
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void Before_IfStatementFalse()
+		{
+			int expectedResult = int.MaxValue;
+			Assert.AreEqual(0, Calculator.ConstructorSetInt);
+			Assert.AreNotEqual(expectedResult, Calculator.Result);
+
+			Calculator = new Calculator(false);
+			Assert.AreEqual(0, Calculator.ConstructorSetInt);
+			Assert.AreEqual(expectedResult, Calculator.Result);
+		}
+
+		/// <summary>
+		/// Tests modifying an existing constructor to run code before the original
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void Before_IfStatementTrue()
+		{
+			const int expectedResult = int.MaxValue;
+			Assert.AreEqual(0, Calculator.ConstructorSetInt);
+			Assert.AreNotEqual(expectedResult, Calculator.Result);
+
+			Calculator = new Calculator(true);
+			Assert.AreEqual(1, Calculator.ConstructorSetInt);
+			Assert.AreEqual(expectedResult, Calculator.Result);
+		}
+
+		/// <summary>
+		/// Tests modifying an existing constructor to run code after the original
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void After_IfStatementFalse()
+		{
+			const int expectedResult = int.MaxValue;
+			Assert.AreEqual(0, Calculator.ConstructorSetInt);
+			Assert.AreNotEqual(expectedResult, Calculator.Result);
+
+			Calculator = new Calculator(false, 12);
+			Assert.AreEqual(0, Calculator.ConstructorSetInt);
+			Assert.AreEqual(expectedResult, Calculator.Result);
+		}
+
+		/// <summary>
+		/// Tests modifying an existing constructor to run code after the original
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void After_IfStatementTrue()
+		{
+			const int expectedResult = int.MaxValue;
+			Assert.AreEqual(0, Calculator.ConstructorSetInt);
+			Assert.AreNotEqual(expectedResult, Calculator.Result);
+
+			const int expectedConstructorSetInt = 12;
+			Calculator = new Calculator(true, expectedConstructorSetInt);
+			Assert.AreEqual(expectedConstructorSetInt, Calculator.ConstructorSetInt);
+			Assert.AreEqual(expectedResult, Calculator.Result);
 		}
 	}
 }

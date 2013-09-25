@@ -23,6 +23,29 @@ namespace Afterthought.UnitTest.Target
 	{
 		public TestAmendment()
 		{
+			#region Construtors
+
+			//AddConstructor not implemented
+			//Constructors
+			//	.Add<int>("Calculator", (instance, result) => instance.Result = result);
+
+			Constructors
+				.WithParams<bool>()
+				.Before<bool>((T instance, ref bool enterIfStatement) =>
+				{
+					instance.Result = int.MaxValue;
+					return enterIfStatement;
+				});
+
+			Constructors
+				.WithParams<bool, int>()
+				.After((instance, enterIfStatement, constructorSetIntIfTrue) =>
+				{
+					instance.Result = int.MaxValue;
+				});
+			
+			#endregion
+
 			#region Methods
 
 			// Modify Multiply to also set the Result property to the resulting value
@@ -109,6 +132,26 @@ namespace Afterthought.UnitTest.Target
 							((int[])parameters[0])[i] = ((int[])parameters[0])[i] * 2;
 					});
 
+			// Modify Double to double each of the input values
+			Methods
+				.Named("Double3")
+				.WithParams<int[], bool>()
+				.Before(delegate(T instance, ref int[] set, ref bool condition)
+				{
+					for (int i = 0; i < set.Length; i++)
+						set[i] = set[i]*2;
+				});
+
+			// Modify Double to double each of the input values
+			Methods
+				.Named("Double4")
+				.WithParams<int[], bool>()
+				.After((instance, set, condition) =>
+				{
+					for (int i = 0; i < set.Length; i++)
+						set[i] = set[i] * 2;
+				});
+
 			// Modify Sum to return the sum of the input values
 			Methods
 				.Named("Sum")
@@ -182,6 +225,22 @@ namespace Afterthought.UnitTest.Target
 				.OfType<int>()
 				.Get((instance, propertyName) => instance.Result)
 			    .Set((instance, propertyName, value) => instance.Result = value);
+
+			// Modify Random6 to always set the result to int.MaxValue before set
+			Properties
+				.Named("Random6")
+				.OfType<int>()
+				.BeforeSet((instance, propertyName, oldValue, value) =>
+				{
+					instance.Result = int.MaxValue;
+					return value;
+				});
+
+			// Modify Random7 to always set the result to int.MaxValue after set
+			Properties
+				.Named("Random7")
+				.OfType<int>()
+				.AfterSet((instance, propertyName, oldValue, value, newValue) => instance.Result = int.MaxValue);
 
 			// Update Result to equal the value assigned to CopyToResult
 			Properties

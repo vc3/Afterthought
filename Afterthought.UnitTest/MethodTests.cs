@@ -89,6 +89,32 @@ namespace Afterthought.UnitTest
 		}
 
 		/// <summary>
+		/// Tests modifying an existing method to run code before the original method
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void BeforeMethod_IfStatementFalse()
+		{
+			var expected = 18;
+			var inputs = new int[] { 9 };
+			Calculator.Double3(inputs, false);
+			Assert.AreEqual(expected, inputs[0]);
+		}
+
+		/// <summary>
+		/// Tests modifying an existing method to run code before the original method
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void BeforeMethod_IfStatementTrue()
+		{
+			var expected = 18;
+			var inputs = new int[] { 9 };
+			Calculator.Double3(inputs, true);
+			Assert.AreEqual(expected, inputs[0]);
+		}
+
+		/// <summary>
 		/// Tests modifying an existing method to run code after the original method
 		/// implementation that does not return a value.
 		/// </summary>
@@ -111,6 +137,32 @@ namespace Afterthought.UnitTest
 			var expected = 18;
 			var inputs = new int[] { 9 };
 			Calculator.Double2(inputs);
+			Assert.AreEqual(expected, inputs[0]);
+		}
+
+		/// <summary>
+		/// Tests modifying an existing method to run code after the original method
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void AfterMethod_IfStatementFalse()
+		{
+			var expected = 18;
+			var inputs = new int[] { 9 };
+			Calculator.Double4(inputs, false);
+			Assert.AreEqual(expected, inputs[0]);
+		}
+
+		/// <summary>
+		/// Tests modifying an existing method to run code after the original method
+		/// implementation when conditional logic exists. 
+		/// </summary>
+		[TestMethod]
+		public void AfterMethod_IfStatementTrue()
+		{
+			var expected = 18;
+			var inputs = new int[] { 9 };
+			Calculator.Double4(inputs, true);
 			Assert.AreEqual(expected, inputs[0]);
 		}
 

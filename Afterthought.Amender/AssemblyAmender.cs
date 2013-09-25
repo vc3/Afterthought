@@ -364,7 +364,7 @@ namespace Afterthought.Amender
 		/// <returns></returns>
 		MethodDefinition AddConstructor(NamedTypeDefinition type, IConstructorAmendment constructor)
 		{
-			return null;
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -1325,6 +1325,8 @@ namespace Afterthought.Amender
 					// After Set
 					if (afterSet != null)
 					{
+						il.GoToEndOfOperations();
+
 						// Load this pointer onto stack
 						il.Emit(OperationCode.Ldarg_0);
 
@@ -1354,6 +1356,8 @@ namespace Afterthought.Amender
 
 						// Call AfterSet delegate
 						il.Emit(OperationCode.Call, afterSet.Instance);
+
+						il.Emit(OperationCode.Ret);
 					}
 				}
 			}
@@ -1486,7 +1490,13 @@ namespace Afterthought.Amender
 
 			// After Method
 			if (methodAmendment.After != null)
+			{
+				il.GoToEndOfOperations();
+
 				CallMethodDelegate(methodBody, methodAmendment.After, false, il, implement, MethodDelegateType.After, context, null);
+
+				il.Emit(OperationCode.Ret);
+			}
 
 			// Emit the remaining operations
 			il.EmitUntilReturn();

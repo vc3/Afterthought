@@ -22,6 +22,27 @@ namespace Afterthought.UnitTest.Target
 	public class Calculator : ILog
 	{
 		public int holding1 = 0;
+		public int ConstructorSetInt = 0;
+
+		public Calculator()
+		{
+		}
+
+		public Calculator(bool enterIfStatement)
+		{
+			if (enterIfStatement)
+			{
+				ConstructorSetInt = 1;
+			}
+		}
+
+		public Calculator(bool enterIfStatement, int constructorSetIntIfTrue)
+		{
+			if (enterIfStatement)
+			{
+				ConstructorSetInt = constructorSetIntIfTrue;
+			}
+		}
 
 		public int Result { get; set; }
 
@@ -65,6 +86,37 @@ namespace Afterthought.UnitTest.Target
 			set
 			{
 				random5 = GetRandom(value);
+			}
+		}
+
+		private int random6 = 1;
+		public int Random6
+		{
+			get { return random6; }
+			set
+			{
+				if (random6 == value)
+				{
+					value = GetRandom(value);
+				}
+
+				random6 = value;
+			}
+		}
+
+		private int random7 = 1;
+		public int Random7
+		{
+			get { return random7; }
+			set
+			{
+				int previous = random7;
+				random7 = value;
+
+				if (random7 == previous)
+				{
+					random7 = GetRandom(value);
+				}
 			}
 		}
 
@@ -134,7 +186,7 @@ namespace Afterthought.UnitTest.Target
 			// Intentionally wrong
 			return x;
 		}
-
+		
 		/// <summary>
 		/// Will be amended to double the values provided as inputs.
 		/// </summary>
@@ -148,7 +200,33 @@ namespace Afterthought.UnitTest.Target
 		/// <param name="values"></param>
 		public void Double2(int[] values)
 		{ }
+		
+		/// <summary>
+		/// Will be amended to double the values provided as inputs.
+		/// </summary>
+		/// <param name="values"></param>
+		/// <param name="enterIfStatement"></param>
+		public void Double3(int[] values, bool enterIfStatement)
+		{
+			if (enterIfStatement)
+			{
+				Result = 5;
+			}
+		}
 
+		/// <summary>
+		/// Will be amended to double the values provided as inputs.
+		/// </summary>
+		/// <param name="values"></param>
+		/// <param name="enterIfStatement"></param>
+		public void Double4(int[] values, bool enterIfStatement)
+		{
+			if (enterIfStatement)
+			{
+				Result = 5;
+			}
+		}
+		
 		/// <summary>
 		/// Will be amended to return the sum of the values.
 		/// </summary>
