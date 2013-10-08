@@ -609,7 +609,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
       out int numberOfBytesRead
     ) {
       int length = this.PeekUInt16(offset);
-#if !COMPACTFX
+#if !COMPACTFX && !__MonoCS__
 #if LITTLEENDIAN
       string result = new string((char*)(this.CurrentPointer + offset + sizeof(UInt16)), 0, length);
 #elif BIGENDIAN
@@ -870,7 +870,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
     internal string ReadASCIIWithSize(
       int byteCount
     ) {
-#if !COMPACTFX
+#if !COMPACTFX && !__MonoCS__
       sbyte* pStart = (sbyte*)this.CurrentPointer;
       sbyte* pEnd = pStart + byteCount;
       sbyte* pIter = pStart;

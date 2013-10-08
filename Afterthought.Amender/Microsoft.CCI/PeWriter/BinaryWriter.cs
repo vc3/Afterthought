@@ -9,19 +9,37 @@
 //
 //-----------------------------------------------------------------------------
 
-namespace Microsoft.Cci.PeWriterInternal {
-  internal sealed class BinaryWriter {
+using System.Diagnostics.Contracts;
+
+namespace Microsoft.Cci.WriterUtilities {
+  public sealed class BinaryWriter {
 
     public BinaryWriter(MemoryStream output) {
-      this.BaseStream = output;
+      Contract.Requires(output != null);
+
+      this.baseStream = output;
     }
 
     public BinaryWriter(MemoryStream output, bool unicode) {
-      this.BaseStream = output;
+      Contract.Requires(output != null);
+
+      this.baseStream = output;
       this.UTF8 = !unicode;
     }
 
-    public MemoryStream BaseStream;
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.baseStream != null);
+    }
+
+
+    public MemoryStream BaseStream {
+      get {
+        Contract.Ensures(Contract.Result<MemoryStream>() != null);
+        return this.baseStream;
+      }
+    }
+    MemoryStream baseStream;
 
     private bool UTF8 = true;
 

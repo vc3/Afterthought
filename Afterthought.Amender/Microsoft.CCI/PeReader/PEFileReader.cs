@@ -2505,6 +2505,19 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     Metadata,
   }
 
+  internal sealed class PEFileDebugInformation {
+    public PEFileDebugInformation() {
+      this.Signature = Guid.Empty;
+      this.Age = 0;
+      this.PdbVersion = string.Empty;
+      this.PdbFileName = string.Empty;
+    }
+    public Guid Signature { get; set; }
+    public uint Age { get; set; }
+    public string PdbVersion { get; set; }
+    public string PdbFileName { get; set; }
+  }
+
   //  For reading the binary file.
   //  Understands the binary file format.
   //  Understands the metadata storage format.
@@ -2545,19 +2558,19 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     #region Fields and Properties [PEFile]
     COFFFileHeader COFFFileHeader;
     OptionalHeaderStandardFields OptionalHeaderStandardFields;
-    OptionalHeaderNTAdditionalFields OptionalHeaderNTAdditionalFields;
+    internal OptionalHeaderNTAdditionalFields OptionalHeaderNTAdditionalFields;
     OptionalHeaderDirectoryEntries OptionalHeaderDirectoryEntries;
     internal SectionHeader[] SectionHeaders;
     internal MemoryReader Win32ResourceMemoryReader;
 
-    internal string DebugInformationLocation {
+    internal PEFileDebugInformation DebugInformation {
       get {
-        if (this.debugInformationLocation == null)
-          this.debugInformationLocation = this.ReadDebugInformationLocationFromDebugTableDirectoryData();
-        return this.debugInformationLocation;
+        if (this.debugInformation == null)
+          this.debugInformation = this.ReadDebugInformationLocationFromDebugTableDirectoryData();
+        return this.debugInformation;
       }
     }
-    string debugInformationLocation;
+    PEFileDebugInformation debugInformation;
 
     internal DllCharacteristics DllCharacteristics {
       get
@@ -2678,8 +2691,8 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
 
     #region Methods [PEFile]
 
-    private string ReadDebugInformationLocationFromDebugTableDirectoryData() {
-      if (this.OptionalHeaderDirectoryEntries.DebugTableDirectory.Size == 0) return string.Empty;
+    private PEFileDebugInformation ReadDebugInformationLocationFromDebugTableDirectoryData() {
+      if (this.OptionalHeaderDirectoryEntries.DebugTableDirectory.Size != 0x1c) return new PEFileDebugInformation();
       var debugDirectoryReader = new MemoryReader(this.DirectoryToMemoryBlock(this.OptionalHeaderDirectoryEntries.DebugTableDirectory));
       PeDebugDirectory debugDir = new PeDebugDirectory();
       debugDir.Characteristics = debugDirectoryReader.ReadUInt32();
@@ -2690,19 +2703,40 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
       debugDir.SizeOfData = debugDirectoryReader.ReadUInt32();
       debugDir.AddressOfRawData = debugDirectoryReader.ReadUInt32();
       debugDir.PointerToRawData = debugDirectoryReader.ReadUInt32();
-      if (debugDir.SizeOfData == 0) return string.Empty;
+      if (debugDir.SizeOfData == 0) return new PEFileDebugInformation();
       var dataBlock = new MemoryBlock(this.BinaryDocumentMemoryBlock.Pointer + debugDir.PointerToRawData, debugDir.SizeOfData);
+      var ptrToDebugInfo = this.BinaryDocumentMemoryBlock.Pointer + debugDir.PointerToRawData;
+      var ptrToDebugInfoEnd = this.BinaryDocumentMemoryBlock.Pointer + debugDir.PointerToRawData + debugDir.SizeOfData;
+      if (ptrToDebugInfo >= this.BinaryDocumentMemoryBlock.Pointer + this.BinaryDocumentMemoryBlock.Length - 28) {
+        //TODO: error
+        return new PEFileDebugInformation();
+      }
+      if (ptrToDebugInfoEnd > this.BinaryDocumentMemoryBlock.Pointer + this.BinaryDocumentMemoryBlock.Length) {
+        //TODO: error
+        return new PEFileDebugInformation();
+      }
       var debugDataReader = new MemoryReader(dataBlock);
       var magic = debugDataReader.ReadUInt32();
       if (magic != 0x53445352) { //RSDS in little endian format
         //TODO: error
+        return new PEFileDebugInformation();
       }
-      var unknown1 = debugDataReader.ReadUInt32();
-      var unknown2 = debugDataReader.ReadUInt32();
-      var unknown3 = debugDataReader.ReadUInt32();
-      var unknown4 = debugDataReader.ReadUInt32();
-      var unknown5 = debugDataReader.ReadUInt32();
-      return debugDataReader.ReadASCIINullTerminated();
+
+      var guid = debugDataReader.PeekGuid(0);
+      debugDataReader.SkipBytes(16);
+      UInt32 age = debugDataReader.ReadUInt32();
+      string fileName = debugDataReader.ReadASCIINullTerminated();
+
+      var guidHex = guid.ToString("N");
+      string ageHex = age.ToString("X");
+      string version = guidHex + ageHex;
+
+      PEFileDebugInformation information = new PEFileDebugInformation();
+      information.Signature = guid;
+      information.Age = age;
+      information.PdbVersion = version;
+      information.PdbFileName = fileName;
+      return information;
     }
 
     bool ReadCOFFFileHeader(

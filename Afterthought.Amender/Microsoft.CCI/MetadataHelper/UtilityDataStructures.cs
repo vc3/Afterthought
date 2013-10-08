@@ -13,8 +13,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 
-//^ using Microsoft.Contracts;
-
 namespace Microsoft.Cci.UtilityDataStructures {
 
 #pragma warning disable 1591
@@ -187,6 +185,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// Add element to MultiHashtable
     /// </summary>
     public void Add(uint key, InternalT value) {
+      Contract.Requires(value != null);
+
       if (this.count >= this.resizeCount) {
         this.Expand();
       }
@@ -194,9 +194,25 @@ namespace Microsoft.Cci.UtilityDataStructures {
     }
 
     /// <summary>
+    /// Removes all entries from the table.
+    /// </summary>
+    public void Clear() {
+      if (this.count == 0) return;
+      var table = this.keyValueTable;
+      int len = table.Length;
+      for (int i = 0; i < len; ++i) {
+        table[i].Key = 0;
+        table[i].Value = null;
+      }
+      this.count = 0;
+    }
+
+    /// <summary>
     /// Checks if key and value is present in the MultiHashtable
     /// </summary>
     public bool Contains(uint key, InternalT value) {
+      Contract.Requires(value != null);
+
       unchecked {
         uint mask = this.size - 1;
         var keyValueTable = this.keyValueTable;
@@ -255,6 +271,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// Updates the hashtable so that newValue shows up in the place of oldValue.
     /// </summary>
     public void ReplaceEntry(uint key, InternalT oldValue, InternalT newValue) {
+      Contract.Requires(oldValue != null);
+      Contract.Requires(newValue != null);
+
       unchecked {
         uint mask = this.size - 1;
         var keyValueTable = this.keyValueTable;
@@ -275,15 +294,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// Enumerator to enumerate values with given key.
     /// </summary>
     public struct KeyedValuesEnumerator {
-      MultiHashtable<InternalT> MultiHashtable;
-      uint Key;
-      uint Hash1;
-      uint Hash2;
-      uint CurrentIndex;
-      internal KeyedValuesEnumerator(
-        MultiHashtable<InternalT> multiHashtable,
-        uint key
-      ) {
+
+      internal KeyedValuesEnumerator(MultiHashtable<InternalT> multiHashtable, uint key) {
         this.MultiHashtable = multiHashtable;
         this.Key = key;
         this.Hash1 = HashHelper.HashInt1(key);
@@ -291,12 +303,20 @@ namespace Microsoft.Cci.UtilityDataStructures {
         this.CurrentIndex = 0xFFFFFFFF;
       }
 
+      MultiHashtable<InternalT> MultiHashtable;
+      uint Key;
+      uint Hash1;
+      uint Hash2;
+      uint CurrentIndex;
+
       /// <summary>
       /// Get the current element.
       /// </summary>
       /// <returns></returns>
       public InternalT Current {
+        [ContractVerification(false)]
         get {
+          Contract.Ensures(Contract.Result<InternalT>() != null);
           return this.MultiHashtable.keyValueTable[this.CurrentIndex].Value;
         }
       }
@@ -344,10 +364,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
       MultiHashtable<InternalT> MultiHashtable;
       uint Key;
 
-      internal KeyedValuesEnumerable(
-        MultiHashtable<InternalT> multiHashtable,
-        uint key
-      ) {
+      internal KeyedValuesEnumerable(MultiHashtable<InternalT> multiHashtable, uint key) {
         this.MultiHashtable = multiHashtable;
         this.Key = key;
       }
@@ -377,9 +394,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
       MultiHashtable<InternalT> MultiHashtable;
       uint CurrentIndex;
 
-      internal ValuesEnumerator(
-        MultiHashtable<InternalT> multiHashtable
-      ) {
+      internal ValuesEnumerator(MultiHashtable<InternalT> multiHashtable) {
         this.MultiHashtable = multiHashtable;
         this.CurrentIndex = 0xFFFFFFFF;
       }
@@ -389,7 +404,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
       /// </summary>
       /// <returns></returns>
       public InternalT Current {
+        [ContractVerification(false)]
         get {
+          Contract.Ensures(Contract.Result<InternalT>() != null);
           return this.MultiHashtable.keyValueTable[this.CurrentIndex].Value;
         }
       }
@@ -452,6 +469,395 @@ namespace Microsoft.Cci.UtilityDataStructures {
         return new ValuesEnumerable(this);
       }
     }
+
+  }
+
+  /// <summary>
+  /// Hashtable that can host multiple values for the same uint key.
+  /// </summary>
+  /// <typeparam name="InternalT"></typeparam>
+  /// <typeparam name="Key"></typeparam>
+  public sealed class MultiHashtable<Key, InternalT> 
+    where Key : class 
+    where InternalT : class {
+
+    struct KeyValuePair {
+      internal Key Key;
+      internal InternalT Value;
+    }
+    KeyValuePair[] keyValueTable;
+    uint size; //always a power of 2
+    uint resizeCount;
+    uint count;
+    const int loadPercent = 60;
+
+    static uint SizeFromExpectedEntries(uint expectedEntries) {
+      uint expectedSize = (expectedEntries * 10) / 6; ;
+      uint initialSize = 16;
+      while (initialSize < expectedSize && initialSize > 0) initialSize <<= 1;
+      return initialSize;
+    }
+
+    /// <summary>
+    /// Constructor for MultiHashtable
+    /// </summary>
+    public MultiHashtable()
+      : this(16) {
+    }
+
+    /// <summary>
+    /// Constructor for MultiHashtable
+    /// </summary>
+    public MultiHashtable(uint expectedEntries) {
+      this.size = SizeFromExpectedEntries(expectedEntries);
+      this.resizeCount = this.size * 6 / 10;
+      this.keyValueTable = new KeyValuePair[this.size];
+      this.count = 0;
+    }
+
+    /// <summary>
+    /// Count of elements in MultiHashtable
+    /// </summary>
+    public uint Count {
+      get {
+        return this.count;
+      }
+    }
+
+    void Expand() {
+      KeyValuePair[] oldKeyValueTable = this.keyValueTable;
+      this.keyValueTable = new KeyValuePair[this.size*2];
+      lock (this) { //force this.keyValueTable into memory before this.size gets increased.
+        this.size <<= 1;
+      }
+      this.count = 0;
+      this.resizeCount = this.size * 6 / 10;
+      int len = oldKeyValueTable.Length;
+      for (int i = 0; i < len; ++i) {
+        var key = oldKeyValueTable[i].Key;
+        InternalT value = oldKeyValueTable[i].Value;
+        if (value != null)
+          this.AddInternal(key, value);
+      }
+    }
+
+    void AddInternal(Key key, InternalT value) {
+      unchecked {
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        var hash = (uint)key.GetHashCode();
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint hash2 = HashHelper.HashInt2(hash);
+        uint tableIndex = hash1 & mask;
+        while (keyValueTable[tableIndex].Value != null) {
+          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == value)
+            return;
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+        keyValueTable[tableIndex].Key = key;
+        keyValueTable[tableIndex].Value = value;
+        this.count++;
+      }
+    }
+
+    /// <summary>
+    /// Add element to MultiHashtable
+    /// </summary>
+    public void Add(Key key, InternalT value) {
+      Contract.Requires(key != null);
+      Contract.Requires(value != null);
+
+      if (this.count >= this.resizeCount) {
+        this.Expand();
+      }
+      this.AddInternal(key, value);
+    }
+
+    /// <summary>
+    /// Removes all entries from the table.
+    /// </summary>
+    public void Clear() {
+      if (this.count == 0) return;
+      var table = this.keyValueTable;
+      int len = table.Length;
+      for (int i = 0; i < len; ++i) {
+        table[i].Key = null;
+        table[i].Value = null;
+      }
+      this.count = 0;
+    }
+
+    /// <summary>
+    /// Checks if key and value is present in the MultiHashtable
+    /// </summary>
+    public bool Contains(Key key, InternalT value) {
+      Contract.Requires(key != null);
+      Contract.Requires(value != null);
+
+      unchecked {
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        var hash = (uint)key.GetHashCode();
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint hash2 = HashHelper.HashInt2(hash);
+        uint tableIndex = hash1 & mask;
+        while (keyValueTable[tableIndex].Value != null) {
+          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == value)
+            return true;
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Checks if key is present in the MultiHashtable
+    /// </summary>
+    public bool ContainsKey(Key key) {
+      unchecked {
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        var hash = (uint)key.GetHashCode();
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint hash2 = HashHelper.HashInt2(hash);
+        uint tableIndex = hash1 & mask;
+        while (keyValueTable[tableIndex].Value != null) {
+          if (keyValueTable[tableIndex].Key == key)
+            return true;
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Returns the number of entries that are associated with the key
+    /// </summary>
+    public int NumberOfEntries(Key key) {
+      unchecked {
+        int count = 0;
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        var hash = (uint)key.GetHashCode();
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint hash2 = HashHelper.HashInt2(hash);
+        uint tableIndex = hash1 & mask;
+        while (keyValueTable[tableIndex].Value != null) {
+          if (keyValueTable[tableIndex].Key == key)
+            count++;
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+        return count;
+      }
+    }
+
+    /// <summary>
+    /// Updates the hashtable so that newValue shows up in the place of oldValue.
+    /// </summary>
+    public void ReplaceEntry(Key key, InternalT oldValue, InternalT newValue) {
+      Contract.Requires(oldValue != null);
+      Contract.Requires(newValue != null);
+
+      unchecked {
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        var hash = (uint)key.GetHashCode();
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint hash2 = HashHelper.HashInt2(hash);
+        uint tableIndex = hash1 & mask;
+        while (keyValueTable[tableIndex].Value != null) {
+          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == oldValue) {
+            keyValueTable[tableIndex].Value = newValue;
+            return;
+          }
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+      }
+    }
+
+    /// <summary>
+    /// Enumerator to enumerate values with given key.
+    /// </summary>
+    public struct KeyedValuesEnumerator {
+      MultiHashtable<Key, InternalT> MultiHashtable;
+      Key Key;
+      uint Hash1;
+      uint Hash2;
+      uint CurrentIndex;
+      internal KeyedValuesEnumerator(
+        MultiHashtable<Key, InternalT> multiHashtable,
+        Key key
+      ) {
+        this.MultiHashtable = multiHashtable;
+        this.Key = key;
+        var hash = (uint)key.GetHashCode();
+        this.Hash1 = HashHelper.HashInt1(hash);
+        this.Hash2 = HashHelper.HashInt2(hash);
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+
+      /// <summary>
+      /// Get the current element.
+      /// </summary>
+      /// <returns></returns>
+      public InternalT Current {
+        get {
+          return this.MultiHashtable.keyValueTable[this.CurrentIndex].Value;
+        }
+      }
+
+      /// <summary>
+      /// Move to next element.
+      /// </summary>
+      /// <returns></returns>
+      public bool MoveNext() {
+        unchecked {
+          uint size = this.MultiHashtable.size;
+          uint mask = size - 1;
+          Key key = this.Key;
+          uint hash1 = this.Hash1;
+          uint hash2 = this.Hash2;
+          KeyValuePair[] keyValueTable = this.MultiHashtable.keyValueTable;
+          uint currentIndex = this.CurrentIndex;
+          if (currentIndex == 0xFFFFFFFF)
+            currentIndex = hash1 & mask;
+          else
+            currentIndex = (currentIndex + hash2) & mask;
+          while (keyValueTable[currentIndex].Value != null) {
+            if (keyValueTable[currentIndex].Key == key)
+              break;
+            currentIndex = (currentIndex + hash2) & mask;
+          }
+          this.CurrentIndex = currentIndex;
+          return keyValueTable[currentIndex].Value != null;
+        }
+      }
+
+      /// <summary>
+      /// Reset the enumeration.
+      /// </summary>
+      /// <returns></returns>
+      public void Reset() {
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+    }
+
+    /// <summary>
+    /// Enumerable to enumerate values with given key.
+    /// </summary>
+    public struct KeyedValuesEnumerable {
+      MultiHashtable<Key, InternalT> MultiHashtable;
+      Key Key;
+
+      internal KeyedValuesEnumerable(
+        MultiHashtable<Key, InternalT> multiHashtable,
+        Key key
+      ) {
+        this.MultiHashtable = multiHashtable;
+        this.Key = key;
+      }
+
+      /// <summary>
+      /// Return the enumerator.
+      /// </summary>
+      /// <returns></returns>
+      public KeyedValuesEnumerator GetEnumerator() {
+        return new KeyedValuesEnumerator(this.MultiHashtable, this.Key);
+      }
+    }
+
+    /// <summary>
+    /// Enumeration to return all the values associated with the given key
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns></returns>
+    public KeyedValuesEnumerable GetValuesFor(Key key) {
+      return new KeyedValuesEnumerable(this, key);
+    }
+
+    /// <summary>
+    /// Enumerator to enumerate all values.
+    /// </summary>
+    public struct ValuesEnumerator {
+      MultiHashtable<Key, InternalT> MultiHashtable;
+      uint CurrentIndex;
+
+      internal ValuesEnumerator(
+        MultiHashtable<Key, InternalT> multiHashtable
+      ) {
+        this.MultiHashtable = multiHashtable;
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+
+      /// <summary>
+      /// Get the current element.
+      /// </summary>
+      /// <returns></returns>
+      public InternalT Current {
+        get {
+          return this.MultiHashtable.keyValueTable[this.CurrentIndex].Value;
+        }
+      }
+
+      /// <summary>
+      /// Move to next element.
+      /// </summary>
+      /// <returns></returns>
+      public bool MoveNext() {
+        unchecked {
+          uint size = this.MultiHashtable.size;
+          uint currentIndex = this.CurrentIndex + 1;
+          if (currentIndex >= size) {
+            return false;
+          }
+          KeyValuePair[] keyValueTable = this.MultiHashtable.keyValueTable;
+          while (currentIndex < size && keyValueTable[currentIndex].Value == null) {
+            currentIndex++;
+          }
+          this.CurrentIndex = currentIndex;
+          return currentIndex < size && keyValueTable[currentIndex].Value != null;
+        }
+      }
+
+      /// <summary>
+      /// Reset the enumeration.
+      /// </summary>
+      /// <returns></returns>
+      public void Reset() {
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+    }
+
+    /// <summary>
+    /// Enumerable to enumerate all values.
+    /// </summary>
+    public struct ValuesEnumerable {
+      MultiHashtable<Key, InternalT> MultiHashtable;
+
+      internal ValuesEnumerable(
+        MultiHashtable<Key, InternalT> multiHashtable
+      ) {
+        this.MultiHashtable = multiHashtable;
+      }
+
+      /// <summary>
+      /// Return the enumerator.
+      /// </summary>
+      /// <returns></returns>
+      public ValuesEnumerator GetEnumerator() {
+        return new ValuesEnumerator(this.MultiHashtable);
+      }
+    }
+
+    /// <summary>
+    /// Enumeration of all the values
+    /// </summary>
+    public ValuesEnumerable Values {
+      get {
+        return new ValuesEnumerable(this);
+      }
+    }
+
   }
 
   /// <summary>
@@ -461,9 +867,26 @@ namespace Microsoft.Cci.UtilityDataStructures {
     where Key : class
     where Value : class, new() {
     static Value dummyObject = new Value();
-    struct KeyValuePair {
-      internal Key key;
-      internal Value value;
+    /// <summary>
+    /// 
+    /// </summary>
+    public struct KeyValuePair {
+      /// <summary>
+      /// 
+      /// </summary>
+      public Key key;
+      /// <summary>
+      /// 
+      /// </summary>
+      public Value value;
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <returns></returns>
+      public override string ToString() {
+        return "Key = "+this.key+", value = "+this.value;
+      }
     }
     KeyValuePair[] keyValueTable;
     uint size; //always a power of two
@@ -492,6 +915,34 @@ namespace Microsoft.Cci.UtilityDataStructures {
       this.size = SizeFromExpectedEntries(expectedEntries);
       this.resizeCount = this.size * 6 / 10;
       this.keyValueTable = new KeyValuePair[this.size];
+      this.count = 0;
+    }
+
+    /// <summary>
+    /// Constructs a hashtable that is a copy of the given hashtable.
+    /// </summary>
+    /// <param name="tableToClone"></param>
+    public Hashtable(Hashtable<Key, Value> tableToClone) {
+      Contract.Requires(tableToClone != null);
+
+      this.size = tableToClone.size;
+      this.resizeCount = tableToClone.resizeCount;
+      this.count = tableToClone.count;
+      var keyValueTable = this.keyValueTable = new KeyValuePair[tableToClone.keyValueTable.Length];
+      for (int i = 0, n = keyValueTable.Length; i < n; i++)
+        keyValueTable[i] = tableToClone.keyValueTable[i];
+    }
+
+    /// <summary>
+    /// Removes all entries from the table.
+    /// </summary>
+    public void Clear() {
+      var table = this.keyValueTable;
+      int len = table.Length;
+      for (int i = 0; i < len; ++i) {
+        table[i].key = null;
+        table[i].value = null;
+      }
       this.count = 0;
     }
 
@@ -678,15 +1129,84 @@ namespace Microsoft.Cci.UtilityDataStructures {
       }
     }
 
+    /// <summary>
+    /// Enumerator for key value pairs.
+    /// </summary>
+    public struct KeyValuePairEnumerator {
+
+      Hashtable<Key, Value> Hashtable;
+      uint CurrentIndex;
+
+      internal KeyValuePairEnumerator(Hashtable<Key, Value> hashtable) {
+        this.Hashtable = hashtable;
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+
+      /// <summary>
+      /// Current element
+      /// </summary>
+      public KeyValuePair Current {
+        get {
+          return this.Hashtable.keyValueTable[this.CurrentIndex];
+        }
+      }
+
+      /// <summary>
+      /// Move to next element
+      /// </summary>
+      public bool MoveNext() {
+        unchecked {
+          uint size = this.Hashtable.size;
+          uint currentIndex = this.CurrentIndex + 1;
+          if (currentIndex >= size) {
+            return false;
+          }
+          var keyValueTable = this.Hashtable.keyValueTable;
+          while (currentIndex < size && keyValueTable[currentIndex].value == null) {
+            currentIndex++;
+          }
+          this.CurrentIndex = currentIndex;
+          return currentIndex < size && keyValueTable[currentIndex].value != null;
+        }
+      }
+
+      /// <summary>
+      /// Reset the enumerator
+      /// </summary>
+      public void Reset() {
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+    }
+
+    /// <summary>
+    /// Get the enumerator
+    /// </summary>
+    /// <returns></returns>
+    public KeyValuePairEnumerator GetEnumerator() {
+      return new KeyValuePairEnumerator(this);
+    }
   }
 
   /// <summary>
   /// Hashtable that can hold only single non zero uint per key.
   /// </summary>
+#if !__MonoCS__
+  [DebuggerTypeProxy(typeof(HashtableForUintValues<>.DebugView))]
+#endif
   public sealed class HashtableForUintValues<Key> where Key : class {
-    struct KeyValuePair {
+    /// <summary>
+    /// 
+    /// </summary>
+    public struct KeyValuePair {
       internal Key key;
       internal uint value;
+
+      /// <summary>
+      /// Returns a string containing the key and value.
+      /// </summary>
+      public override string ToString() {
+        return "key = "+this.key+", value = "+this.value;
+      }
     }
     KeyValuePair[] keyValueTable;
     uint size; //always a power of two
@@ -719,7 +1239,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
     }
 
     /// <summary>
-    /// 
+    /// Removes all entries from the table.
     /// </summary>
     public void Clear() {
       var table = this.keyValueTable;
@@ -894,6 +1414,22 @@ namespace Microsoft.Cci.UtilityDataStructures {
       }
     }
 
+    internal class DebugView {
+
+      public DebugView(HashtableForUintValues<Key> hashTable) {
+        var numEntries = hashTable.Count;
+        this.entries = new KeyValuePair[numEntries];
+        var len = hashTable.keyValueTable.Length;
+        var j = 0;
+        for (int i = 0; i < len; i++) {
+          this.entries[j++] = hashTable.keyValueTable[i];
+        }
+      }
+
+      [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+      public KeyValuePair[] entries;
+
+    }
   }
 
   /// <summary>
@@ -901,9 +1437,25 @@ namespace Microsoft.Cci.UtilityDataStructures {
   /// </summary>
   /// <typeparam name="InternalT"></typeparam>
   public sealed class Hashtable<InternalT> where InternalT : class {
-    struct KeyValuePair {
-      internal uint Key;
-      internal InternalT Value;
+    /// <summary>
+    /// 
+    /// </summary>
+    public struct KeyValuePair {
+      /// <summary>
+      /// 
+      /// </summary>
+      public uint Key;
+      /// <summary>
+      /// 
+      /// </summary>
+      public InternalT Value;
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <returns></returns>
+      public override string ToString() {
+        return "key = "+this.Key+", value = "+this.Value;
+      }
     }
     KeyValuePair[] keyValueTable;
     uint size; //always a power of two
@@ -994,6 +1546,20 @@ namespace Microsoft.Cci.UtilityDataStructures {
     }
 
     /// <summary>
+    /// Removes all entries from the table.
+    /// </summary>
+    public void Clear() {
+      if (this.count == 0) return;
+      var table = this.keyValueTable;
+      int len = table.Length;
+      for (int i = 0; i < len; ++i) {
+        table[i].Key = 0;
+        table[i].Value = null;
+      }
+      this.count = 0;
+    }
+
+    /// <summary>
     /// Find element in the Hashtable. Returns null if the element is not found.
     /// </summary>
     /// <param name="key"></param>
@@ -1043,6 +1609,63 @@ namespace Microsoft.Cci.UtilityDataStructures {
         if (this.count >= this.resizeCount) this.Expand();
         this.AddInternal(key, value);
       }
+    }
+
+    /// <summary>
+    /// Enumerator for key value pairs.
+    /// </summary>
+    public struct KeyValuePairEnumerator {
+
+      Hashtable<InternalT> Hashtable;
+      uint CurrentIndex;
+
+      internal KeyValuePairEnumerator(Hashtable<InternalT> hashtable) {
+        this.Hashtable = hashtable;
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+
+      /// <summary>
+      /// Current element
+      /// </summary>
+      public KeyValuePair Current {
+        get {
+          return this.Hashtable.keyValueTable[this.CurrentIndex];
+        }
+      }
+
+      /// <summary>
+      /// Move to next element
+      /// </summary>
+      public bool MoveNext() {
+        unchecked {
+          uint size = this.Hashtable.size;
+          uint currentIndex = this.CurrentIndex + 1;
+          if (currentIndex >= size) {
+            return false;
+          }
+          var keyValueTable = this.Hashtable.keyValueTable;
+          while (currentIndex < size && keyValueTable[currentIndex].Value == null) {
+            currentIndex++;
+          }
+          this.CurrentIndex = currentIndex;
+          return currentIndex < size && keyValueTable[currentIndex].Value != null;
+        }
+      }
+
+      /// <summary>
+      /// Reset the enumerator
+      /// </summary>
+      public void Reset() {
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+    }
+
+    /// <summary>
+    /// Get the enumerator
+    /// </summary>
+    /// <returns></returns>
+    public KeyValuePairEnumerator GetEnumerator() {
+      return new KeyValuePairEnumerator(this);
     }
 
     /// <summary>
@@ -1102,6 +1725,258 @@ namespace Microsoft.Cci.UtilityDataStructures {
 
       internal ValuesEnumerable(
         Hashtable<InternalT> hashtable
+      ) {
+        this.Hashtable = hashtable;
+      }
+
+      /// <summary>
+      /// Get the enumerator
+      /// </summary>
+      /// <returns></returns>
+      public ValuesEnumerator GetEnumerator() {
+        return new ValuesEnumerator(this.Hashtable);
+      }
+    }
+
+    /// <summary>
+    /// Enumerable of all the values
+    /// </summary>
+    public ValuesEnumerable Values {
+      get {
+        return new ValuesEnumerable(this);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Hashtable that can hold only single non null value per ulong key.
+  /// </summary>
+  /// <typeparam name="InternalT"></typeparam>
+  public sealed class HashtableUlong<InternalT> where InternalT : class {
+    struct KeyValuePair {
+      internal ulong Key;
+      internal InternalT Value;
+      public override string ToString() {
+        return "key = "+this.Key+", value = "+this.Value;
+      }
+    }
+    KeyValuePair[] keyValueTable;
+    uint size; //always a power of two
+    uint resizeCount;
+    uint count;
+    const int loadPercent = 60;
+
+    static uint SizeFromExpectedEntries(uint expectedEntries) {
+      uint expectedSize = (expectedEntries * 10) / 6; ;
+      uint initialSize = 16;
+      while (initialSize < expectedSize && initialSize > 0) initialSize <<= 1;
+      return initialSize;
+    }
+
+    /// <summary>
+    /// Constructor for Hashtable
+    /// </summary>
+    public HashtableUlong()
+      : this(16) {
+    }
+
+    /// <summary>
+    /// Constructor for Hashtable
+    /// </summary>
+    public HashtableUlong(uint expectedEntries) {
+      this.size = SizeFromExpectedEntries(expectedEntries);
+      this.resizeCount = this.size * 6 / 10;
+      this.keyValueTable = new KeyValuePair[this.size];
+      this.count = 0;
+    }
+
+    /// <summary>
+    /// Number of elements
+    /// </summary>
+    public uint Count {
+      get {
+        return this.count;
+      }
+    }
+
+    void Expand() {
+      KeyValuePair[] oldKeyValueTable = this.keyValueTable;
+      this.keyValueTable = new KeyValuePair[this.size*2];
+      lock (this) { //force this.keyValueTable into memory before this.size gets increased.
+        this.size <<= 1;
+      }
+      this.count = 0;
+      this.resizeCount = this.size * 6 / 10;
+      int len = oldKeyValueTable.Length;
+      for (int i = 0; i < len; ++i) {
+        var key = oldKeyValueTable[i].Key;
+        InternalT value = oldKeyValueTable[i].Value;
+        if (value != null)
+          this.AddInternal(key, value);
+      }
+    }
+
+    void AddInternal(ulong key, InternalT value) {
+      unchecked {
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        uint key1 = (uint)(key >> 32);
+        uint key2 = (uint)key;
+        uint hash1 = HashHelper.HashDoubleInt1(key1, key2);
+        uint hash2 = HashHelper.HashDoubleInt2(key1, key2);
+        uint tableIndex = hash1 & mask;
+        while (keyValueTable[tableIndex].Value != null) {
+          if (keyValueTable[tableIndex].Key == key) {
+            keyValueTable[tableIndex].Value = value;
+            return;
+          }
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+        keyValueTable[tableIndex].Key = key;
+        keyValueTable[tableIndex].Value = value;
+        this.count++;
+      }
+    }
+
+    /// <summary>
+    /// Add element to the Hashtable
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="value"></param>
+    public void Add(ulong key, InternalT value) {
+      if (this.count >= this.resizeCount) {
+        this.Expand();
+      }
+      this.AddInternal(key, value);
+    }
+
+    /// <summary>
+    /// Removes all entries from the table.
+    /// </summary>
+    public void Clear() {
+      if (this.count == 0) return;
+      var table = this.keyValueTable;
+      int len = table.Length;
+      for (int i = 0; i < len; ++i) {
+        table[i].Key = 0;
+        table[i].Value = null;
+      }
+      this.count = 0;
+    }
+
+    /// <summary>
+    /// Find element in the Hashtable. Returns null if the element is not found.
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns></returns>
+    public InternalT/*?*/ Find(ulong key) {
+      unchecked {
+        uint mask = this.size - 1;
+        var keyValueTable = this.keyValueTable;
+        uint key1 = (uint)(key >> 32);
+        uint key2 = (uint)key;
+        uint hash1 = HashHelper.HashDoubleInt1(key1, key2);
+        uint tableIndex = hash1 & mask;
+        if (keyValueTable[tableIndex].Key == key) return keyValueTable[tableIndex].Value;
+        uint hash2 = HashHelper.HashDoubleInt2(key1, key2);
+        tableIndex = (tableIndex + hash2) & mask;
+        InternalT result = null;
+        while ((result = keyValueTable[tableIndex].Value) != null) {
+          if (keyValueTable[tableIndex].Key == key) return result;
+          tableIndex = (tableIndex + hash2) & mask;
+        }
+        return null;
+      }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns></returns>
+    public InternalT this[ulong key] {
+      get {
+        unchecked {
+          uint mask = this.size - 1;
+          var keyValueTable = this.keyValueTable;
+          uint key1 = (uint)(key >> 32);
+          uint key2 = (uint)key;
+          uint hash1 = HashHelper.HashDoubleInt1(key1, key2);
+          uint tableIndex = hash1 & mask;
+          if (keyValueTable[tableIndex].Key == key) return keyValueTable[tableIndex].Value;
+          uint hash2 = HashHelper.HashDoubleInt2(key1, key2);
+          tableIndex = (tableIndex + hash2) & mask;
+          InternalT result = null;
+          while ((result = keyValueTable[tableIndex].Value) != null) {
+            if (keyValueTable[tableIndex].Key == key) return result;
+            tableIndex = (tableIndex + hash2) & mask;
+          }
+          return null;
+        }
+      }
+      set {
+        if (this.count >= this.resizeCount) this.Expand();
+        this.AddInternal(key, value);
+      }
+    }
+
+    /// <summary>
+    /// Enumerator for elements
+    /// </summary>
+    public struct ValuesEnumerator {
+      HashtableUlong<InternalT> Hashtable;
+      uint CurrentIndex;
+      internal ValuesEnumerator(
+        HashtableUlong<InternalT> hashtable
+      ) {
+        this.Hashtable = hashtable;
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+
+      /// <summary>
+      /// Current element
+      /// </summary>
+      public InternalT Current {
+        get {
+          return this.Hashtable.keyValueTable[this.CurrentIndex].Value;
+        }
+      }
+
+      /// <summary>
+      /// Move to next element
+      /// </summary>
+      public bool MoveNext() {
+        unchecked {
+          uint size = this.Hashtable.size;
+          uint currentIndex = this.CurrentIndex + 1;
+          if (currentIndex >= size) {
+            return false;
+          }
+          KeyValuePair[] keyValueTable = this.Hashtable.keyValueTable;
+          while (currentIndex < size && keyValueTable[currentIndex].Value == null) {
+            currentIndex++;
+          }
+          this.CurrentIndex = currentIndex;
+          return currentIndex < size && keyValueTable[currentIndex].Value != null;
+        }
+      }
+
+      /// <summary>
+      /// Reset the enumerator
+      /// </summary>
+      public void Reset() {
+        this.CurrentIndex = 0xFFFFFFFF;
+      }
+    }
+
+    /// <summary>
+    /// Enumerable for elements
+    /// </summary>
+    public struct ValuesEnumerable {
+      HashtableUlong<InternalT> Hashtable;
+
+      internal ValuesEnumerable(
+        HashtableUlong<InternalT> hashtable
       ) {
         this.Hashtable = hashtable;
       }
@@ -1627,13 +2502,14 @@ namespace Microsoft.Cci.UtilityDataStructures {
   }
 
   /// <summary>
-  /// A hash table used to keep track of a set of objects, providing methods to add objects to the set and to determine if an objet is a member of the set.
+  /// A hash table used to keep track of a set of objects, providing methods to add objects to the set and to determine if an object is a member of the set.
   /// </summary>
-  public sealed class SetOfObjects { //Provide a Values enumeration
+  public sealed class SetOfObjects {
     object[] elements;
     uint size;
     uint resizeCount;
     uint count;
+    uint dummyCount;
     const int loadPercent = 60;
     // ^ invariant (this.Size&(this.Size-1)) == 0;
 
@@ -1664,6 +2540,21 @@ namespace Microsoft.Cci.UtilityDataStructures {
     }
 
     /// <summary>
+    /// Makes a clone of the given set.
+    /// </summary>
+    public SetOfObjects(SetOfObjects setToClone) {
+      Contract.Requires(setToClone != null);
+      this.size = setToClone.size;
+      this.resizeCount = setToClone.resizeCount;
+      this.count = setToClone.count;
+      this.dummyCount = setToClone.dummyCount;
+      var n = setToClone.elements.Length;
+      this.elements = new object[n];
+      for (int i = 0; i < n; i++)
+        this.elements[i] = setToClone.elements[i];     
+    }
+
+    /// <summary>
     /// Removes all elements from the set.
     /// </summary>
     public void Clear() {
@@ -1688,6 +2579,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
         this.size <<= 1;
       }
       this.count = 0;
+      this.dummyCount = 0;
       this.resizeCount = this.size * 6 / 10;
       int len = oldElements.Length;
       for (int i = 0; i < len; ++i) {
@@ -1706,10 +2598,22 @@ namespace Microsoft.Cci.UtilityDataStructures {
         uint tableIndex = hash1 & mask;
         var elem = elements[tableIndex];
         if (elem != null) {
+          if (object.ReferenceEquals(elem, dummyObject)) {
+            elements[tableIndex] = element;
+            this.count++;
+            this.dummyCount--;
+            return true;
+          }
           if (object.ReferenceEquals(elem, element)) return false;
           uint hash2 = HashHelper.HashInt2(hash);
           tableIndex = (tableIndex + hash2) & mask;
           while ((elem = elements[tableIndex]) != null) {
+            if (object.ReferenceEquals(elem, dummyObject)) {
+              elements[tableIndex] = element;
+              this.count++;
+              this.dummyCount--;
+              return true;
+            }
             if (object.ReferenceEquals(elem, element)) return false;
             tableIndex = (tableIndex + hash2) & mask;
           }
@@ -1725,7 +2629,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// </summary>
     /// <param name="element"></param>
     public bool Add(object element) {
-      if (this.count >= this.resizeCount) this.Expand();
+      if (this.count+this.dummyCount >= this.resizeCount) this.Expand();
       return this.AddInternal(element);
     }
 
@@ -1770,6 +2674,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
         if (elem != null) {
           if (object.ReferenceEquals(elem, element)) {
             elements[tableIndex] = dummyObject;
+            this.count--;
+            this.dummyCount++;
             return;
           }
           uint hash2 = HashHelper.HashInt2(hash);
@@ -1777,6 +2683,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
           while ((elem = elements[tableIndex]) != null) {
             if (object.ReferenceEquals(elem, element)) {
               elements[tableIndex] = dummyObject;
+              this.count--;
+              this.dummyCount++;
               return;
             }
             tableIndex = (tableIndex + hash2) & mask;
@@ -1869,10 +2777,268 @@ namespace Microsoft.Cci.UtilityDataStructures {
   }
 
   /// <summary>
+  /// A hash table used to keep track of a set of non zero uint values, providing methods to add values to the set and to determine if an value is a member of the set.
+  /// </summary>
+  public sealed class SetOfUints {
+    uint[] elements;
+    uint size;
+    uint resizeCount;
+    uint count;
+    uint dummyCount;
+    const int loadPercent = 60;
+    // ^ invariant (this.Size&(this.Size-1)) == 0;
+
+    static uint SizeFromExpectedEntries(uint expectedEntries) {
+      uint expectedSize = (expectedEntries * 10) / 6; ;
+      uint initialSize = 16;
+      while (initialSize < expectedSize && initialSize > 0) initialSize <<= 1;
+      return initialSize;
+    }
+
+    /// <summary>
+    /// Constructor for SetOfUints
+    /// </summary>
+    public SetOfUints()
+      : this(16) {
+    }
+
+    /// <summary>
+    /// Constructor for SetOfObjects
+    /// </summary>
+    public SetOfUints(uint expectedEntries) {
+      this.size = SizeFromExpectedEntries(expectedEntries);
+      this.resizeCount = this.size * 6 / 10;
+      this.elements = new uint[this.size];
+      this.count = 0;
+    }
+
+    /// <summary>
+    /// Removes all elements from the set.
+    /// </summary>
+    public void Clear() {
+      this.count = 0;
+      for (int i = 0, n = this.elements.Length; i < n; i++)
+        this.elements[i] = 0;
+    }
+
+    /// <summary>
+    /// Number of elements
+    /// </summary>
+    public uint Count {
+      get {
+        return this.count;
+      }
+    }
+
+    void Expand() {
+      var oldElements = this.elements;
+      this.elements = new uint[this.size*2];
+      lock (this) { //force this.elements into memory before this.size gets increased.
+        this.size <<= 1;
+      }
+      this.count = 0;
+      this.dummyCount = 0;
+      this.resizeCount = this.size * 6 / 10;
+      int len = oldElements.Length;
+      for (int i = 0; i < len; ++i) {
+        var element = oldElements[i];
+        if (element != 0 && element != uint.MaxValue)
+          this.AddInternal(element);
+      }
+    }
+
+    bool AddInternal(uint element) {
+      unchecked {
+        uint mask = this.size - 1;
+        var elements = this.elements;
+        var hash = element;
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint tableIndex = hash1 & mask;
+        var elem = elements[tableIndex];
+        if (elem != 0) {
+          if (elem == uint.MaxValue) {
+            elements[tableIndex] = element;
+            this.dummyCount--;
+            this.count++;
+            return true;
+          }
+          if (elem == element) return false;
+          uint hash2 = HashHelper.HashInt2(hash);
+          tableIndex = (tableIndex + hash2) & mask;
+          while ((elem = elements[tableIndex]) != 0) {
+            if (elem == uint.MaxValue) {
+              elements[tableIndex] = element;
+              this.dummyCount--;
+              this.count++;
+              return true;
+            }
+            if (elem == element) return false;
+            tableIndex = (tableIndex + hash2) & mask;
+          }
+        }
+        elements[tableIndex] = element;
+        this.count++;
+        return true;
+      }
+    }
+
+    /// <summary>
+    /// Returns false if the element is already in the set. Otherwise returns true and adds the element.
+    /// </summary>
+    /// <param name="element"></param>
+    public bool Add(uint element) {
+      if (this.count+this.dummyCount >= this.resizeCount) this.Expand();
+      return this.AddInternal(element);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
+    public bool Contains(uint element) {
+      unchecked {
+        uint mask = this.size - 1;
+        var elements = this.elements;
+        var hash = element;
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint tableIndex = hash1 & mask;
+        var elem = elements[tableIndex];
+        if (elem != 0) {
+          if (elem == element) return true;
+          uint hash2 = HashHelper.HashInt2(hash);
+          tableIndex = (tableIndex + hash2) & mask;
+          while ((elem = elements[tableIndex]) != 0) {
+            if (elem == element) return true;
+            tableIndex = (tableIndex + hash2) & mask;
+          }
+        }
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="element"></param>
+    public void Remove(uint element) {
+      unchecked {
+        uint mask = this.size - 1;
+        var elements = this.elements;
+        var hash = (uint)element.GetHashCode();
+        uint hash1 = HashHelper.HashInt1(hash);
+        uint tableIndex = hash1 & mask;
+        var elem = elements[tableIndex];
+        if (elem != 0) {
+          if (elem == element) {
+            elements[tableIndex] = uint.MaxValue;
+            this.count--;
+            this.dummyCount++;
+            return;
+          }
+          uint hash2 = HashHelper.HashInt2(hash);
+          tableIndex = (tableIndex + hash2) & mask;
+          while ((elem = elements[tableIndex]) != 0) {
+            if (elem == element) {
+              elements[tableIndex] = uint.MaxValue;
+              this.count--;
+              this.dummyCount++;
+              return;
+            }
+            tableIndex = (tableIndex + hash2) & mask;
+          }
+        }
+      }
+    }
+
+    /// <summary>
+    /// Enumerator for elements
+    /// </summary>
+    public struct ValuesEnumerator {
+
+      internal ValuesEnumerator(SetOfUints setOfUints) {
+        this.setOfUints = setOfUints;
+        this.currentIndex = 0xFFFFFFFF;
+      }
+
+      SetOfUints setOfUints;
+      uint currentIndex;
+
+      /// <summary>
+      /// Current element
+      /// </summary>
+      public uint Current {
+        get {
+          return this.setOfUints.elements[this.currentIndex];
+        }
+      }
+
+      /// <summary>
+      /// Move to next element
+      /// </summary>
+      public bool MoveNext() {
+        unchecked {
+          var elements = this.setOfUints.elements;
+          uint size = (uint)elements.Length;
+          uint currentIndex = this.currentIndex + 1;
+          if (currentIndex >= size) return false;
+          while (currentIndex < size) {
+            var elem = elements[currentIndex];
+            if (elem != 0 && elem != uint.MaxValue) {
+              this.currentIndex = currentIndex;
+              return true;
+            }
+            currentIndex++;
+          }
+          this.currentIndex = currentIndex;
+          return false;
+        }
+      }
+
+      /// <summary>
+      /// Reset the enumerator
+      /// </summary>
+      public void Reset() {
+        this.currentIndex = 0xFFFFFFFF;
+      }
+    }
+
+    /// <summary>
+    /// Enumerable for elements
+    /// </summary>
+    public struct ValuesEnumerable {
+      internal ValuesEnumerable(SetOfUints setOfUints) {
+        this.setOfUints = setOfUints;
+      }
+
+      SetOfUints setOfUints;
+
+      /// <summary>
+      /// Get the enumerator
+      /// </summary>
+      /// <returns></returns>
+      public ValuesEnumerator GetEnumerator() {
+        return new ValuesEnumerator(this.setOfUints);
+      }
+    }
+
+    /// <summary>
+    /// Enumerable of all the values
+    /// </summary>
+    public ValuesEnumerable Values {
+      get {
+        return new ValuesEnumerable(this);
+      }
+    }
+  }
+
+  /// <summary>
   /// A list of elements represented as a sublist of a master list. Use this to avoid allocating lots of little list objects.
   /// </summary>
   [ContractVerification(true)]
+#if !__MonoCS__
   [DebuggerTypeProxy(typeof(Sublist<>.SublistView))]
+#endif
   public struct Sublist<T> {
 
     /// <summary>
@@ -1904,9 +3070,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
       //Contract.Invariant(this.masterList == null || Contract.ForAll(this.masterList, (e) => e != null));
       Contract.Invariant(this.offset >= 0);
       Contract.Invariant(this.count >= 0);
-      Contract.Invariant(this.count <= this.masterList.Count);
+      Contract.Invariant(this.masterList == null || this.count <= this.masterList.Count);
       Contract.Invariant(this.offset+this.count >= 0);
-      Contract.Invariant(this.offset+this.count <= this.masterList.Count);
+      Contract.Invariant(this.masterList == null || this.offset+this.count <= this.masterList.Count);
     }
 
 
@@ -1929,7 +3095,23 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// The number of elements in this list.
     /// </summary>
     public int Count {
-      get { return this.count; }
+      get {
+        Contract.Ensures(Contract.Result<int>() >= 0);
+        return this.count;
+      }
+    }
+
+    /// <summary>
+    /// Returns the index of the given element if it occurs in this list. If not, returns -1.
+    /// The comparision uses object identity will, so do not use this method if the element type is a value type.
+    /// </summary>
+    [ContractVerification(false)]
+    public int Find(T element) {
+      for (int i = 0, n = this.count; i < n; i++) {
+        if (object.ReferenceEquals(this.masterList[this.offset+i], element))
+          return i;
+      }
+      return -1;
     }
 
     /// <summary>
@@ -1937,6 +3119,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// </summary>
     /// <param name="offset">An offset from the start of this sublist.</param>
     /// <param name="count">The number of elements that should be in the resulting list.</param>
+    [ContractVerification(false)]
     public Sublist<T> GetSublist(int offset, int count) {
       Contract.Requires(offset >= 0);
       Contract.Requires(count >= 0);
@@ -1952,6 +3135,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// <param name="i"></param>
     /// <returns></returns>
     public T this[int i] {
+      [ContractVerification(false)]
       get {
         Contract.Requires(i >= 0);
         Contract.Requires(i < this.Count);
@@ -1959,12 +3143,20 @@ namespace Microsoft.Cci.UtilityDataStructures {
         Contract.Assume(this.masterList[this.offset+i] != null);
         return this.masterList[this.offset+i];
       }
+      [ContractVerification(false)]
+      set {
+        Contract.Requires(i >= 0);
+        Contract.Requires(i < this.Count);
+        Contract.Requires(value != null);
+        this.masterList[this.offset+i] = value;
+      }
     }
 
     /// <summary>
     /// Returns an object that can enumerate the elements of this list.
     /// </summary>
     /// <returns></returns>
+    [ContractVerification(false)]
     public Enumerator GetEnumerator() {
       return new Enumerator(this.masterList, this.offset, this.offset+this.count-1);
     }
@@ -2045,6 +3237,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
         }
       }
     }
+
 
   }
 

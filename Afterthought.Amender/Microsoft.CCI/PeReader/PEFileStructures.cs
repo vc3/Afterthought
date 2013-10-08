@@ -857,7 +857,7 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     internal const int SizeofOptionalHeaderNTAdditionalFields32 = 68;
     internal const int SizeofOptionalHeaderNTAdditionalFields64 = 88;
     internal const int NumberofOptionalHeaderDirectoryEntries = 16;
-    internal const int SizeofOptionalHeaderDirectoriesEntries = 64;
+    internal const int SizeofOptionalHeaderDirectoriesEntries = 16*8;
     internal const int SizeofSectionHeader = 40;
     internal const int SizeofSectionName = 8;
     internal const int SizeofResourceDirectory = 16;

@@ -17,13 +17,16 @@ namespace Microsoft.Cci {
   public interface IPdbWriter {
     void CloseMethod(uint offset);
     void CloseScope(uint offset);
+    void CloseTokenSourceLocationsScope();
     void DefineCustomMetadata(string name, byte[] metadata);
     void DefineLocalConstant(string name, object value, uint contantSignatureToken);
     void DefineLocalVariable(uint index, string name, bool isCompilerGenerated, uint localVariablesSignatureToken);
     void DefineSequencePoint(ILocation location, uint offset);
+    void DefineTokenSourceLocation(uint token, ILocation location);
     PeDebugDirectory GetDebugDirectory();
     void OpenMethod(uint methodToken);
     void OpenScope(uint offset);
+    void OpenTokenSourceLocationsScope();
     void SetEntryPoint(uint entryMethodToken);
     void UsingNamespace(string fullName);
   }

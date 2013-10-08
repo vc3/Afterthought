@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Diagnostics.Contracts;
 
 //^ using Microsoft.Contracts;
 
@@ -148,8 +149,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public IAssembly ContainingAssembly {
-      get { return this.containingAssembly; }
-      set { this.containingAssembly = value; }
+      get {
+        Contract.Ensures(Contract.Result<IAssembly>() != null);
+        return this.containingAssembly; 
+      }
+      set {
+        Contract.Requires(value != null);
+        this.containingAssembly = value; 
+      }
     }
     IAssembly containingAssembly;
 
@@ -158,8 +165,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public IName FileName {
-      get { return this.fileName; }
-      set { this.fileName = value; }
+      get {
+        Contract.Ensures(Contract.Result<IName>() != null);
+        return this.fileName; 
+      }
+      set {
+        Contract.Requires(value != null);
+        this.fileName = value; 
+      }
     }
     IName fileName;
 
@@ -168,8 +181,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public List<byte> HashValue {
-      get { return this.hashValue; }
-      set { this.hashValue = value; }
+      get {
+        Contract.Ensures(Contract.Result<List<byte>>() != null);
+        return this.hashValue; 
+      }
+      set {
+        Contract.Requires(value != null);
+        this.hashValue = value; 
+      }
     }
     List<byte> hashValue;
 

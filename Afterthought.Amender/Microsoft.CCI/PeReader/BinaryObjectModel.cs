@@ -19,7 +19,7 @@ using Microsoft.Cci.MetadataReader.PEFile;
 
 namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
-    #region Base Objects for Object Model
+  #region Base Objects for Object Model
 
   internal interface IMetadataReaderModuleReference : IModuleReference {
     uint InternedModuleId { get; }
@@ -30,12 +30,13 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
   /// This is used in maintaining type spec cache.
   /// </summary>
   internal abstract class MetadataObject : IReference, IMetadataObjectWithToken {
+
     internal PEFileToObjectModel PEFileToObjectModel;
-    protected MetadataObject(
-      PEFileToObjectModel peFileToObjectModel
-    ) {
+
+    protected MetadataObject(PEFileToObjectModel peFileToObjectModel) {
       this.PEFileToObjectModel = peFileToObjectModel;
     }
+
     internal abstract uint TokenValue { get; }
 
     public IPlatformType PlatformType {
@@ -88,11 +89,87 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
   /// Base class of Namespaces/Types/TypeMembers.
   /// </summary>
   internal abstract class MetadataDefinitionObject : MetadataObject, IDefinition {
-    protected MetadataDefinitionObject(
-      PEFileToObjectModel peFileToObjectModel
-    )
+
+    protected MetadataDefinitionObject(PEFileToObjectModel peFileToObjectModel)
       : base(peFileToObjectModel) {
+      this.locations = IteratorHelper.GetSingletonEnumerable<ILocation>(new MetadataLocation(peFileToObjectModel.document, this));
     }
+
+    public override IEnumerable<ILocation> Locations {
+      get {
+        return this.locations;
+      }
+    }
+    IEnumerable<ILocation> locations;
+
+  }
+
+  /// <summary>
+  /// 
+  /// </summary>
+  internal sealed class MetadataObjectDocument : IDocument {
+
+    internal MetadataObjectDocument(PEFileToObjectModel peFileToObjectModel) {
+      this.peFileToObjectModel = peFileToObjectModel;
+    }
+
+    PEFileToObjectModel peFileToObjectModel;
+
+    /// <summary>
+    /// The location where this document was found, or where it should be stored.
+    /// This will also uniquely identify the source document within an instance of compilation host.
+    /// </summary>
+    public string Location {
+      get { return this.peFileToObjectModel.Module.ModuleIdentity.Location; }
+    }
+
+    /// <summary>
+    /// The name of the document. For example the name of the file if the document corresponds to a file.
+    /// </summary>
+    public IName Name {
+      get { return this.peFileToObjectModel.Module.ModuleIdentity.Name; }
+    }
+
+  }
+
+  /// <summary>
+  /// 
+  /// </summary>
+  internal sealed class MetadataLocation : IMetadataLocation {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="document"></param>
+    /// <param name="definition"></param>
+    internal MetadataLocation(IDocument document, IMetadataObjectWithToken definition) {
+      this.document = document;
+      this.definition = definition;
+    }
+
+    #region IMetadataLocation Members
+
+    /// <summary>
+    /// The metadata object whose definition contains this location.
+    /// </summary>
+    public IMetadataObjectWithToken Definition {
+      get { return this.definition; }
+    }
+    IMetadataObjectWithToken definition;
+
+    #endregion
+
+    #region ILocation Members
+
+    /// <summary>
+    /// The document containing this location.
+    /// </summary>
+    public IDocument Document {
+      get { return this.document; }
+    }
+    IDocument document;
+
+    #endregion
   }
 
   internal enum ContainerState : byte {
@@ -312,6 +389,12 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       }
     }
 
+    string IModule.DebugInformationVersion {
+      get {
+        return this.PEFileToObjectModel.GetDebugInformationVersion();
+      }
+    }
+
     ushort IModule.DllCharacteristics {
       get { return (ushort)this.PEFileToObjectModel.GetDllCharacteristics(); }
     }
@@ -407,6 +490,14 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     ulong IModule.SizeOfStackReserve {
       get { return this.PEFileToObjectModel.PEFileReader.SizeOfStackReserve; }
+    }
+
+    ushort IModule.SubsystemMajorVersion {
+      get { return this.PEFileToObjectModel.SubsystemMajorVersion; }
+    }
+
+    ushort IModule.SubsystemMinorVersion {
+      get { return this.PEFileToObjectModel.SubsystemMinorVersion; }
     }
 
     string IModule.TargetRuntimeVersion {
@@ -1143,6 +1234,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get { return this.ParentModuleNamespace; }
     }
 
+    IName IContainerMember<INamespaceDefinition>.Name {
+      get { return this.Name; }
+    }
+
     #endregion
 
     #region IScopeMember<IScope<INamespaceMember>> Members
@@ -1737,10 +1832,12 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public IEnumerable<byte> Rawdata {
       get {
         unsafe {
+          var size = this.sectionHeaders[this.index].SizeOfRawData;
+          var virtSize = this.sectionHeaders[this.index].VirtualSize;
+          if (virtSize < size) size = virtSize;
           MemoryBlock block =
             new MemoryBlock(
-              this.peFileToObjectModel.PEFileReader.BinaryDocumentMemoryBlock.Pointer + this.sectionHeaders[this.index].OffsetToRawData + 0,
-              this.sectionHeaders[this.index].VirtualSize);
+              this.peFileToObjectModel.PEFileReader.BinaryDocumentMemoryBlock.Pointer + this.sectionHeaders[this.index].OffsetToRawData + 0, size);
           return new EnumerableMemoryBlockWrapper(block);
         }
       }
@@ -2225,8 +2322,8 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     #region ITokenDecoder Members
 
-    public IMetadataObjectWithToken GetObjectForToken(uint token) {
-      return this.PEFileToObjectModel.GetReferenceForToken(this, token) as IMetadataObjectWithToken;
+    public object GetObjectForToken(uint token) {
+      return this.PEFileToObjectModel.GetReferenceForToken(this, token);
     }
 
     #endregion
@@ -2560,7 +2657,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
           this.adderMethod = this.PEFileToObjectModel.GetEventAddOrRemoveOrFireMethod(this, MethodSemanticsFlags.AddOn);
           if (this.adderMethod == null) {
             //  MDError
-            this.adderMethod = Dummy.Method;
+            this.adderMethod = Dummy.MethodDefinition;
           }
           this.EventFlags |= EventFlags.AdderLoaded;
         }
@@ -2575,7 +2672,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
           this.removerMethod = this.PEFileToObjectModel.GetEventAddOrRemoveOrFireMethod(this, MethodSemanticsFlags.RemoveOn);
           if (this.removerMethod == null) {
             //  MDError
-            this.removerMethod = Dummy.Method;
+            this.removerMethod = Dummy.MethodDefinition;
           }
           this.EventFlags |= EventFlags.RemoverLoaded;
         }
@@ -2623,7 +2720,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public IMethodReference Adder {
       get {
-        if (this.AdderMethod == Dummy.Method) return Dummy.MethodReference;
+        if (this.AdderMethod is Dummy) return Dummy.MethodReference;
         return this.AdderMethod;
       }
     }
@@ -2642,7 +2739,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public IMethodReference Remover {
       get {
-        if (this.RemoverMethod == Dummy.Method) return Dummy.MethodReference;
+        if (this.RemoverMethod is Dummy) return Dummy.MethodReference;
         return this.RemoverMethod;
       }
     }
@@ -2703,17 +2800,18 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     void InitPropertySignature()
-      //^ ensures this.ReturnModuleCustomModifiers != null;
+      //^ ensures this.returnModuleCustomModifiers != null;
     {
       lock (GlobalLock.LockingObject) {
         if (this.returnValueCustomModifiers == null) {
           PropertySignatureConverter propertySignature = this.PEFileToObjectModel.GetPropertySignature(this);
           this.FirstSignatureByte = propertySignature.firstByte;
-          this.returnValueCustomModifiers = propertySignature.returnCustomModifiers??Enumerable<ICustomModifier>.Empty;
           this.returnType = propertySignature.type;
           this.parameters = propertySignature.parameters;
           if (propertySignature.returnValueIsByReference)
             this.PropertyFlags |= PropertyFlags.ReturnValueIsByReference;
+          // Keep this last make sure we don't have the race in the double-check lock pattern.
+          this.returnValueCustomModifiers = propertySignature.returnCustomModifiers??Enumerable<ICustomModifier>.Empty;
         }
       }
     }
@@ -3005,7 +3103,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public virtual IFieldDefinition ResolvedField {
       get {
         var parent = this.ParentTypeReference;
-        if (parent == null) return Dummy.Field;
+        if (parent == null) return Dummy.FieldDefinition;
         return TypeHelper.GetField(parent.ResolvedType, this, true);
       }
     }
@@ -3149,7 +3247,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public virtual IMethodDefinition ResolvedMethod {
       get {
         ITypeReference/*?*/moduleTypeRef = this.OwningTypeReference;
-        if (moduleTypeRef == null) return Dummy.Method;
+        if (moduleTypeRef == null) return Dummy.MethodDefinition;
         return TypeHelper.GetMethod(moduleTypeRef.ResolvedType, this, true);
       }
     }
@@ -3784,7 +3882,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       ManifestResourceFlags flags,
       bool inExternalFile
     )
-      : base(peFileToObjectModel, resourceRowId, Dummy.Assembly, inExternalFile ? flags | ManifestResourceFlags.InExternalFile : flags, name) {
+      : base(peFileToObjectModel, resourceRowId, Dummy.AssemblyReference, inExternalFile ? flags | ManifestResourceFlags.InExternalFile : flags, name) {
     }
 
     internal override uint TokenValue {
@@ -3814,7 +3912,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     IAssemblyReference IResourceReference.DefiningAssembly {
       get {
         IAssembly/*?*/ assem = this.PEFileToObjectModel.Module as IAssembly;
-        return assem == null ? Dummy.Assembly : assem;
+        return assem == null ? Dummy.AssemblyReference : assem;
       }
     }
 

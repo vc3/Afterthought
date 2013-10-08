@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 
 namespace Microsoft.Cci {
   using Microsoft.Cci.ILGeneratorImplementation;
@@ -32,16 +33,24 @@ namespace Microsoft.Cci {
     /// In case of AST to instructions conversion this lists the types produced.
     /// In case of instructions to AST decompilation this should ideally be list of all types
     /// which are local to method.</param>
-    public ILGeneratorMethodBody(ILGenerator generator, bool localsAreZeroed, ushort maxStack, IMethodDefinition methodDefinition, 
+    public ILGeneratorMethodBody(ILGenerator generator, bool localsAreZeroed, ushort maxStack, IMethodDefinition methodDefinition,
       IEnumerable<ILocalDefinition> localVariables, IEnumerable<ITypeDefinition> privateHelperTypes) {
+      Contract.Requires(generator != null);
+      Contract.Requires(methodDefinition != null);
+      Contract.Requires(localVariables != null);
+      Contract.Requires(privateHelperTypes != null);
+
       this.localsAreZeroed = localsAreZeroed;
       this.operationExceptionInformation = generator.GetOperationExceptionInformation();
       this.operations = generator.GetOperations();
       this.privateHelperTypes = privateHelperTypes;
-      this.generatorScopes = generator.GetLocalScopes();
+      this.generatorIteratorScopes = generator.GetIteratorScopes();
+      this.generatorLocalScopes = generator.GetLocalScopes();
       this.localVariables = localVariables;
       this.maxStack = maxStack;
       this.methodDefinition = methodDefinition;
+      this.size = generator.CurrentOffset;
+      this.synchronizationInformation = generator.GetSynchronizationInformation();
     }
 
     /// <summary>
@@ -51,13 +60,25 @@ namespace Microsoft.Cci {
       visitor.Visit(this);
     }
 
-    readonly IEnumerable<ILGeneratorScope> generatorScopes;
+    readonly IEnumerable<ILocalScope>/*?*/ generatorIteratorScopes;
+    readonly IEnumerable<ILGeneratorScope> generatorLocalScopes;
+    readonly ISynchronizationInformation/*?*/ synchronizationInformation;
+
+    /// <summary>
+    /// Returns a block scope associated with each local variable in the iterator for which this is the generator for its MoveNext method.
+    /// May return null.
+    /// </summary>
+    /// <remarks>The PDB file model seems to be that scopes are duplicated if necessary so that there is a separate scope for each
+    /// local variable in the original iterator and the mapping from local to scope is done by position.</remarks>
+    public IEnumerable<ILocalScope>/*?*/ GetIteratorScopes() {
+      return this.generatorIteratorScopes;
+    }
 
     /// <summary>
     /// Returns zero or more local (block) scopes into which the CLR IL operations of this method body is organized.
     /// </summary>
     public IEnumerable<ILocalScope> GetLocalScopes() {
-      foreach (var generatorScope in this.generatorScopes) {
+      foreach (var generatorScope in this.generatorLocalScopes) {
         if (generatorScope.locals.Count > 0)
           yield return generatorScope;
       }
@@ -70,16 +91,25 @@ namespace Microsoft.Cci {
     /// is for the y.
     /// </summary>
     public IEnumerable<INamespaceScope> GetNamespaceScopes() {
-      foreach (var generatorScope in this.generatorScopes) {
+      foreach (var generatorScope in this.generatorLocalScopes) {
         if (generatorScope.usedNamespaces.Count > 0)
           yield return generatorScope;
       }
     }
 
     /// <summary>
+    /// Returns an object that describes where synchronization points occur in the IL operations of the "MoveNext" method of
+    /// the state class of an async method. Returns null otherwise.
+    /// </summary>
+    public ISynchronizationInformation/*?*/ GetSynchronizationInformation() {
+      return this.synchronizationInformation;
+    }
+
+    /// <summary>
     /// A list exception data within the method body IL.
     /// </summary>
     public IEnumerable<IOperationExceptionInformation> OperationExceptionInformation {
+      [ContractVerification(false)]
       get { return this.operationExceptionInformation; }
     }
     readonly IEnumerable<IOperationExceptionInformation> operationExceptionInformation;
@@ -96,6 +126,7 @@ namespace Microsoft.Cci {
     /// The local variables of the method.
     /// </summary>
     public IEnumerable<ILocalDefinition> LocalVariables {
+      [ContractVerification(false)]
       get { return this.localVariables; }
     }
     readonly IEnumerable<ILocalDefinition> localVariables;
@@ -113,6 +144,7 @@ namespace Microsoft.Cci {
     /// A list CLR IL operations that implement this method body.
     /// </summary>
     public IEnumerable<IOperation> Operations {
+      [ContractVerification(false)]
       get { return this.operations; }
     }
     readonly IEnumerable<IOperation> operations;
@@ -132,10 +164,18 @@ namespace Microsoft.Cci {
     /// which are local to method.
     /// </summary>
     public IEnumerable<ITypeDefinition> PrivateHelperTypes {
+      [ContractVerification(false)]
       get { return this.privateHelperTypes; }
     }
     readonly IEnumerable<ITypeDefinition> privateHelperTypes;
 
+    /// <summary>
+    /// The size in bytes of the method body when serialized.
+    /// </summary>
+    public uint Size {
+      get { return this.size; }
+    }
+    readonly uint size;
   }
 
   /// <summary>
@@ -199,6 +239,15 @@ namespace Microsoft.Cci {
     /// </summary>
     public virtual bool IsIterator(IMethodBody methodBody) {
       return false;
+    }
+
+    /// <summary>
+    /// If the given method body is the "MoveNext" method of the state class of an asynchronous method, the returned
+    /// object describes where synchronization points occur in the IL operations of the "MoveNext" method. Otherwise
+    /// the result is null.
+    /// </summary>
+    public ISynchronizationInformation/*?*/ GetSynchronizationInformation(IMethodBody methodBody) {
+      return null;
     }
 
     /// <summary>

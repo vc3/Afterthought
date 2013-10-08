@@ -25,16 +25,14 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
     IEnumerable<IOperationExceptionInformation>/*?*/ cilExceptionInformation;
     internal readonly bool IsLocalsInited;
     internal readonly ushort StackSize;
+    readonly uint bodySize;
 
-    internal MethodBody(
-      MethodDefinition methodDefinition,
-      bool isLocalsInited,
-      ushort stackSize
-    ) {
+    internal MethodBody(MethodDefinition methodDefinition, bool isLocalsInited, ushort stackSize, uint bodySize) {
       this.MethodDefinition = methodDefinition;
       this.IsLocalsInited = isLocalsInited;
       this.LocalVariables = null;
       this.StackSize = stackSize;
+      this.bodySize = bodySize;
     }
 
     internal void SetLocalVariables(ILocalDefinition[] localVariables) {
@@ -89,6 +87,12 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
       get {
         if (this.cilExceptionInformation == null) return Enumerable<IOperationExceptionInformation>.Empty;
         return this.cilExceptionInformation;
+      }
+    }
+
+    public uint Size {
+      get {
+        return this.bodySize;
       }
     }
 
@@ -374,9 +378,9 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
         this.ReturnTypeReference = this.GetTypeReference();
       }
       if (paramCount > 0) {
-        IParameterTypeInformation[] reqModuleParamArr = this.GetModuleParameterTypeInformations(Dummy.Method, paramCount);
+        IParameterTypeInformation[] reqModuleParamArr = this.GetModuleParameterTypeInformations(Dummy.Signature, paramCount);
         if (reqModuleParamArr.Length > 0) this.RequiredParameters = IteratorHelper.GetReadonly(reqModuleParamArr);
-        IParameterTypeInformation[] varArgModuleParamArr = this.GetModuleParameterTypeInformations(Dummy.Method, paramCount - reqModuleParamArr.Length);
+        IParameterTypeInformation[] varArgModuleParamArr = this.GetModuleParameterTypeInformations(Dummy.Signature, paramCount - reqModuleParamArr.Length);
         if (varArgModuleParamArr.Length > 0) this.VarArgParameters = IteratorHelper.GetReadonly(varArgModuleParamArr);
       }
     }
@@ -397,7 +401,7 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
     internal readonly MethodDefinition MethodDefinition;
     internal readonly MethodBody MethodBody;
     readonly MethodIL MethodIL;
-    readonly uint EndOfMethodOffset;
+    internal readonly uint EndOfMethodOffset;
 
     internal ILReader(
       MethodDefinition methodDefinition,
@@ -406,8 +410,8 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
       this.MethodDefinition = methodDefinition;
       this.PEFileToObjectModel = methodDefinition.PEFileToObjectModel;
       this.MethodIL = methodIL;
-      this.MethodBody = new MethodBody(methodDefinition, methodIL.LocalVariablesInited, methodIL.MaxStack);
       this.EndOfMethodOffset = (uint)methodIL.EncodedILMemoryBlock.Length;
+      this.MethodBody = new MethodBody(methodDefinition, methodIL.LocalVariablesInited, methodIL.MaxStack, this.EndOfMethodOffset);
     }
 
     bool LoadLocalSignature() {
@@ -912,7 +916,6 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
             value = this.GetLocal(memReader.ReadUInt16());
             break;
           case OperationCode.Localloc:
-            value = PointerType.GetPointerType(this.PEFileToObjectModel.PlatformType.SystemVoid, this.PEFileToObjectModel.InternFactory);
             break;
           case OperationCode.Endfilter:
             break;
@@ -1131,7 +1134,8 @@ namespace Microsoft.Cci.MetadataReader {
     }
 
     /// <summary>
-    /// 
+    /// The location where this document was found, or where it should be stored.
+    /// This will also uniquely identify the source document within an instance of compilation host.
     /// </summary>
     public string Location {
       get { return this.method.PEFileToObjectModel.Module.ModuleIdentity.Location; }
@@ -1147,10 +1151,19 @@ namespace Microsoft.Cci.MetadataReader {
     }
 
     /// <summary>
-    /// 
+    /// The name of the document. For example the name of the file if the document corresponds to a file.
     /// </summary>
     public IName Name {
       get { return this.method.PEFileToObjectModel.Module.ModuleIdentity.Name; }
+    }
+
+    /// <summary>
+    /// Returns a token decoder for the method associated with this document.
+    /// </summary>
+    public ITokenDecoder TokenDecoder {
+      get {
+        return this.method;
+      }
     }
 
   }

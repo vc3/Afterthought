@@ -9,8 +9,8 @@
 //
 //-----------------------------------------------------------------------------
 
-namespace Microsoft.Cci.PeWriterInternal {
-  internal sealed class MemoryStream {
+namespace Microsoft.Cci.WriterUtilities {
+  public sealed class MemoryStream {
 
     public MemoryStream() {
       this.Buffer = new byte[64];

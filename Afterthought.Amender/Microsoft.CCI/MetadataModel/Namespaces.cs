@@ -211,6 +211,7 @@ namespace Microsoft.Cci {
     public IUnitNamespaceReference ContainingUnitNamespace {
       get {
         Contract.Ensures(Contract.Result<IUnitNamespaceReference>() != null);
+        Contract.Ensures(Contract.Result<IUnitNamespaceReference>() != this);
         throw new NotImplementedException();
       }
     }
@@ -365,10 +366,10 @@ namespace Microsoft.Cci {
       }
     }
 
-    public IEnumerable<INamespaceMember> Members {
+    IEnumerable<INamespaceMember> INamespaceDefinition.Members {
       get {
-        //Contract.Ensures(Contract.Result<IEnumerable<INamespaceMember>>() != null);
-        //Contract.Ensures(Contract.ForAll(Contract.Result<IEnumerable<INamespaceMember>>(), x => x != null));
+        Contract.Ensures(Contract.Result<IEnumerable<INamespaceMember>>() != null);
+        Contract.Ensures(Contract.ForAll(Contract.Result<IEnumerable<INamespaceMember>>(), x => x != null));
         throw new NotImplementedException();
       }
     }
@@ -407,6 +408,10 @@ namespace Microsoft.Cci {
 
     public void DispatchAsReference(IMetadataVisitor visitor) {
       throw new NotImplementedException();
+    }
+
+    public IEnumerable<INamespaceMember> Members {
+      get { throw new NotImplementedException(); }
     }
   }
 

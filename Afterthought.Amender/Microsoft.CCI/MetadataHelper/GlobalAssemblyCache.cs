@@ -25,7 +25,7 @@ namespace Microsoft.Cci {
   /// </summary>
   [ContractVerification(false)]
   public static class GlobalAssemblyCache {
-#if !COMPACTFX
+#if !COMPACTFX && !__MonoCS__
     private static bool FusionLoaded;
 #endif
 
@@ -34,7 +34,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="codeBaseUri">The code base URI.</param>
     public static bool Contains(Uri codeBaseUri) {
-      if (codeBaseUri == null) { Debug.Fail("codeBaseUri == null"); return false; }
+      Contract.Requires(codeBaseUri != null);
+      
       lock (GlobalLock.LockingObject) {
 #if COMPACTFX
         var gacKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"\Software\Microsoft\.NETCompactFramework\Installer\Assemblies\Global");
@@ -48,19 +49,20 @@ namespace Microsoft.Cci {
         }
         return false;
 #else
+#if __MonoCS__
+        IAssemblyEnum assemblyEnum = new MonoAssemblyEnum();
+#else
         if (!GlobalAssemblyCache.FusionLoaded) {
           GlobalAssemblyCache.FusionLoaded = true;
-          System.Reflection.Assembly systemAssembly = typeof(object).Assembly;
-          //^ assume systemAssembly != null;
-          string/*?*/ systemAssemblyLocation = systemAssembly.Location;
-          //^ assume systemAssemblyLocation != null;
-          string dir = Path.GetDirectoryName(systemAssemblyLocation);
-          //^ assume dir != null;
+          var systemAssembly = typeof(object).Assembly;
+          var systemAssemblyLocation = systemAssembly.Location;
+          string dir = Path.GetDirectoryName(systemAssemblyLocation)??"";
           GlobalAssemblyCache.LoadLibrary(Path.Combine(dir, "fusion.dll"));
         }
         IAssemblyEnum assemblyEnum;
         int rc = GlobalAssemblyCache.CreateAssemblyEnum(out assemblyEnum, null, null, ASM_CACHE.GAC, 0);
         if (rc < 0 || assemblyEnum == null) return false;
+#endif
         IApplicationContext applicationContext;
         IAssemblyName currentName;
         while (assemblyEnum.GetNextAssembly(out applicationContext, out currentName, 0) == 0) {
@@ -98,19 +100,20 @@ namespace Microsoft.Cci {
         }
         return null;
 #else
+#if __MonoCS__
+        IAssemblyEnum assemblyEnum = new MonoAssemblyEnum();
+#else
         if (!GlobalAssemblyCache.FusionLoaded) {
           GlobalAssemblyCache.FusionLoaded = true;
-          System.Reflection.Assembly systemAssembly = typeof(object).Assembly;
-          //^ assume systemAssembly != null;
-          string/*?*/ systemAssemblyLocation = systemAssembly.Location;
-          //^ assume systemAssemblyLocation != null;
-          string dir = Path.GetDirectoryName(systemAssemblyLocation);
-          //^ assume dir != null;
+          var systemAssembly = typeof(object).Assembly;
+          var systemAssemblyLocation = systemAssembly.Location;
+          var dir = Path.GetDirectoryName(systemAssemblyLocation)??"";
           GlobalAssemblyCache.LoadLibrary(Path.Combine(dir, "fusion.dll"));
         }
         IAssemblyEnum assemblyEnum;
-        CreateAssemblyEnum(out assemblyEnum, null, null, ASM_CACHE.GAC, 0);
-        if (assemblyEnum == null) return null;
+        int rc = CreateAssemblyEnum(out assemblyEnum, null, null, ASM_CACHE.GAC, 0);
+        if (rc < 0 || assemblyEnum == null) return null;
+#endif
         IApplicationContext applicationContext;
         IAssemblyName currentName;
         while (assemblyEnum.GetNextAssembly(out applicationContext, out currentName, 0) == 0) {
@@ -216,7 +219,7 @@ namespace Microsoft.Cci {
     }
 #endif
 
-#if !COMPACTFX
+#if !COMPACTFX && !__MonoCS__
     [DllImport("kernel32.dll", CharSet=CharSet.Ansi)]
     private static extern IntPtr LoadLibrary(string lpFileName);
     [DllImport("fusion.dll", CharSet=CharSet.Auto)]
@@ -231,7 +234,8 @@ namespace Microsoft.Cci {
   }
 
 #if !COMPACTFX
-  internal class AssemblyName {
+#pragma warning disable 1591
+  public class AssemblyName {
     IAssemblyName assemblyName;
 
     internal AssemblyName(IAssemblyName assemblyName) {
@@ -277,9 +281,13 @@ namespace Microsoft.Cci {
       return this.StrongName;
     }
     internal string/*?*/ GetLocation() {
+#if __MonoCS__
+      IAssemblyCache assemblyCache = new MonoAssemblyCache();
+#else
       IAssemblyCache assemblyCache;
       CreateAssemblyCache(out assemblyCache, 0);
       if (assemblyCache == null) return null;
+#endif
       ASSEMBLY_INFO assemblyInfo = new ASSEMBLY_INFO();
       assemblyInfo.cbAssemblyInfo = (uint)Marshal.SizeOf(typeof(ASSEMBLY_INFO));
       assemblyCache.QueryAssemblyInfo(ASSEMBLYINFO_FLAG.VALIDATE | ASSEMBLYINFO_FLAG.GETSIZE, this.StrongName, ref assemblyInfo);
@@ -366,7 +374,7 @@ namespace Microsoft.Cci {
       public const uint GETSIZE = 2;
     }
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    private struct ASSEMBLY_INFO {
+    public struct ASSEMBLY_INFO {
       public uint cbAssemblyInfo;
       public uint dwAssemblyFlags;
       public ulong uliAssemblySizeInKB;
@@ -375,7 +383,7 @@ namespace Microsoft.Cci {
       public uint cchBuf;
     }
     [ComImport(), Guid("E707DCDE-D1CD-11D2-BAB9-00C04F8ECEAE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IAssemblyCache {
+    public interface IAssemblyCache {
       [PreserveSig()]
       int UninstallAssembly(uint dwFlags, [MarshalAs(UnmanagedType.LPWStr)] string pszAssemblyName, IntPtr pvReserved, int pulDisposition);
       [PreserveSig()]
@@ -388,6 +396,7 @@ namespace Microsoft.Cci {
       int InstallAssembly(uint dwFlags, [MarshalAs(UnmanagedType.LPWStr)] string pszManifestFilePath, IntPtr pvReserved);
     }
   }
+#pragma warning restore 1591
   [ComImport(), Guid("CD193BC0-B4BC-11D2-9833-00C04FC31D2E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
   interface IAssemblyName {
     [PreserveSig()]

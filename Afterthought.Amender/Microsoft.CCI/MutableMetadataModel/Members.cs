@@ -13,8 +13,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics.Contracts;
 
-//^ using Microsoft.Contracts;
-
 namespace Microsoft.Cci.MutableCodeModel {
 
   /// <summary>
@@ -247,7 +245,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IMetadataConstant compileTimeValue;
 
     /// <summary>
-    /// Custom modifiers associated with the referenced field.
+    /// Custom modifiers associated with the referenced field. May be null.
     /// </summary>
     public List<ICustomModifier>/*?*/ CustomModifiers {
       get { return this.customModifiers; }
@@ -333,7 +331,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool IsMapped {
-      get { return this.fieldMapping != Dummy.SectionBlock; }
+      get { return !(this.fieldMapping is Dummy); }
     }
 
     /// <summary>
@@ -341,7 +339,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool IsMarshalledExplicitly {
-      get { return this.marshallingInformation != Dummy.MarshallingInformation; }
+      get { return !(this.marshallingInformation is Dummy); }
     }
 
     /// <summary>
@@ -532,7 +530,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -558,7 +556,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ITypeReference containingType;
 
     /// <summary>
-    /// Custom modifiers associated with the referenced field.
+    /// Custom modifiers associated with the referenced field. May be null.
     /// </summary>
     public List<ICustomModifier>/*?*/ CustomModifiers {
       get { return this.customModifiers; }
@@ -647,7 +645,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     bool isStatic;
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -753,7 +751,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public GlobalFieldDefinition() {
-      this.containingNamespace = Dummy.RootUnitNamespace;
+      this.containingNamespace = Dummy.NamespaceDefinition;
     }
 
     /// <summary>
@@ -790,6 +788,10 @@ namespace Microsoft.Cci.MutableCodeModel {
       get { return this.ContainingNamespace; }
     }
 
+    IName IContainerMember<INamespaceDefinition>.Name {
+      get { return this.Name; }
+    }
+
     #endregion
 
     #region IScopeMember<IScope<INamespaceMember>> Members
@@ -810,7 +812,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public GlobalMethodDefinition() {
-      this.containingNamespace = Dummy.RootUnitNamespace;
+      this.containingNamespace = Dummy.NamespaceDefinition;
     }
 
     /// <summary>
@@ -845,6 +847,10 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     INamespaceDefinition IContainerMember<INamespaceDefinition>.Container {
       get { return this.ContainingNamespace; }
+    }
+
+    IName IContainerMember<INamespaceDefinition>.Name {
+      get { return this.Name; }
     }
 
     #endregion
@@ -891,7 +897,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// The type arguments that were used to instantiate this.GenericMethod in order to create this method.
+    /// The type arguments that were used to instantiate this.GenericMethod in order to create this method. May be null.
     /// </summary>
     /// <value></value>
     public List<ITypeReference>/*?*/ GenericArguments {
@@ -938,11 +944,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// The definition of a type parameter of a generic method.
     /// </summary>
-    //^ [NotDelayed]
     public GenericMethodParameter() {
-      this.definingMethod = Dummy.Method;
-      //^ base;
-      //^ assume this.definingMethod.IsGeneric; //TODO: define a dummy generic method
+      this.definingMethod = Dummy.MethodDefinition;
     }
 
     /// <summary>
@@ -963,14 +966,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       get {
         return this.definingMethod;
       }
-      set
-        //^ requires value.IsGeneric;
-      {
+      set {
         this.definingMethod = value;
       }
     }
     IMethodDefinition definingMethod;
-    //^ invariant definingMethod.IsGeneric;
 
     /// <summary>
     /// Calls visitor.Visit(IGenericMethodParameter).
@@ -1015,7 +1015,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.isPinned = false;
       this.isReference = false;
       this.locations = null;
-      this.methodDefinition = Dummy.Method;
+      this.methodDefinition = Dummy.MethodDefinition;
       this.name = Dummy.Name;
       this.type = Dummy.TypeReference;
     }
@@ -1066,7 +1066,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IMetadataConstant compileTimeValue;
 
     /// <summary>
-    /// Custom modifiers associated with local variable definition.
+    /// Custom modifiers associated with local variable definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomModifier>/*?*/ CustomModifiers {
@@ -1080,7 +1080,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool IsConstant {
-      get { return this.compileTimeValue != Dummy.Constant; }
+      get { return !(this.compileTimeValue is Dummy); }
     }
 
     /// <summary>
@@ -1124,7 +1124,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IName name;
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -1192,7 +1192,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.localsAreZeroed = true;
       this.localVariables = null;
       this.maxStack = 0;
-      this.methodDefinition = Dummy.Method;
+      this.methodDefinition = Dummy.MethodDefinition;
       this.operationExceptionInformation = null;
       this.operations = null;
       this.privateHelperTypes = null;
@@ -1223,6 +1223,7 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.privateHelperTypes = new List<ITypeDefinition>(methodBody.PrivateHelperTypes);
       else
         this.privateHelperTypes = null;
+      this.size = methodBody.Size;
     }
 
     /// <summary>
@@ -1244,7 +1245,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     bool localsAreZeroed;
 
     /// <summary>
-    /// The local variables of the method.
+    /// The local variables of the method. May be null.
     /// </summary>
     public List<ILocalDefinition>/*?*/ LocalVariables {
       get { return this.localVariables; }
@@ -1272,7 +1273,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IMethodDefinition methodDefinition;
 
     /// <summary>
-    /// A list CLR IL operations that implement this method body.
+    /// A list CLR IL operations that implement this method body. May be null.
     /// </summary>
     public List<IOperation>/*?*/ Operations {
       get { return this.operations; }
@@ -1281,7 +1282,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IOperation>/*?*/ operations;
 
     /// <summary>
-    /// A list exception data within the method body IL.
+    /// A list exception data within the method body IL. May be null.
     /// </summary>
     public List<IOperationExceptionInformation>/*?*/ OperationExceptionInformation {
       get { return this.operationExceptionInformation; }
@@ -1293,7 +1294,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Any types that are implicitly defined in order to implement the body semantics.
     /// In case of AST to instructions conversion this lists the types produced.
     /// In case of instructions to AST decompilation this should ideally be list of all types
-    /// which are local to method.
+    /// which are local to method. May be null.
     /// </summary>
     public List<ITypeDefinition>/*?*/ PrivateHelperTypes {
       get { return this.privateHelperTypes; }
@@ -1301,6 +1302,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
     List<ITypeDefinition>/*?*/ privateHelperTypes;
 
+    /// <summary>
+    /// The size in bytes of the method body when serialized.
+    /// </summary>
+    public uint Size {
+      get { return this.size; }
+      set { this.size = value; }
+    }
+    uint size;
 
     #region IMethodBody Members
 
@@ -1481,7 +1490,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// If the method is generic then this list contains the type parameters.
+    /// If the method is generic then this list contains the type parameters. May be null.
     /// </summary>
     /// <value></value>
     public List<IGenericMethodParameter>/*?*/ GenericParameters {
@@ -1880,7 +1889,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// The parameters forming part of this signature.
+    /// The parameters forming part of this signature. May be null.
     /// </summary>
     /// <value></value>
     public List<IParameterDefinition>/*?*/ Parameters {
@@ -2016,7 +2025,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IName returnValueName;
 
     /// <summary>
-    /// Declarative security actions for this method.
+    /// Declarative security actions for this method. May be null.
     /// </summary>
     /// <value></value>
     public List<ISecurityAttribute>/*?*/ SecurityAttributes {
@@ -2175,7 +2184,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -2228,7 +2237,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Information about this types of the extra arguments supplied at the call sites that references the method with this object.
+    /// Information about this types of the extra arguments supplied at the call sites that references the method with this object. May be null.
     /// </summary>
     /// <value></value>
     public List<IParameterTypeInformation>/*?*/ ExtraParameters {
@@ -2312,7 +2321,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -2338,7 +2347,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IName name;
 
     /// <summary>
-    /// The parameters forming part of this signature.
+    /// The parameters forming part of this signature. May be null.
     /// </summary>
     /// <value></value>
     public List<IParameterTypeInformation>/*?*/ Parameters {
@@ -2392,7 +2401,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Returns the list of custom modifiers, if any, associated with the returned value. Evaluate this property only if ReturnValueIsModified is true.
+    /// Returns the list of custom modifiers, if any, associated with the returned value. Evaluate this property only if ReturnValueIsModified is true. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomModifier>/*?*/ ReturnValueCustomModifiers {
@@ -2515,7 +2524,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public ParameterDefinition() {
       this.attributes = null;
-      this.containingSignature = Dummy.Method;
+      this.containingSignature = Dummy.Signature;
       this.customModifiers = null;
       this.defaultValue = Dummy.Constant;
       this.index = 0;
@@ -2567,7 +2576,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -2587,7 +2596,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ISignature containingSignature;
 
     /// <summary>
-    /// Returns the list of custom modifiers, if any, associated with the parameter. Evaluate this property only if IsModified is true.
+    /// Returns the list of custom modifiers, if any, associated with the parameter. Evaluate this property only if IsModified is true. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomModifier>/*?*/ CustomModifiers {
@@ -2627,7 +2636,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool HasDefaultValue {
-      get { return this.defaultValue != Dummy.Constant; }
+      get { return !(this.defaultValue is Dummy); }
     }
 
     /// <summary>
@@ -2673,7 +2682,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool IsMarshalledExplicitly {
-      get { return this.marshallingInformation != Dummy.MarshallingInformation; }
+      get { return !(this.marshallingInformation is Dummy); }
     }
 
     /// <summary>
@@ -2717,11 +2726,11 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool IsParameterArray {
-      get { return this.paramArrayElementType != Dummy.TypeReference; }
+      get { return !(this.paramArrayElementType is Dummy); }
     }
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -2825,7 +2834,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public ParameterTypeInformation() {
-      this.containingSignature = Dummy.Method;
+      this.containingSignature = Dummy.Signature;
       this.customModifiers = null;
       this.index = 0;
       this.isByReference = false;
@@ -2859,7 +2868,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ISignature containingSignature;
 
     /// <summary>
-    /// Returns the list of custom modifiers, if any, associated with the parameter. Evaluate this property only if IsModified is true.
+    /// Returns the list of custom modifiers, if any, associated with the parameter. Evaluate this property only if IsModified is true. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomModifier>/*?*/ CustomModifiers {
@@ -2971,7 +2980,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A list of methods that are associated with the property.
+    /// A list of methods that are associated with the property. May be null.
     /// </summary>
     /// <value></value>
     public List<IMethodReference>/*?*/ Accessors {
@@ -3029,7 +3038,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value></value>
     public bool HasDefaultValue {
-      get { return this.defaultValue != Dummy.Constant; }
+      get { return !(this.defaultValue is Dummy); }
     }
 
     /// <summary>
@@ -3068,7 +3077,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// The parameters forming part of this signature.
+    /// The parameters forming part of this signature. May be null.
     /// </summary>
     /// <value></value>
     public List<IParameterDefinition>/*?*/ Parameters {
@@ -3078,7 +3087,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IParameterDefinition>/*?*/ parameters;
 
     /// <summary>
-    /// Returns the list of custom modifiers, if any, associated with the returned value. Evaluate this property only if ReturnValueIsModified is true.
+    /// Returns the list of custom modifiers, if any, associated with the returned value. Evaluate this property only if ReturnValueIsModified is true. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomModifier>/*?*/ ReturnValueCustomModifiers {
@@ -3227,7 +3236,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// The parameters forming part of this signature.
+    /// The parameters forming part of this signature. May be null.
     /// </summary>
     /// <value></value>
     public List<IParameterTypeInformation>/*?*/ Parameters {
@@ -3237,7 +3246,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IParameterTypeInformation>/*?*/ parameters;
 
     /// <summary>
-    /// Returns the list of custom modifiers, if any, associated with the returned value. Evaluate this property only if ReturnValueIsModified is true.
+    /// Returns the list of custom modifiers, if any, associated with the returned value. Evaluate this property only if ReturnValueIsModified is true. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomModifier>/*?*/ ReturnValueCustomModifiers {
@@ -3392,7 +3401,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     internal TypeDefinitionMember() {
       this.attributes = null;
-      this.containingTypeDefinition = Dummy.Type;
+      this.containingTypeDefinition = Dummy.TypeDefinition;
       this.locations = null;
       this.name = Dummy.Name;
       this.flags = 0;
@@ -3418,7 +3427,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -3454,7 +3463,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     internal int flags;
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -3504,7 +3513,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <value></value>
     ITypeReference ITypeMemberReference.ContainingType {
       get {
-        if (this.ContainingTypeDefinition == Dummy.Type) return Dummy.TypeReference;
+        if (this.ContainingTypeDefinition is Dummy) return Dummy.TypeReference;
         return this.ContainingTypeDefinition;
       }
     }

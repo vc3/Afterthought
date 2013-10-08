@@ -21,6 +21,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// Provides a standard abstraction over the applications that host components that provide or consume objects from the metadata model.
   /// </summary>
+  [ContractVerification(true)]
   public abstract class MetadataHostEnvironment : IMetadataHost {
 
     /// <summary>
@@ -43,19 +44,30 @@ namespace Microsoft.Cci {
     /// to find an assembly that either requires 32 bit pointers or 64 bit pointers. If no such assembly is found, the default is 32 bit pointers.
     /// </param>
     /// <param name="searchPaths">
-    /// A collection of strings that are interpreted as valid paths which are used to search for units.
+    /// A collection of strings that are interpreted as valid paths which are used to search for units. May be null.
     /// </param>
     /// <param name="searchInGAC">
     /// Whether the GAC (Global Assembly Cache) should be searched when resolving references.
     /// </param>
-    protected MetadataHostEnvironment(INameTable nameTable, IInternFactory factory, byte pointerSize, IEnumerable<string> searchPaths, bool searchInGAC)
+    protected MetadataHostEnvironment(INameTable nameTable, IInternFactory factory, byte pointerSize, IEnumerable<string>/*?*/ searchPaths, bool searchInGAC)
       //^ requires pointerSize == 0 || pointerSize == 4 || pointerSize == 8;
     {
+      Contract.Requires(nameTable != null);
+      Contract.Requires(factory != null);
+
       this.nameTable = nameTable;
       this.internFactory = factory;
       this.pointerSize = pointerSize;
       this.libPaths = searchPaths == null ? new List<string>(0) : new List<string>(searchPaths);
       this.SearchInGAC = searchInGAC;
+    }
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.nameTable != null);
+      Contract.Invariant(this.internFactory != null);
+      Contract.Invariant(this.coreIdentities != null);
+      //Contract.Invariant(this.pointerSize == 0 || this.pointerSize == 4 || this.pointerSize == 8);
     }
 
     /// <summary>
@@ -72,12 +84,13 @@ namespace Microsoft.Cci {
     /// </summary>
     protected List<string> LibPaths {
       get {
+        Contract.Ensures(Contract.Result<List<String>>() != null);
         if (this.libPaths == null)
           this.libPaths = new List<string>();
         return this.libPaths;
       }
     }
-    List<string> libPaths;
+    List<string>/*?*/ libPaths;
 
     /// <summary>
     /// Sets or gets the boolean that determines if lookups of assemblies searches the GAC by default.
@@ -99,6 +112,7 @@ namespace Microsoft.Cci {
     /// </summary>
     public AssemblyIdentity ContractAssemblySymbolicIdentity {
       get {
+        Contract.Ensures(Contract.Result<AssemblyIdentity>() != null);
         if (this.contractAssemblySymbolicIdentity == null)
           this.contractAssemblySymbolicIdentity = this.GetContractAssemblySymbolicIdentity();
         return this.contractAssemblySymbolicIdentity;
@@ -107,15 +121,28 @@ namespace Microsoft.Cci {
     AssemblyIdentity/*?*/ contractAssemblySymbolicIdentity;
 
     /// <summary>
+    /// The set of identities that results from the individual opinions of all of the units loaded into this host.
+    /// </summary>
+    protected SetOfObjects CoreIdentities {
+      get {
+        Contract.Ensures(Contract.Result<SetOfObjects>() != null);
+        return this.coreIdentities; 
+      }
+    }
+    SetOfObjects coreIdentities = new SetOfObjects();
+
+    /// <summary>
     /// Returns the identity of the assembly containing the Microsoft.Contracts.Contract, by asking
     /// each of the loaded units for its opinion on the matter and returning the opinion with the highest version number.
     /// If none of the loaded units have an opinion, the result is the same as CoreAssemblySymbolicIdentity.
     /// </summary>
     protected virtual AssemblyIdentity GetContractAssemblySymbolicIdentity() {
+      Contract.Ensures(Contract.Result<AssemblyIdentity>() != null);
       if (this.unitCache.Count > 0) {
         AssemblyIdentity/*?*/ result = null;
         lock (GlobalLock.LockingObject) {
           foreach (IUnit unit in this.unitCache.Values) {
+            Contract.Assume(unit != null);
             AssemblyIdentity contractId = unit.ContractAssemblySymbolicIdentity;
             if (contractId.Name.Value.Length == 0) continue;
             if (result == null || result.Version < contractId.Version) result = contractId;
@@ -144,16 +171,17 @@ namespace Microsoft.Cci {
     /// If none of the loaded units have an opinion, the identity of the runtime executing the compiler itself is returned.
     /// </summary>
     protected virtual AssemblyIdentity GetCoreAssemblySymbolicIdentity() {
-      var coreAssemblyName = typeof(object).Assembly.GetName();
-      string loc = GetLocalPath(coreAssemblyName);
+      Contract.Ensures(Contract.Result<AssemblyIdentity>() != null);
+      AssemblyIdentity/*?*/ result = null;
+      IUnit referringUnit = Dummy.Unit;
       if (this.unitCache.Count > 0) {
-        AssemblyIdentity/*?*/ result = null;
-        IUnit referringUnit = Dummy.Unit;
         var dummyVersion = new Version(255, 255, 255, 255);
         lock (GlobalLock.LockingObject) {
           foreach (IUnit unit in this.unitCache.Values) {
+            Contract.Assume(unit != null);
             AssemblyIdentity coreId = unit.CoreAssemblySymbolicIdentity;
             if (coreId.Name.Value.Length == 0) continue;
+            this.coreIdentities.Add(coreId);
             if (result == null || result.Version == dummyVersion ||
                (result.Version < coreId.Version && coreId.Version != dummyVersion) ||
                 result.Version == coreId.Version && unit.UnitIdentity.Equals(coreId)) {
@@ -162,27 +190,26 @@ namespace Microsoft.Cci {
             }
           }
         }
-        if (result != null) {
-          //The loaded assemblies have an opinion on the identity of the core assembly. By default, we are going to respect that opinion.
-          if (result.Location.Length == 0) {
-            //However, they do not know where to find it. (This will only be non empty if one of the loaded assemblies itself is the core assembly.)
-            if (loc.Length > 0) {
-              //We don't know where to find the core assembly that the loaded assemblies want, but we do know where to find the core assembly
-              //that we are running on. Perhaps it is the same assembly as the one we've identified. In that case we know where it can be found.
-              var myCore = new AssemblyIdentity(this.NameTable.GetNameFor(coreAssemblyName.Name), "", coreAssemblyName.Version, coreAssemblyName.GetPublicKeyToken(), loc);
-              if (myCore.Equals(result)) return myCore; //myCore is the same as result, but also has a non null location.
-            }
-            //Now use host specific heuristics for finding the assembly.
-            this.coreAssemblySymbolicIdentity = result; //in case ProbeAssemblyReference wants to know the core identity
-            return this.ProbeAssemblyReference(referringUnit, result);
-          }
-          return result;
-        }
       }
-      //If we get here, none of the assemblies in the unit cache has an opinion on the identity of the core assembly.
-      //Usually this will be because this method was called before any assemblies have been loaded.
-      //In this case, we have little option but to choose the identity of the core assembly of the platform we are running on.
-      return new AssemblyIdentity(this.NameTable.GetNameFor(coreAssemblyName.Name), "", coreAssemblyName.Version, coreAssemblyName.GetPublicKeyToken(), loc);
+      if (result == null) {
+        //If we get here, none of the assemblies in the unit cache has an opinion on the identity of the core assembly.
+        //Usually this will be because this method was called before any assemblies have been loaded.
+        //In this case, we have little option but to choose the identity of the core assembly of the platform we are running on.
+        var coreAssemblyName = typeof(object).Assembly.GetName();
+        var version = coreAssemblyName.Version;
+        Contract.Assume(version != null);
+        var publicKeyToken = coreAssemblyName.GetPublicKeyToken();
+        Contract.Assume(publicKeyToken != null);
+        result = new AssemblyIdentity(this.NameTable.GetNameFor(coreAssemblyName.Name), "", version, publicKeyToken, "");
+      }
+      if (result.Location.Length == 0) {
+        //We either found a plausible identity by polling the assemblies in the unit cache, or we used the identity of our own core assembly.
+        //However, we defer to ProbeAssemblyReference to find an actual location for the assembly.
+        //(Note that if result.Location.Length > 0, then the core assembly has already been loaded and we thus know the location and don't have to probe.)
+        this.coreAssemblySymbolicIdentity = result; //in case ProbeAssemblyReference wants to know the core identity
+        result = this.ProbeAssemblyReference(referringUnit, result);
+      }
+      return this.coreAssemblySymbolicIdentity = result;
     }
 
     /// <summary>
@@ -201,11 +228,12 @@ namespace Microsoft.Cci {
     /// Returns an identity that is the same as CoreAssemblyIdentity, except that the name is "System.Core" and the version is at least 3.5.
     /// </summary>
     protected virtual AssemblyIdentity GetSystemCoreAssemblySymbolicIdentity() {
+      Contract.Ensures(Contract.Result<AssemblyIdentity>() != null);
       var core = this.CoreAssemblySymbolicIdentity;
       var name = this.NameTable.GetNameFor("System.Core");
-      var location = core.Location;
-      if (location != null)
-        location = Path.Combine(Path.GetDirectoryName(location), "System.Core.dll");
+      var location = "";
+      if (core.Location.Length > 0)
+        location = Path.Combine(Path.GetDirectoryName(core.Location)??"", "System.Core.dll");
       var version = new Version(3, 5, 0, 0);
       if (version < core.Version) version = core.Version;
       return new AssemblyIdentity(name, core.Culture, version, core.PublicKeyToken, location);
@@ -260,6 +288,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="assemblyName">The name of the assembly whose location is desired.</param>
     public static string GetLocalPath(System.Reflection.AssemblyName assemblyName) {
+      Contract.Requires(assemblyName != null);
+
       var loc = assemblyName.CodeBase;
       if (loc == null) loc = "";
       if (loc.StartsWith("file://", StringComparison.OrdinalIgnoreCase)) {
@@ -302,6 +332,7 @@ namespace Microsoft.Cci {
           if (result != null && this.UnifyAssembly(result).Equals(assemblyIdentity))
             lock (GlobalLock.LockingObject) {
               this.unitCache[assemblyIdentity] = result;
+              this.coreIdentities.Add(result.CoreAssemblySymbolicIdentity);
             }
         }
       }
@@ -313,7 +344,6 @@ namespace Microsoft.Cci {
     /// The module that matches the given reference, or a dummy module if no matching module can be found.
     /// </summary>
     public virtual IModule LoadModule(ModuleIdentity moduleIdentity) {
-      if (moduleIdentity.Location == null) return Dummy.Module;
       IUnit/*?*/ unit;
       lock (GlobalLock.LockingObject) {
         this.unitCache.TryGetValue(moduleIdentity, out unit);
@@ -333,6 +363,7 @@ namespace Microsoft.Cci {
           if (result != null)
             lock (GlobalLock.LockingObject) {
               this.unitCache.Add(moduleIdentity, result);
+              this.coreIdentities.Add(result.CoreAssemblySymbolicIdentity);
             }
         }
       }
@@ -353,6 +384,7 @@ namespace Microsoft.Cci {
 
     /// <summary>
     /// Returns the unit that is stored at the given location, or a dummy unit if no unit exists at that location or if the unit at that location is not accessible.
+    /// Implementations should do enough caching to avoid repeating work: this method gets called very often for already loaded units as part of the probing logic.
     /// </summary>
     public abstract IUnit LoadUnitFrom(string location);
 
@@ -391,6 +423,7 @@ namespace Microsoft.Cci {
     /// Returns an object that provides a collection of references to types from the core platform, such as System.Object and System.String.
     /// </summary>
     protected virtual IPlatformType GetPlatformType() {
+      Contract.Ensures(Contract.Result<IPlatformType>() != null);
       return new PlatformType(this);
     }
 
@@ -400,14 +433,13 @@ namespace Microsoft.Cci {
     /// </summary>
     public byte PointerSize {
       get {
-        //^^ ensures result == 4 || result == 8;
+        Contract.Assume(this.pointerSize == 0 || this.pointerSize == 4 || this.pointerSize == 8);
         if (this.pointerSize == 0)
           this.pointerSize = this.GetTargetPlatformPointerSize();
         return this.pointerSize;
       }
     }
     byte pointerSize;
-    //^ invariant pointerSize == 0 || pointerSize == 4 || pointerSize == 8;
 
     /// <summary>
     /// Returns an opinion about the size of a pointer on the target runtime for the set of modules
@@ -415,9 +447,8 @@ namespace Microsoft.Cci {
     /// the result is 4 (i.e. 32 bit pointers). This method is only called if a host application has not
     /// explicitly provided the pointer size of the target platform.
     /// </summary>
-    protected virtual byte GetTargetPlatformPointerSize()
-      //^ ensures result == 4 || result == 8;
-    {
+    protected virtual byte GetTargetPlatformPointerSize() {
+      Contract.Ensures(Contract.Result<byte>() == 4 || Contract.Result<byte>() == 8);
       lock (GlobalLock.LockingObject) {
         if (this.unitCache.Count > 0) {
           foreach (IUnit unit in this.unitCache.Values) {
@@ -437,13 +468,16 @@ namespace Microsoft.Cci {
     /// Returns null if not found, otherwise constructs a new AssemblyIdentity
     /// </summary>
     protected virtual AssemblyIdentity/*?*/ Probe(string probeDir, AssemblyIdentity referencedAssembly) {
+      Contract.Requires(probeDir != null);
+      Contract.Requires(referencedAssembly != null);
+
       string path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".dll");
       if (!File.Exists(path)) path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".winmd");
       if (!File.Exists(path)) path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".exe");
       if (!File.Exists(path)) return null;
       var assembly = this.LoadUnitFrom(path) as IAssembly;
       if (assembly == null) return null;
-      if (assembly.AssemblyIdentity != referencedAssembly) return null;
+      if (!assembly.AssemblyIdentity.Equals(referencedAssembly)) return null;
       return assembly.AssemblyIdentity;
     }
 
@@ -467,13 +501,18 @@ namespace Microsoft.Cci {
     /// </remarks>
     [Pure]
     public virtual AssemblyIdentity ProbeAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
-      // probe for in the same directory as the referring unit
-      var referringDir = Path.GetDirectoryName(Path.GetFullPath(referringUnit.Location));
-      AssemblyIdentity result = this.Probe(referringDir, referencedAssembly);
-      if (result != null) return result;
+      AssemblyIdentity result;
+
+      if (!string.IsNullOrEmpty(referringUnit.Location)) {
+        // probe for in the same directory as the referring unit
+        var referringDir = Path.GetDirectoryName(Path.GetFullPath(referringUnit.Location));
+        result = this.Probe(referringDir, referencedAssembly);
+        if (result != null) return result;
+      }
 
       // Probe in the libPaths directories
       foreach (string libPath in this.LibPaths) {
+        Contract.Assume(libPath != null);
         result = this.Probe(libPath, referencedAssembly);
         if (result != null) return result;
       }
@@ -489,23 +528,23 @@ namespace Microsoft.Cci {
 #endif
 
       // Check platform location
-      var platformDir = Path.GetDirectoryName(Path.GetFullPath(GetLocalPath(typeof(object).Assembly.GetName())));
+      var platformDir = Path.GetDirectoryName(Path.GetFullPath(GetLocalPath(typeof(object).Assembly.GetName())))??"";
       var coreVersion = this.CoreAssemblySymbolicIdentity.Version;
       if (coreVersion.Major == 1) {
         if (coreVersion.Minor == 0)
-          platformDir = Path.Combine(Path.GetDirectoryName(platformDir), "v1.0.3705");
+          platformDir = Path.Combine(Path.GetDirectoryName(platformDir)??"", "v1.0.3705");
         else if (coreVersion.Minor == 1)
-          platformDir = Path.Combine(Path.GetDirectoryName(platformDir), "v1.1.4322");
+          platformDir = Path.Combine(Path.GetDirectoryName(platformDir)??"", "v1.1.4322");
       } else if (coreVersion.Major == 2) {
-        platformDir = Path.Combine(Path.GetDirectoryName(platformDir), "v3.5");
+        platformDir = Path.Combine(Path.GetDirectoryName(platformDir)??"", "v3.5");
         result = this.Probe(platformDir, referencedAssembly);
         if (result != null) return result;
-        platformDir = Path.Combine(Path.GetDirectoryName(platformDir), "v3.0");
+        platformDir = Path.Combine(Path.GetDirectoryName(platformDir)??"", "v3.0");
         result = this.Probe(platformDir, referencedAssembly);
         if (result != null) return result;
-        platformDir = Path.Combine(Path.GetDirectoryName(platformDir), "v2.0.50727");
+        platformDir = Path.Combine(Path.GetDirectoryName(platformDir)??"", "v2.0.50727");
       } else if (coreVersion.Major == 4) {
-        platformDir = Path.Combine(Path.GetDirectoryName(platformDir), "v4.0.30319");
+        platformDir = Path.Combine(Path.GetDirectoryName(platformDir)??"", "v4.0.30319");
       }
 
       result = this.Probe(platformDir, referencedAssembly);
@@ -540,6 +579,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="unit">The unit to register.</param>
     public void RegisterAsLatest(IUnit unit) {
+      Contract.Requires(unit != null);
+
       lock (GlobalLock.LockingObject) {
         this.unitCache[unit.UnitIdentity] = unit;
       }
@@ -606,8 +647,7 @@ namespace Microsoft.Cci {
         assemblyIdentity.Culture == this.CoreAssemblySymbolicIdentity.Culture && 
         IteratorHelper.EnumerablesAreEqual(assemblyIdentity.PublicKeyToken, this.CoreAssemblySymbolicIdentity.PublicKeyToken))
         return this.CoreAssemblySymbolicIdentity;
-      if (string.Equals(assemblyIdentity.Name.Value, "mscorlib", StringComparison.OrdinalIgnoreCase) && assemblyIdentity.Version == new Version(255, 255, 255, 255))
-        return this.CoreAssemblySymbolicIdentity;
+      if (this.CoreIdentities.Contains(assemblyIdentity)) return this.CoreAssemblySymbolicIdentity;
       return assemblyIdentity;
     }
 
@@ -642,6 +682,7 @@ namespace Microsoft.Cci {
   /// An interface provided by the application hosting the metadata reader. The interface allows the host application
   /// to control how assembly references are unified, where files are found and so on.
   /// </summary>
+  [ContractClass(typeof(IMetadataReaderHostContract))]
   public interface IMetadataReaderHost : IMetadataHost {
     /// <summary>
     /// Open the binary document as a memory block in host dependent fashion.
@@ -661,13 +702,22 @@ namespace Microsoft.Cci {
     IBinaryDocumentMemoryBlock/*?*/ OpenBinaryDocument(IBinaryDocument parentSourceDocument, string childDocumentName);
 
     /// <summary>
+    /// Provides the host with an opportunity to add, remove or substitute assembly references in the given list.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="referringUnit">The unit that contains these references.</param>
+    /// <param name="assemblyReferences">The assembly references to substitute.</param>
+    /// <returns>Usually assemblyReferences, but occasionally a modified enumeration.</returns>
+    IEnumerable<IAssemblyReference> Redirect(IUnit referringUnit, IEnumerable<IAssemblyReference> assemblyReferences);
+
+    /// <summary>
     /// Provides the host with an opportunity to substitute one type reference for another during metadata reading.
     /// This avoids the cost of rewriting the entire unit in order to make such changes.
     /// </summary>
-    /// <param name="referringUnit">The unit that is referencing the type.</param>
-    /// <param name="typeReference">A type reference encountered during metadata reading.</param>
+    /// <param name="referringUnit">The unit that contains the reference.</param>
+    /// <param name="typeReference">A named type reference encountered during metadata reading.</param>
     /// <returns>Usually the value in typeReference, but occassionally something else.</returns>
-    ITypeReference Redirect(IUnit referringUnit, ITypeReference typeReference);
+    INamedTypeReference Redirect(IUnit referringUnit, INamedTypeReference typeReference);
 
     /// <summary>
     /// Provides the host with an opportunity to substitute a custom attribute with another during metadata reading.
@@ -727,6 +777,266 @@ namespace Microsoft.Cci {
     byte GuessUnderlyingTypeSizeOfUnresolvableReferenceToEnum(ITypeReference reference);
 
   }
+
+  #region IMetadataReaderHost contract binding
+  [ContractClassFor(typeof(IMetadataReaderHost))]
+  abstract class IMetadataReaderHostContract : IMetadataReaderHost {
+    #region IMetadataReaderHost Members
+
+    /// <summary>
+    /// Open the binary document as a memory block in host dependent fashion.
+    /// </summary>
+    /// <param name="sourceDocument">The binary document that is to be opened.</param>
+    /// <returns>
+    /// The unmanaged memory block corresponding to the source document.
+    /// </returns>
+    public IBinaryDocumentMemoryBlock OpenBinaryDocument(IBinaryDocument sourceDocument) {
+      Contract.Requires(sourceDocument != null);
+      Contract.Ensures(Contract.Result<IBinaryDocumentMemoryBlock>() != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Open the child binary document within the context of parent source document.as a memory block in host dependent fashion
+    /// For example: in multimodule assemblies the main module will be parentSourceDocument, where as other modules will be child
+    /// docuements.
+    /// </summary>
+    /// <param name="parentSourceDocument">The source document indicating the child document location.</param>
+    /// <param name="childDocumentName">The name of the child document.</param>
+    /// <returns>
+    /// The unmanaged memory block corresponding to the child document.
+    /// </returns>
+    public IBinaryDocumentMemoryBlock OpenBinaryDocument(IBinaryDocument parentSourceDocument, string childDocumentName) {
+      Contract.Requires(parentSourceDocument != null);
+      Contract.Requires(childDocumentName != null);
+      Contract.Ensures(Contract.Result<IBinaryDocumentMemoryBlock>() != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Provides the host with an opportunity to add, remove or substitute assembly references in the given list.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="referringUnit">The unit that contains these references.</param>
+    /// <param name="assemblyReferences">The assembly references to substitute.</param>
+    /// <returns>
+    /// Usually assemblyReferences, but occasionally a modified enumeration.
+    /// </returns>
+    public IEnumerable<IAssemblyReference> Redirect(IUnit referringUnit, IEnumerable<IAssemblyReference> assemblyReferences) {
+      Contract.Requires(referringUnit != null);
+      Contract.Requires(assemblyReferences != null);
+      Contract.Ensures(Contract.Result<IEnumerable<IAssemblyReference>>() != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Provides the host with an opportunity to substitute one type reference for another during metadata reading.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="referringUnit">The unit that contains the reference.</param>
+    /// <param name="typeReference">A named type reference encountered during metadata reading.</param>
+    /// <returns>
+    /// Usually the value in typeReference, but occassionally something else.
+    /// </returns>
+    public INamedTypeReference Redirect(IUnit referringUnit, INamedTypeReference typeReference) {
+      Contract.Requires(referringUnit != null);
+      Contract.Requires(typeReference != null);
+      Contract.Ensures(Contract.Result<INamedTypeReference>() != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Provides the host with an opportunity to substitute a custom attribute with another during metadata reading.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="containingUnit">The unit that contains the custom attribute.</param>
+    /// <param name="customAttribute">The custom attribute to rewrite (fix up).</param>
+    /// <returns>
+    /// Usually the value in customAttribute, but occassionally another custom attribute.
+    /// </returns>
+    public ICustomAttribute Rewrite(IUnit containingUnit, ICustomAttribute customAttribute) {
+      Contract.Requires(containingUnit != null);
+      Contract.Requires(customAttribute != null);
+      Contract.Ensures(Contract.Result<ICustomAttribute>() != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Provides the host with an opportunity to substitute one method definition for another during metadata reading.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="containingUnit">The unit that is defines the method.</param>
+    /// <param name="methodDefinition">A method definition encountered during metadata reading.</param>
+    /// <returns>
+    /// Usually the value in methodDefinition, but occassionally something else.
+    /// </returns>
+    public IMethodDefinition Rewrite(IUnit containingUnit, IMethodDefinition methodDefinition) {
+      Contract.Requires(containingUnit != null);
+      Contract.Requires(methodDefinition != null);
+      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// This method is called when the assembly reference is being resolved and its not already loaded by the host.
+    /// </summary>
+    /// <param name="referringUnit">The unit that is referencing the assembly.</param>
+    /// <param name="referencedAssembly">Assembly identifier for the assembly being referenced.</param>
+    public void ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
+      Contract.Requires(referringUnit != null);
+      Contract.Requires(referencedAssembly != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// This method is called when the module reference is being resolved and its not already loaded by the host.
+    /// </summary>
+    /// <param name="referringUnit">The unit that is referencing the module.</param>
+    /// <param name="referencedModule">Module identifier for the assembly being referenced.</param>
+    public void ResolvingModuleReference(IUnit referringUnit, ModuleIdentity referencedModule) {
+      Contract.Requires(referringUnit != null);
+      Contract.Requires(referencedModule != null);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Called by the metadata reader when it is about to start parsing a custom attribute blob.
+    /// </summary>
+    public void StartGuessingGame() {
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Called by the metadata reader when it has unsucessfully tried to parse a custom attribute blob and it now needs to try a new permutation.
+    /// Returns false if no more perumations are possible.
+    /// </summary>
+    /// <returns></returns>
+    public bool TryNextPermutation() {
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Called by the metadata reader when it has successfully parsed a custom attribute blob.
+    /// </summary>
+    public void WinGuessingGame() {
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Returns a guess of the size of the underlying type of the given type reference to an enum type, which is assumed to be unresolvable
+    /// because it is defined an assembly that is not loaded into this host. Successive calls to the method will cycle through these values
+    /// with a periodicity determined by the number of types in the game and the successful guesses made in earlier games.
+    /// </summary>
+    /// <param name="reference">A type reference that cannot be resolved.</param>
+    /// <returns>
+    /// 1, 2, 4 or 8.
+    /// </returns>
+    public byte GuessUnderlyingTypeSizeOfUnresolvableReferenceToEnum(ITypeReference reference) {
+      Contract.Requires(reference != null);
+      Contract.Ensures(Contract.Result<byte>() == 1 || Contract.Result<byte>() == 2 || Contract.Result<byte>() == 4 || Contract.Result<byte>() == 8);
+      throw new NotImplementedException();
+    }
+
+    #endregion
+
+    #region IMetadataHost Members
+
+#pragma warning disable 67
+    public event EventHandler<ErrorEventArgs> Errors;
+#pragma warning restore 67
+
+    public AssemblyIdentity ContractAssemblySymbolicIdentity {
+      get { throw new NotImplementedException(); }
+    }
+
+    public AssemblyIdentity CoreAssemblySymbolicIdentity {
+      get { throw new NotImplementedException(); }
+    }
+
+    public AssemblyIdentity SystemCoreAssemblySymbolicIdentity {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IAssembly FindAssembly(AssemblyIdentity assemblyIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public IModule FindModule(ModuleIdentity moduleIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public IUnit FindUnit(UnitIdentity unitIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public IInternFactory InternFactory {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IPlatformType PlatformType {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IAssembly LoadAssembly(AssemblyIdentity assemblyIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public IModule LoadModule(ModuleIdentity moduleIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public IUnit LoadUnit(UnitIdentity unitIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public IUnit LoadUnitFrom(string location) {
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<IUnit> LoadedUnits {
+      get { throw new NotImplementedException(); }
+    }
+
+    public INameTable NameTable {
+      get { throw new NotImplementedException(); }
+    }
+
+    public byte PointerSize {
+      get { throw new NotImplementedException(); }
+    }
+
+    public void ReportErrors(ErrorEventArgs errorEventArguments) {
+      throw new NotImplementedException();
+    }
+
+    public void ReportError(IErrorMessage error) {
+      throw new NotImplementedException();
+    }
+
+    public AssemblyIdentity ProbeAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
+      throw new NotImplementedException();
+    }
+
+    public ModuleIdentity ProbeModuleReference(IUnit referringUnit, ModuleIdentity referencedModule) {
+      throw new NotImplementedException();
+    }
+
+    public AssemblyIdentity UnifyAssembly(AssemblyIdentity assemblyIdentity) {
+      throw new NotImplementedException();
+    }
+
+    public AssemblyIdentity UnifyAssembly(IAssemblyReference assemblyReference) {
+      throw new NotImplementedException();
+    }
+
+    public bool PreserveILLocations {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
 
   /// <summary>
   /// A base class for an object provided by the application hosting the metadata reader. The object allows the host application
@@ -807,7 +1117,7 @@ namespace Microsoft.Cci {
     /// <remarks>When overridding this method, be sure to add any disposable objects to this.disposableObjectAllocatedByThisHost.</remarks>
     public virtual IBinaryDocumentMemoryBlock/*?*/ OpenBinaryDocument(IBinaryDocument sourceDocument) {
       try {
-#if !COMPACTFX
+#if !COMPACTFX && !__MonoCS__
         IBinaryDocumentMemoryBlock binDocMemoryBlock = MemoryMappedFile.CreateMemoryMappedFile(sourceDocument.Location, sourceDocument);
 #else
         IBinaryDocumentMemoryBlock binDocMemoryBlock = UnmanagedBinaryMemoryBlock.CreateUnmanagedBinaryMemoryBlock(sourceDocument.Location, sourceDocument);
@@ -833,10 +1143,10 @@ namespace Microsoft.Cci {
     /// <remarks>When overridding this method, be sure to add any disposable objects to this.disposableObjectAllocatedByThisHost.</remarks>
     public virtual IBinaryDocumentMemoryBlock/*?*/ OpenBinaryDocument(IBinaryDocument parentSourceDocument, string childDocumentName) {
       try {
-        string directory = Path.GetDirectoryName(parentSourceDocument.Location);
-        string fullPath = Path.Combine(directory, childDocumentName);
+        var directory = Path.GetDirectoryName(parentSourceDocument.Location)??"";
+        var fullPath = Path.Combine(directory, childDocumentName);
         IBinaryDocument newBinaryDocument = BinaryDocument.GetBinaryDocumentForFile(fullPath, this);
-#if !COMPACTFX
+#if !COMPACTFX && !__MonoCS__
         IBinaryDocumentMemoryBlock binDocMemoryBlock = MemoryMappedFile.CreateMemoryMappedFile(newBinaryDocument.Location, newBinaryDocument);
 #else
         IBinaryDocumentMemoryBlock binDocMemoryBlock = UnmanagedBinaryMemoryBlock.CreateUnmanagedBinaryMemoryBlock(newBinaryDocument.Location, newBinaryDocument);
@@ -849,15 +1159,26 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
-    /// Provides the host with an opportunity to substitute one type reference for another during metadata reading.
+    /// Provides the host with an opportunity to add, remove or substitute assembly references in the given list.
     /// This avoids the cost of rewriting the entire unit in order to make such changes.
     /// </summary>
-    /// <param name="referringUnit">The unit that is referencing the type.</param>
-    /// <param name="typeReference">A type reference encountered during metadata reading.</param>
+    /// <param name="referringUnit">The unit that contains these references.</param>
+    /// <param name="assemblyReferences">The assembly references to substitute.</param>
+    /// <returns>Usually assemblyReferences, but occasionally a modified enumeration.</returns>
+    public virtual IEnumerable<IAssemblyReference> Redirect(IUnit referringUnit, IEnumerable<IAssemblyReference> assemblyReferences) {
+      return assemblyReferences;
+    }
+
+    /// <summary>
+    /// Provides the host with an opportunity to substitute one named type reference for another during metadata reading.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="referringUnit">The unit that contains the reference.</param>
+    /// <param name="typeReference">A named type reference encountered during metadata reading.</param>
     /// <returns>
     /// Usually the value in typeReference, but occassionally something else.
     /// </returns>
-    public virtual ITypeReference Redirect(IUnit referringUnit, ITypeReference typeReference) {
+    public virtual INamedTypeReference Redirect(IUnit referringUnit, INamedTypeReference typeReference) {
       return typeReference;
     }
 
@@ -1004,6 +1325,7 @@ namespace Microsoft.Cci {
   /// The association is based on the identities of the entities and the factory does not retain
   /// references to the given metadata model objects.
   /// </summary>
+  [ContractVerification(true)]
   public sealed class InternFactory : IInternFactory {
 
     sealed class AssemblyStore {
@@ -1213,12 +1535,40 @@ namespace Microsoft.Cci {
       this.FieldReferenceHashtable = new Hashtable<DoubleHashtable>();
     }
 
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.AssemblyHashtable != null);
+      Contract.Invariant(this.ModuleHashtable != null);
+      Contract.Invariant(this.NestedNamespaceHashtable != null);
+      Contract.Invariant(this.NamespaceTypeHashtable != null);
+      Contract.Invariant(this.NestedTypeHashtable != null);
+      Contract.Invariant(this.VectorTypeHashTable != null);
+      Contract.Invariant(this.PointerTypeHashTable != null);
+      Contract.Invariant(this.ManagedPointerTypeHashTable != null);
+      Contract.Invariant(this.MatrixTypeHashtable != null);
+      Contract.Invariant(this.TypeListHashtable != null);
+      Contract.Invariant(this.GenericTypeInstanceHashtable != null);
+      Contract.Invariant(this.GenericMethodInstanceHashtable != null);
+      Contract.Invariant(this.GenericTypeParameterHashtable != null);
+      Contract.Invariant(this.GenericMethodTypeParameterHashTable != null);
+      Contract.Invariant(this.CustomModifierHashTable != null);
+      Contract.Invariant(this.CustomModifierListHashTable != null);
+      Contract.Invariant(this.ParameterTypeHashtable != null);
+      Contract.Invariant(this.ParameterTypeListHashtable != null);
+      Contract.Invariant(this.SignatureHashtable != null);
+      Contract.Invariant(this.FunctionTypeHashTable != null);
+      Contract.Invariant(this.ModifiedTypeHashtable != null);
+      Contract.Invariant(this.MethodReferenceHashtable != null);
+      Contract.Invariant(this.FieldReferenceHashtable != null);
+    }
+
     AssemblyStore GetAssemblyStore(AssemblyIdentity assemblyIdentity) {
+      Contract.Requires(assemblyIdentity != null);
+      Contract.Ensures(Contract.Result<AssemblyStore>() != null);
+
       IName assemblyName = assemblyIdentity.Name;
       foreach (AssemblyStore aStore in this.AssemblyHashtable.GetValuesFor((uint)assemblyName.UniqueKey)) {
-        if (assemblyIdentity.Equals(aStore.AssemblyIdentity)) {
-          return aStore;
-        }
+        if (assemblyIdentity.Equals(aStore.AssemblyIdentity)) return aStore;
       }
       uint value = this.CurrentAssemblyInternValue;
       this.CurrentAssemblyInternValue += 0x00001000;
@@ -1228,11 +1578,12 @@ namespace Microsoft.Cci {
     }
 
     ModuleStore GetModuleStore(ModuleIdentity moduleIdentity) {
+      Contract.Requires(moduleIdentity != null);
+      Contract.Ensures(Contract.Result<ModuleStore>() != null);
+
       IName moduleName = moduleIdentity.Name;
       foreach (ModuleStore mStore in this.ModuleHashtable.GetValuesFor((uint)moduleName.UniqueKey)) {
-        if (moduleIdentity.Equals(mStore.ModuleIdentitity)) {
-          return mStore;
-        }
+        if (moduleIdentity.Equals(mStore.ModuleIdentitity)) return mStore;
       }
       uint value;
       if (moduleIdentity.ContainingAssembly != null) {
@@ -1248,6 +1599,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetUnitRootNamespaceInternId(IUnitReference unitReference) {
+      Contract.Requires(unitReference != null);
+
       IAssemblyReference/*?*/ assemblyReference = unitReference as IAssemblyReference;
       if (assemblyReference != null) {
         AssemblyStore assemblyStore = this.GetAssemblyStore(assemblyReference.UnifiedAssemblyIdentity);
@@ -1261,9 +1614,9 @@ namespace Microsoft.Cci {
       return 0;
     }
 
-    uint GetNestedNamespaceInternId(
-      INestedUnitNamespaceReference nestedUnitNamespaceReference
-    ) {
+    uint GetNestedNamespaceInternId(INestedUnitNamespaceReference nestedUnitNamespaceReference) {
+      Contract.Requires(nestedUnitNamespaceReference != null);
+
       uint parentNamespaceInternedId = this.GetUnitNamespaceInternId(nestedUnitNamespaceReference.ContainingUnitNamespace);
       uint value = this.NestedNamespaceHashtable.Find(parentNamespaceInternedId, (uint)nestedUnitNamespaceReference.Name.UniqueKey);
       if (value == 0) {
@@ -1273,9 +1626,9 @@ namespace Microsoft.Cci {
       return value;
     }
 
-    uint GetUnitNamespaceInternId(
-      IUnitNamespaceReference unitNamespaceReference
-    ) {
+    uint GetUnitNamespaceInternId(IUnitNamespaceReference unitNamespaceReference) {
+      Contract.Requires(unitNamespaceReference != null);
+
       INestedUnitNamespaceReference/*?*/ nestedUnitNamespaceReference = unitNamespaceReference as INestedUnitNamespaceReference;
       if (nestedUnitNamespaceReference != null) {
         return this.GetNestedNamespaceInternId(nestedUnitNamespaceReference);
@@ -1283,17 +1636,13 @@ namespace Microsoft.Cci {
       return this.GetUnitRootNamespaceInternId(unitNamespaceReference.Unit);
     }
 
-    uint GetNamespaceTypeReferenceInternId(
-      IUnitNamespaceReference containingUnitNamespace,
-      IName typeName,
-      uint genericParameterCount
-    ) {
+    uint GetNamespaceTypeReferenceInternId(IUnitNamespaceReference containingUnitNamespace, IName typeName, uint genericParameterCount) {
+      Contract.Requires(containingUnitNamespace != null);
+      Contract.Requires(typeName != null);
+
       uint containingUnitNamespaceInteredId = this.GetUnitNamespaceInternId(containingUnitNamespace);
       foreach (NamespaceTypeStore nsTypeStore in this.NamespaceTypeHashtable.GetValuesFor((uint)typeName.UniqueKey)) {
-        if (
-          nsTypeStore.ContainingNamespaceInternedId == containingUnitNamespaceInteredId
-          && nsTypeStore.GenericParameterCount == genericParameterCount
-        ) {
+        if (nsTypeStore.ContainingNamespaceInternedId == containingUnitNamespaceInteredId && nsTypeStore.GenericParameterCount == genericParameterCount) {
           return nsTypeStore.InternedId;
         }
       }
@@ -1302,11 +1651,10 @@ namespace Microsoft.Cci {
       return nsTypeStore1.InternedId;
     }
 
-    uint GetNestedTypeReferenceInternId(
-      ITypeReference containingTypeReference,
-      IName typeName,
-      uint genericParameterCount
-    ) {
+    uint GetNestedTypeReferenceInternId(ITypeReference containingTypeReference, IName typeName, uint genericParameterCount) {
+      Contract.Requires(containingTypeReference != null);
+      Contract.Requires(typeName != null);
+
       uint containingTypeReferenceInteredId = this.GetTypeReferenceInternId(containingTypeReference);
       foreach (NestedTypeStore nstTypeStore in this.NestedTypeHashtable.GetValuesFor((uint)typeName.UniqueKey)) {
         if (
@@ -1322,6 +1670,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetVectorTypeReferenceInternId(ITypeReference elementTypeReference) {
+      Contract.Requires(elementTypeReference != null);
+
       uint elementTypeReferenceInternId = this.GetTypeReferenceInternId(elementTypeReference);
       uint value = this.VectorTypeHashTable.Find(elementTypeReferenceInternId);
       if (value == 0) {
@@ -1331,21 +1681,15 @@ namespace Microsoft.Cci {
       return value;
     }
 
-    uint GetMatrixTypeReferenceInternId(
-      ITypeReference elementTypeReference,
-      int rank,
-      IEnumerable<ulong> sizes,
-      IEnumerable<int> lowerBounds
-    ) {
+    uint GetMatrixTypeReferenceInternId(ITypeReference elementTypeReference, int rank, IEnumerable<ulong> sizes, IEnumerable<int> lowerBounds) {
+      Contract.Requires(elementTypeReference != null);
+      Contract.Requires(sizes != null);
+      Contract.Requires(lowerBounds != null);
+
       uint elementTypeReferenceInternId = this.GetTypeReferenceInternId(elementTypeReference);
       foreach (MatrixTypeStore matrixTypeStore in this.MatrixTypeHashtable.GetValuesFor(elementTypeReferenceInternId)) {
-        if (
-          matrixTypeStore.Rank == rank
-          && IteratorHelper.EnumerablesAreEqual<ulong>(matrixTypeStore.Sizes, sizes)
-          && IteratorHelper.EnumerablesAreEqual<int>(matrixTypeStore.LowerBounds, lowerBounds)
-        ) {
+        if (matrixTypeStore.Rank == rank && IteratorHelper.EnumerablesAreEqual<ulong>(matrixTypeStore.Sizes, sizes) && IteratorHelper.EnumerablesAreEqual<int>(matrixTypeStore.LowerBounds, lowerBounds))
           return matrixTypeStore.InternedId;
-        }
       }
       MatrixTypeStore matrixTypeStore1 = new MatrixTypeStore(rank, new List<int>(lowerBounds).ToArray(), new List<ulong>(sizes).ToArray(), this.CurrentTypeInternValue++);
       this.MatrixTypeHashtable.Add(elementTypeReferenceInternId, matrixTypeStore1);
@@ -1353,10 +1697,11 @@ namespace Microsoft.Cci {
     }
 
     uint GetTypeReferenceListInternedId(IEnumerator<ITypeReference> typeReferences) {
-      if (!typeReferences.MoveNext()) {
-        return 0;
-      }
+      Contract.Requires(typeReferences != null);
+
+      if (!typeReferences.MoveNext()) return 0;
       ITypeReference currentTypeRef = typeReferences.Current;
+      Contract.Assume(currentTypeRef != null);
       uint currentTypeRefInternedId = this.GetTypeReferenceInternId(currentTypeRef);
       uint tailInternedId = this.GetTypeReferenceListInternedId(typeReferences);
       uint value = this.TypeListHashtable.Find(currentTypeRefInternedId, tailInternedId);
@@ -1367,10 +1712,10 @@ namespace Microsoft.Cci {
       return value;
     }
 
-    uint GetGenericTypeInstanceReferenceInternId(
-      ITypeReference genericTypeReference,
-      IEnumerable<ITypeReference> genericArguments
-    ) {
+    uint GetGenericTypeInstanceReferenceInternId(ITypeReference genericTypeReference, IEnumerable<ITypeReference> genericArguments) {
+      Contract.Requires(genericTypeReference != null);
+      Contract.Requires(genericArguments != null);
+
       uint genericTypeInternedId = this.GetTypeReferenceInternId(genericTypeReference);
       uint genericArgumentsInternedId = this.GetTypeReferenceListInternedId(genericArguments.GetEnumerator());
       uint value = this.GenericTypeInstanceHashtable.Find(genericTypeInternedId, genericArgumentsInternedId);
@@ -1382,6 +1727,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetPointerTypeReferenceInternId(ITypeReference targetTypeReference) {
+      Contract.Requires(targetTypeReference != null);
+
       uint targetTypeReferenceInternId = this.GetTypeReferenceInternId(targetTypeReference);
       uint value = this.PointerTypeHashTable.Find(targetTypeReferenceInternId);
       if (value == 0) {
@@ -1392,6 +1739,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetManagedPointerTypeReferenceInternId(ITypeReference targetTypeReference) {
+      Contract.Requires(targetTypeReference != null);
+
       uint targetTypeReferenceInternId = this.GetTypeReferenceInternId(targetTypeReference);
       uint value = this.ManagedPointerTypeHashTable.Find(targetTypeReferenceInternId);
       if (value == 0) {
@@ -1400,10 +1749,10 @@ namespace Microsoft.Cci {
       }
       return value;
     }
-    uint GetGenericTypeParameterReferenceInternId(
-      ITypeReference definingTypeReference,
-      int index
-    ) {
+    
+    uint GetGenericTypeParameterReferenceInternId(ITypeReference definingTypeReference, int index) {
+      Contract.Requires(definingTypeReference != null);
+
       uint definingTypeReferenceInternId = this.GetTypeReferenceInternId(GetUninstantiatedGenericType(definingTypeReference));
       uint value = this.GenericTypeParameterHashtable.Find(definingTypeReferenceInternId, (uint)index);
       if (value == 0) {
@@ -1414,6 +1763,9 @@ namespace Microsoft.Cci {
     }
 
     private static ITypeReference GetUninstantiatedGenericType(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
+      Contract.Ensures(Contract.Result<ITypeReference>() != null);
+
       IGenericTypeInstanceReference/*?*/ genericTypeInstanceReference = typeReference as IGenericTypeInstanceReference;
       if (genericTypeInstanceReference != null) return genericTypeInstanceReference.GenericType;
       INestedTypeReference/*?*/ nestedTypeReference = typeReference as INestedTypeReference;
@@ -1431,11 +1783,10 @@ namespace Microsoft.Cci {
     /// <param name="definingMethodReference">A reference to the method defining the referenced generic parameter.</param>
     /// <param name="index">The index of the referenced generic parameter. This is an index rather than a name because metadata in CLR
     /// PE files contain only the index, not the name.</param>
-    uint GetGenericMethodParameterReferenceInternId(
-      IMethodReference definingMethodReference,
-      uint index
-    ) {
-      if (this.CurrentMethodReference != Dummy.MethodReference) {
+    uint GetGenericMethodParameterReferenceInternId(IMethodReference definingMethodReference, uint index) {
+      Contract.Requires(definingMethodReference != null);
+
+      if (!(this.CurrentMethodReference is Dummy)) {
         //this happens when the defining method reference contains a type in its signature which either is, or contains,
         //a reference to this generic method type parameter. In that case we break the cycle by just using the index of 
         //the generic parameter. Only method references that refer to their own type parameters will ever
@@ -1455,6 +1806,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetParameterTypeInternId(IParameterTypeInformation parameterTypeInformation) {
+      Contract.Requires(parameterTypeInformation != null);
+
       uint typeReferenceInternId = this.GetTypeReferenceInternId(parameterTypeInformation.Type);
       uint customModifiersInternId = 0;
       if (parameterTypeInformation.IsModified)
@@ -1473,9 +1826,10 @@ namespace Microsoft.Cci {
     }
 
     uint GetParameterTypeListInternId(IEnumerator<IParameterTypeInformation> parameterTypeInformations) {
-      if (!parameterTypeInformations.MoveNext()) {
-        return 0;
-      }
+      Contract.Requires(parameterTypeInformations != null);
+
+      if (!parameterTypeInformations.MoveNext()) return 0;
+      Contract.Assume(parameterTypeInformations.Current != null);
       uint currentParameterInternedId = this.GetParameterTypeInternId(parameterTypeInformations.Current);
       uint tailInternedId = this.GetParameterTypeListInternId(parameterTypeInformations);
       uint value = this.ParameterTypeListHashtable.Find(currentParameterInternedId, tailInternedId);
@@ -1486,14 +1840,13 @@ namespace Microsoft.Cci {
       return value;
     }
 
-    uint GetSignatureInternId(
-      CallingConvention callingConvention,
-      IEnumerable<IParameterTypeInformation> parameters,
-      IEnumerable<IParameterTypeInformation> extraArgumentTypes,
-      IEnumerable<ICustomModifier> returnValueCustomModifiers,
-      bool returnValueIsByRef,
-      ITypeReference returnType
-    ) {
+    uint GetSignatureInternId(CallingConvention callingConvention, IEnumerable<IParameterTypeInformation> parameters, IEnumerable<IParameterTypeInformation> extraArgumentTypes,
+      IEnumerable<ICustomModifier> returnValueCustomModifiers, bool returnValueIsByRef, ITypeReference returnType) {
+      Contract.Requires(parameters != null);
+      Contract.Requires(extraArgumentTypes != null);
+      Contract.Requires(returnValueCustomModifiers != null);
+      Contract.Requires(returnType != null);
+
       uint requiredParameterTypesInternedId = this.GetParameterTypeListInternId(parameters.GetEnumerator());
       uint extraArgumentTypesInteredId = this.GetParameterTypeListInternId(extraArgumentTypes.GetEnumerator());
       uint returnValueCustomModifiersInternedId = this.GetCustomModifierListInternId(returnValueCustomModifiers.GetEnumerator());
@@ -1515,9 +1868,9 @@ namespace Microsoft.Cci {
       return signatureStore1.InternedId;
     }
 
-    uint GetMethodReferenceInternedId(
-      IMethodReference methodReference
-    ) {
+    uint GetMethodReferenceInternedId(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
+
       var genInstanceRef = methodReference as IGenericMethodInstanceReference;
       if (genInstanceRef != null) return this.GetGenericMethodInstanceReferenceInternedKey(genInstanceRef);
       uint containingTypeReferenceInternedId = this.GetTypeReferenceInternId(methodReference.ContainingType);
@@ -1551,9 +1904,9 @@ namespace Microsoft.Cci {
       return signatureStore1.InternedId;
     }
 
-    uint GetGenericMethodInstanceReferenceInternedKey(
-      IGenericMethodInstanceReference genericMethodInstanceReference
-    ) {
+    uint GetGenericMethodInstanceReferenceInternedKey(IGenericMethodInstanceReference genericMethodInstanceReference) {
+      Contract.Requires(genericMethodInstanceReference != null);
+
       var genericMethodInternedId = genericMethodInstanceReference.GenericMethod.InternedKey;
       uint genericArgumentsInternedId = this.GetTypeReferenceListInternedId(genericMethodInstanceReference.GenericArguments.GetEnumerator());
       uint value = this.GenericMethodInstanceHashtable.Find(genericMethodInternedId, genericArgumentsInternedId);
@@ -1564,9 +1917,9 @@ namespace Microsoft.Cci {
       return value;
     }
 
-    uint GetFieldReferenceInternedId(
-      IFieldReference fieldReference
-    ) {
+    uint GetFieldReferenceInternedId(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+
       uint containingTypeReferenceInternedId = this.GetTypeReferenceInternId(fieldReference.ContainingType);
       uint fieldTypeInternedId;
       if (fieldReference.IsModified)
@@ -1587,22 +1940,14 @@ namespace Microsoft.Cci {
       return result;
     }
 
-    uint GetFunctionPointerTypeReferenceInternId(
-      CallingConvention callingConvention,
-      IEnumerable<IParameterTypeInformation> parameters,
-      IEnumerable<IParameterTypeInformation> extraArgumentTypes,
-      IEnumerable<ICustomModifier> returnValueCustomModifiers,
-      bool returnValueIsByRef,
-      ITypeReference returnType
-    ) {
-      uint signatureInternedId = this.GetSignatureInternId(
-        callingConvention,
-        parameters,
-        extraArgumentTypes,
-        returnValueCustomModifiers,
-        returnValueIsByRef,
-        returnType
-      );
+    uint GetFunctionPointerTypeReferenceInternId(CallingConvention callingConvention, IEnumerable<IParameterTypeInformation> parameters, IEnumerable<IParameterTypeInformation> extraArgumentTypes,
+      IEnumerable<ICustomModifier> returnValueCustomModifiers, bool returnValueIsByRef, ITypeReference returnType) {
+      Contract.Requires(parameters != null);
+      Contract.Requires(extraArgumentTypes != null);
+      Contract.Requires(returnValueCustomModifiers != null);
+      Contract.Requires(returnType != null);
+
+      uint signatureInternedId = this.GetSignatureInternId(callingConvention, parameters, extraArgumentTypes, returnValueCustomModifiers, returnValueIsByRef, returnType);
       uint value = this.FunctionTypeHashTable.Find(signatureInternedId);
       if (value == 0) {
         value = this.CurrentTypeInternValue++;
@@ -1612,6 +1957,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetCustomModifierInternId(ICustomModifier customModifier) {
+      Contract.Requires(customModifier != null);
+
       uint currentTypeRefInternedId = this.GetTypeReferenceInternId(customModifier.Modifier);
       uint isOptionalIntneredId = customModifier.IsOptional ? 0xF0F0F0F0 : 0x0F0F0F0F;  //  Just for the heck of it...
       uint value = this.CustomModifierHashTable.Find(currentTypeRefInternedId, isOptionalIntneredId);
@@ -1623,10 +1970,12 @@ namespace Microsoft.Cci {
     }
 
     uint GetCustomModifierListInternId(IEnumerator<ICustomModifier> customModifiers) {
-      if (!customModifiers.MoveNext()) {
-        return 0;
-      }
-      uint currentCustomModifierInternedId = this.GetCustomModifierInternId(customModifiers.Current);
+      Contract.Requires(customModifiers != null);
+
+      if (!customModifiers.MoveNext()) return 0;
+      var current = customModifiers.Current;
+      Contract.Assume(current != null);
+      uint currentCustomModifierInternedId = this.GetCustomModifierInternId(current);
       uint tailInternedId = this.GetCustomModifierListInternId(customModifiers);
       uint value = this.CustomModifierListHashTable.Find(currentCustomModifierInternedId, tailInternedId);
       if (value == 0) {
@@ -1637,6 +1986,8 @@ namespace Microsoft.Cci {
     }
 
     uint GetTypeReferenceInterendIdIgnoringCustomModifiers(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
+
       INamespaceTypeReference/*?*/ namespaceTypeReference = typeReference as INamespaceTypeReference;
       if (namespaceTypeReference != null) {
         return this.GetNamespaceTypeReferenceInternId(
@@ -1713,6 +2064,9 @@ namespace Microsoft.Cci {
     }
 
     uint GetModifiedTypeReferenceInternId(ITypeReference typeReference, IEnumerable<ICustomModifier> customModifiers) {
+      Contract.Requires(typeReference != null);
+      Contract.Requires(customModifiers != null);
+
       uint typeReferenceInternId = this.GetTypeReferenceInterendIdIgnoringCustomModifiers(typeReference);
       uint customModifiersInternId = this.GetCustomModifierListInternId(customModifiers.GetEnumerator());
       uint value = this.ModifiedTypeHashtable.Find(typeReferenceInternId, customModifiersInternId);
@@ -1724,10 +2078,11 @@ namespace Microsoft.Cci {
     }
 
     uint GetTypeReferenceInternId(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
+
       IModifiedTypeReference/*?*/ modifiedTypeReference = typeReference as IModifiedTypeReference;
-      if (modifiedTypeReference != null) {
+      if (modifiedTypeReference != null)
         return this.GetModifiedTypeReferenceInternId(modifiedTypeReference.UnmodifiedType, modifiedTypeReference.CustomModifiers);
-      }
       return this.GetTypeReferenceInterendIdIgnoringCustomModifiers(typeReference);
     }
 

@@ -177,6 +177,10 @@ namespace Microsoft.Cci {
       get { throw new NotImplementedException(); }
     }
 
+    public string DebugInformationVersion {
+      get { throw new NotImplementedException(); }
+    }
+
     public ushort DllCharacteristics {
       get { throw new NotImplementedException(); }
     }
@@ -286,6 +290,14 @@ namespace Microsoft.Cci {
     }
 
     public ulong SizeOfStackReserve {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ushort SubsystemMajorVersion {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ushort SubsystemMinorVersion {
       get { throw new NotImplementedException(); }
     }
 
@@ -423,7 +435,7 @@ namespace Microsoft.Cci {
     /// <summary>
     /// A list of aliases for the root namespace of the referenced assembly.
     /// </summary>
-    IEnumerable<IName> Aliases { get; }
+    IEnumerable<IName> Aliases { get; } //TODO: make this go away, it does not exist in metadata.
 
     /// <summary>
     /// The referenced assembly, or Dummy.Assembly if the reference cannot be resolved.
@@ -757,6 +769,11 @@ namespace Microsoft.Cci {
     string DebugInformationLocation { get; }
 
     /// <summary>
+    /// A hexadecimal string that is used to store and retrieve the debugging symbols from a symbol store.
+    /// </summary>
+    string DebugInformationVersion { get; }
+
+    /// <summary>
     /// Flags that control the behavior of the target operating system. CLI implementations are supposed to ignore this, but some operating system pay attention.
     /// </summary>
     ushort DllCharacteristics { get; }
@@ -920,6 +937,16 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// The first part of a two part version number indicating the operating subsystem that is expected to be the target environment for this module.
+    /// </summary>
+    ushort SubsystemMajorVersion { get; }
+
+    /// <summary>
+    /// The second part of a two part version number indicating the operating subsystem that is expected to be the target environment for this module.
+    /// </summary>
+    ushort SubsystemMinorVersion { get; }
+
+    /// <summary>
     /// Identifies the version of the CLR that is required to load this module or assembly.
     /// </summary>
     string TargetRuntimeVersion { get; }
@@ -974,6 +1001,13 @@ namespace Microsoft.Cci {
     }
 
     public string DebugInformationLocation {
+      get {
+        Contract.Ensures(Contract.Result<string>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
+    public string DebugInformationVersion {
       get {
         Contract.Ensures(Contract.Result<string>() != null);
         throw new NotImplementedException();
@@ -1120,6 +1154,14 @@ namespace Microsoft.Cci {
       }
     }
 
+    public ushort SubsystemMajorVersion {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ushort SubsystemMinorVersion {
+      get { throw new NotImplementedException(); }
+    }
+
     public string TargetRuntimeVersion {
       get {
         Contract.Ensures(Contract.Result<string>() != null);
@@ -1250,6 +1292,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A reference to a .NET module.
   /// </summary>
+  [ContractClass(typeof(IModuleReferenceContract))]
   public interface IModuleReference : IUnitReference {
 
     /// <summary>
@@ -1269,6 +1312,79 @@ namespace Microsoft.Cci {
     ModuleIdentity ModuleIdentity { get; }
 
   }
+
+  #region IModuleReference contract binding
+  [ContractClassFor(typeof(IModuleReference))]
+  abstract class IModuleReferenceContract : IModuleReference {
+
+    #region IModuleReference Members
+
+    public IAssemblyReference ContainingAssembly {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IModule ResolvedModule {
+      get {
+        Contract.Ensures(Contract.Result<IModule>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public ModuleIdentity ModuleIdentity {
+      get {
+        Contract.Ensures(Contract.Result<ModuleIdentity>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+
+    #region IUnitReference Members
+
+    public IUnit ResolvedUnit {
+      get { throw new NotImplementedException(); }
+    }
+
+    public UnitIdentity UnitIdentity {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region IReference Members
+
+    public IEnumerable<ICustomAttribute> Attributes {
+      get { throw new NotImplementedException(); }
+    }
+
+    public void Dispatch(IMetadataVisitor visitor) {
+      throw new NotImplementedException();
+    }
+
+    public void DispatchAsReference(IMetadataVisitor visitor) {
+      throw new NotImplementedException();
+    }
+
+    #endregion
+
+    #region IObjectWithLocations Members
+
+    public IEnumerable<ILocation> Locations {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region INamedEntity Members
+
+    public IName Name {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
 
   /// <summary>
   /// A unit of metadata stored as a single artifact and potentially produced and revised independently from other units.
@@ -1354,6 +1470,7 @@ namespace Microsoft.Cci {
     public IEnumerable<IPESection> UninterpretedSections {
       get {
         Contract.Ensures(Contract.Result<IEnumerable<IPESection>>() != null);
+        Contract.Ensures(Contract.ForAll(Contract.Result<IEnumerable<IPESection>>(), x => x != null));
         throw new NotImplementedException();
       }
     }
@@ -1409,6 +1526,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A reference to a instance of <see cref="IUnit"/>.
   /// </summary>
+  [ContractClass(typeof(IUnitReferenceContract))]
   public interface IUnitReference : IReference, INamedEntity {
 
     /// <summary>
@@ -1422,6 +1540,62 @@ namespace Microsoft.Cci {
     /// <remarks>The location might not be set.</remarks>
     UnitIdentity UnitIdentity { get; }
   }
+
+  #region IUnitReference contract binding
+  [ContractClassFor(typeof(IUnitReference))]
+  abstract class IUnitReferenceContract : IUnitReference {
+    #region IUnitReference Members
+
+    public IUnit ResolvedUnit {
+      get {
+        Contract.Ensures(Contract.Result<IUnit>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
+    public UnitIdentity UnitIdentity {
+      get {
+        Contract.Ensures(Contract.Result<UnitIdentity>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
+    #endregion
+
+    #region IReference Members
+
+    public IEnumerable<ICustomAttribute> Attributes {
+      get { throw new NotImplementedException(); }
+    }
+
+    public void Dispatch(IMetadataVisitor visitor) {
+      throw new NotImplementedException();
+    }
+
+    public void DispatchAsReference(IMetadataVisitor visitor) {
+      throw new NotImplementedException();
+    }
+
+    #endregion
+
+    #region IObjectWithLocations Members
+
+    public IEnumerable<ILocation> Locations {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region INamedEntity Members
+
+    public IName Name {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
 
   /// <summary>
   /// A set of units that all contribute to a unified root namespace. For example the set of assemblies referenced by a C# project.

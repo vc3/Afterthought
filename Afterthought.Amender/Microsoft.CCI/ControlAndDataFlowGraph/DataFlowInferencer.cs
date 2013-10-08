@@ -12,11 +12,11 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using Microsoft.Cci.UtilityDataStructures;
 
-namespace Microsoft.Cci.ControlAndDataFlowGraph {
+namespace Microsoft.Cci.Analysis {
 
   internal class DataFlowInferencer<BasicBlock, Instruction>
-    where BasicBlock : Microsoft.Cci.BasicBlock<Instruction>, new()
-    where Instruction : Microsoft.Cci.Instruction, new() {
+    where BasicBlock : Microsoft.Cci.Analysis.BasicBlock<Instruction>, new()
+    where Instruction : Microsoft.Cci.Analysis.Instruction, new() {
 
     private DataFlowInferencer(IMetadataHost host, ControlAndDataFlowGraph<BasicBlock, Instruction> cdfg) {
       Contract.Requires(host != null);
@@ -66,10 +66,20 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
     private void SetupDataFlowFor(IMethodBody methodBody) {
       Contract.Requires(methodBody != null);
 
+      //If this is a dummy body, do nothing.
+      if (this.cdfg.AllBlocks.Count == 1 && this.cdfg.AllBlocks[0] != null && this.cdfg.AllBlocks[0].Instructions.Count <= 1) return;
+
       this.AddStackSetupForExceptionHandlers(methodBody);
-      foreach (var root in cdfg.RootBlocks) {
+      foreach (var root in this.cdfg.RootBlocks) {
         this.blocksToVisit.Enqueue(root);
         while (this.blocksToVisit.Count != 0)
+          this.DequeueBlockAndSetupDataFlow();
+      }
+      //At this point, all reachable code blocks have had their data flow inferred. Now look for unreachable blocks.
+      foreach (var block in this.cdfg.AllBlocks) {
+        if (this.blocksAlreadyVisited.Contains(block)) continue;
+        blocksToVisit.Enqueue(block);
+        while (blocksToVisit.Count != 0)
           this.DequeueBlockAndSetupDataFlow();
       }
       this.operandStackSetupInstructions.TrimExcess();
@@ -82,6 +92,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         Contract.Assume(exinfo != null); //The checker can't work out that all collection elements are non null, even though there is a contract to that effect
         if (exinfo.HandlerKind == HandlerKind.Filter) {
           var block = this.cdfg.BlockFor[exinfo.FilterDecisionStartOffset];
+          Contract.Assume(block != null); //All branch targets must have blocks, but we can't put that in a contract that satisfies the checker.
+          this.AddStackSetup(block, exinfo.ExceptionType);
+          block = this.cdfg.BlockFor[exinfo.HandlerStartOffset];
           Contract.Assume(block != null); //All branch targets must have blocks, but we can't put that in a contract that satisfies the checker.
           this.AddStackSetup(block, exinfo.ExceptionType);
         } else if (exinfo.HandlerKind == HandlerKind.Catch) {
@@ -192,9 +205,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Sub_Ovf:
         case OperationCode.Sub_Ovf_Un:
         case OperationCode.Xor:
-          instruction.Operand2 = stack.Pop();
-          instruction.Operand1 = stack.Pop();
-          stack.Push(instruction);
+          instruction.Operand2 = this.stack.Pop();
+          instruction.Operand1 = this.stack.Pop();
+          this.stack.Push(instruction);
           break;
 
         case OperationCode.Arglist:
@@ -236,24 +249,24 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Ldstr:
         case OperationCode.Ldtoken:
         case OperationCode.Sizeof:
-          stack.Push(instruction);
+          this.stack.Push(instruction);
           break;
 
         case OperationCode.Array_Addr:
         case OperationCode.Array_Get:
           Contract.Assume(instruction.Operation.Value is IArrayTypeReference); //This is an informally specified property of the Metadata model.
-          InitializeArrayIndexerInstruction(instruction, stack, (IArrayTypeReference)instruction.Operation.Value);
+          InitializeArrayIndexerInstruction(instruction, this.stack, (IArrayTypeReference)instruction.Operation.Value);
           break;
 
         case OperationCode.Array_Create:
         case OperationCode.Array_Create_WithLowerBound:
         case OperationCode.Newarr:
-          InitializeArrayCreateInstruction(instruction, stack, instruction.Operation);
+          InitializeArrayCreateInstruction(instruction, this.stack, instruction.Operation);
           break;
 
         case OperationCode.Array_Set:
           Contract.Assume(instruction.Operation.Value is IArrayTypeReference); //This is an informally specified property of the Metadata model.
-          InitializeArraySetInstruction(instruction, stack, (IArrayTypeReference)instruction.Operation.Value);
+          InitializeArraySetInstruction(instruction, this.stack, (IArrayTypeReference)instruction.Operation.Value);
           break;
 
         case OperationCode.Beq:
@@ -276,8 +289,8 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Blt_Un_S:
         case OperationCode.Bne_Un:
         case OperationCode.Bne_Un_S:
-          instruction.Operand2 = stack.Pop();
-          instruction.Operand1 = stack.Pop();
+          instruction.Operand2 = this.stack.Pop();
+          instruction.Operand1 = this.stack.Pop();
           break;
 
         case OperationCode.Box:
@@ -341,34 +354,28 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Refanyval:
         case OperationCode.Unbox:
         case OperationCode.Unbox_Any:
-          instruction.Operand1 = stack.Pop();
-          stack.Push(instruction);
+          instruction.Operand1 = this.stack.Pop();
+          this.stack.Push(instruction);
           break;
 
         case OperationCode.Brfalse:
         case OperationCode.Brfalse_S:
         case OperationCode.Brtrue:
         case OperationCode.Brtrue_S:
-          instruction.Operand1 = stack.Pop();
+          instruction.Operand1 = this.stack.Pop();
           break;
 
         case OperationCode.Call:
+        case OperationCode.Callvirt:
           var signature = instruction.Operation.Value as ISignature;
           Contract.Assume(signature != null); //This is an informally specified property of the Metadata model.
-          if (!signature.IsStatic) instruction.Operand1 = stack.Pop();
-          InitializeArgumentsAndPushReturnResult(instruction, stack, signature);
-          break;
-
-        case OperationCode.Callvirt:
-          instruction.Operand1 = stack.Pop();
-          Contract.Assume(instruction.Operation.Value is ISignature); //This is an informally specified property of the Metadata model.
-          InitializeArgumentsAndPushReturnResult(instruction, stack, (ISignature)instruction.Operation.Value);
+          InitializeArgumentsAndPushReturnResult(instruction, this.stack, signature);
           break;
 
         case OperationCode.Calli:
-          Contract.Assume(instruction.Operation.Value is ISignature); //This is an informally specified property of the Metadata model.
-          InitializeArgumentsAndPushReturnResult(instruction, stack, (ISignature)instruction.Operation.Value);
-          instruction.Operand1 = stack.Pop();
+          var funcPointer = instruction.Operation.Value as IFunctionPointerTypeReference;
+          Contract.Assume(funcPointer != null); //This is an informally specified property of the Metadata model.
+          InitializeArgumentsAndPushReturnResult(instruction, this.stack, funcPointer);
           break;
 
         case OperationCode.Cpobj:
@@ -382,8 +389,8 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Stind_R8:
         case OperationCode.Stind_Ref:
         case OperationCode.Stobj:
-          instruction.Operand2 = stack.Pop();
-          instruction.Operand1 = stack.Pop();
+          instruction.Operand2 = this.stack.Pop();
+          instruction.Operand1 = this.stack.Pop();
           break;
 
         case OperationCode.Cpblk:
@@ -398,17 +405,17 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Stelem_R8:
         case OperationCode.Stelem_Ref:
           var indexAndValue = new Instruction[2];
-          indexAndValue[1] = stack.Pop();
-          indexAndValue[0] = stack.Pop();
+          indexAndValue[1] = this.stack.Pop();
+          indexAndValue[0] = this.stack.Pop();
           instruction.Operand2 = indexAndValue;
-          instruction.Operand1 = stack.Pop();
+          instruction.Operand1 = this.stack.Pop();
           break;
 
         case OperationCode.Dup:
-          var dupop = stack.Pop();
+          var dupop = this.stack.Pop();
           instruction.Operand1 = dupop;
-          stack.Push(dupop);
-          stack.Push(instruction);
+          this.stack.Push(instruction);
+          this.stack.Push(instruction);
           break;
 
         case OperationCode.Endfilter:
@@ -425,18 +432,34 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Stsfld:
         case OperationCode.Throw:
         case OperationCode.Switch:
-          instruction.Operand1 = stack.Pop();
+          instruction.Operand1 = this.stack.Pop();
+          break;
+
+        case OperationCode.Leave:
+        case OperationCode.Leave_S:
+          this.stack.Clear();
           break;
 
         case OperationCode.Newobj:
           Contract.Assume(instruction.Operation.Value is ISignature); //This is an informally specified property of the Metadata model.
-          InitializeArgumentsAndPushReturnResult(instruction, stack, (ISignature)instruction.Operation.Value); //won't push anything
-          stack.Push(instruction);
+          signature = (ISignature)instruction.Operation.Value;
+          var numArguments = (int)IteratorHelper.EnumerableCount(signature.Parameters);
+          if (numArguments > 0) {
+            if (numArguments > 1) {
+              numArguments--;
+              var arguments = new Instruction[numArguments];
+              instruction.Operand2 = arguments;
+              for (var i = numArguments-1; i >= 0; i--)
+                arguments[i] = stack.Pop();
+            }
+            instruction.Operand1 = stack.Pop();
+          }
+          this.stack.Push(instruction);
           break;
 
         case OperationCode.Ret:
           if (this.cdfg.MethodBody.MethodDefinition.Type.TypeCode != PrimitiveTypeCode.Void)
-            instruction.Operand1 = stack.Pop();
+            instruction.Operand1 = this.stack.Pop();
           break;
       }
     }
@@ -445,12 +468,36 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       Contract.Requires(instruction != null);
       Contract.Requires(stack != null);
       Contract.Requires(signature != null);
+
       var numArguments = IteratorHelper.EnumerableCount(signature.Parameters);
+      if (!signature.IsStatic) numArguments++;
+      if (numArguments > 0) {
+        numArguments--;
+        if (numArguments > 0) {
+          var arguments = new Instruction[numArguments];
+          instruction.Operand2 = arguments;
+          for (var i = numArguments; i > 0; i--)
+            arguments[i-1] = stack.Pop();
+        }
+        instruction.Operand1 = stack.Pop();
+      }
+      if (signature.Type.TypeCode != PrimitiveTypeCode.Void)
+        stack.Push(instruction);
+    }
+
+    private static void InitializeArgumentsAndPushReturnResult(Instruction instruction, Stack<Instruction> stack, IFunctionPointerTypeReference funcPointer) {
+      Contract.Requires(instruction != null);
+      Contract.Requires(stack != null);
+      Contract.Requires(funcPointer != null);
+
+      instruction.Operand1 = stack.Pop(); //the function pointer
+      var numArguments = IteratorHelper.EnumerableCount(funcPointer.Parameters);
+      if (!funcPointer.IsStatic) numArguments++;
       var arguments = new Instruction[numArguments];
       instruction.Operand2 = arguments;
       for (var i = numArguments; i > 0; i--)
         arguments[i-1] = stack.Pop();
-      if (signature.Type.TypeCode != PrimitiveTypeCode.Void)
+      if (funcPointer.Type.TypeCode != PrimitiveTypeCode.Void)
         stack.Push(instruction);
     }
 
@@ -461,11 +508,17 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       IArrayTypeReference arrayType = (IArrayTypeReference)currentOperation.Value;
       Contract.Assume(arrayType != null); //This is an informally specified property of the Metadata model.
       var rank = arrayType.Rank;
-      if (currentOperation.OperationCode == OperationCode.Array_Create_WithLowerBound) rank *= 2;
-      var indices = new Instruction[rank];
-      instruction.Operand2 = indices;
-      for (var i = rank; i > 0; i--)
-        indices[i-1] = stack.Pop();
+      if (rank > 0) {
+        if (currentOperation.OperationCode == OperationCode.Array_Create_WithLowerBound) rank *= 2;
+        rank--;
+        if (rank > 0) {
+          var indices = new Instruction[rank];
+          instruction.Operand2 = indices;
+          for (var i = rank; i > 0; i--)
+            indices[i-1] = stack.Pop();
+        }
+        instruction.Operand1 = stack.Pop();
+      }
       stack.Push(instruction);
     }
 

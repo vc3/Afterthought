@@ -17,6 +17,7 @@ using System.Threading;
 using Microsoft.Cci;
 using Microsoft.Cci.Immutable;
 using Microsoft.Cci.UtilityDataStructures;
+using System.Diagnostics.Contracts;
 
 //^ using Microsoft.Contracts;
 
@@ -84,7 +85,7 @@ namespace Microsoft.Cci {
       List<IUnit> units = new List<IUnit>();
       foreach (UnitIdentity unitId in referencedUnitSet.Units) {
         IUnit unit = this.LoadUnit(unitId);
-        if (unit == Dummy.Unit) return Dummy.UnitSet;
+        if (unit is Dummy) return Dummy.UnitSet;
         units.Add(unit);
       }
       if (result != null && UnitsAreTheSameObjects(units, result.Units))
@@ -2766,6 +2767,74 @@ namespace Microsoft.Cci {
     }
 
     #endregion
+  }
+
+  /// <summary>
+  /// 
+  /// </summary>
+  public sealed class SynchronizationPointLocation : ILocation {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="document"></param>
+    /// <param name="synchronizationPoint"></param>
+    public SynchronizationPointLocation(IDocument document, ISynchronizationPoint synchronizationPoint) {
+      Contract.Requires(document != null);
+      Contract.Requires(synchronizationPoint != null);
+
+      this.document = document;
+      this.synchronizationPoint = synchronizationPoint;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public ISynchronizationPoint SynchronizationPoint {
+      get { return this.synchronizationPoint; }
+    }
+    ISynchronizationPoint synchronizationPoint;
+
+    /// <summary>
+    /// The document containing this location.
+    /// </summary>
+    public IDocument Document {
+      get { return this.document; }
+    }
+    IDocument document;
+
+  }
+
+  /// <summary>
+  /// 
+  /// </summary>
+  public sealed class ContinuationLocation : ILocation {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="synchronizationPointLocation"></param>
+    public ContinuationLocation(SynchronizationPointLocation synchronizationPointLocation) {
+      Contract.Requires(synchronizationPointLocation != null);
+
+      this.synchronizationPointLocation = synchronizationPointLocation;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public SynchronizationPointLocation SynchronizationPointLocation {
+      get { return this.synchronizationPointLocation; }
+    }
+    SynchronizationPointLocation synchronizationPointLocation;
+
+    /// <summary>
+    /// The document containing this location.
+    /// </summary>
+    public IDocument Document {
+      get { return this.synchronizationPointLocation.Document; }
+    }
+
   }
 
 }

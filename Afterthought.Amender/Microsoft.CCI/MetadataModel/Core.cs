@@ -43,10 +43,22 @@ namespace Microsoft.Cci {
     /// in the same location should be replaced with this collection.
     /// </param>
     public ErrorEventArgs(object errorReporter, ILocation location, IEnumerable<IErrorMessage> errors) {
+      Contract.Requires(errorReporter != null);
+      Contract.Requires(location != null);
+      Contract.Requires(errors != null);
+
       this.errorReporter = errorReporter;
       this.location = location;
       this.errors = errors;
     }
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.errorReporter != null);
+      Contract.Invariant(this.location != null);
+      Contract.Invariant(this.errors != null);
+    }
+
 
     /// <summary>
     /// The object reporting the errors. This can be used to filter out events coming from non interesting sources.
@@ -55,7 +67,10 @@ namespace Microsoft.Cci {
     /// can ignore any events that come from a reporter that does not implement this interface.
     /// </summary>
     public object ErrorReporter {
-      get { return this.errorReporter; }
+      get {
+        Contract.Ensures(Contract.Result<object>() != null);
+        return this.errorReporter; 
+      }
     }
     readonly object errorReporter;
 
@@ -63,7 +78,10 @@ namespace Microsoft.Cci {
     /// Identifies the portion of the document that was analyzed to arrive at the error list.
     /// </summary>
     public ILocation Location {
-      get { return this.location; }
+      get {
+        Contract.Ensures(Contract.Result<ILocation>() != null);
+        return this.location; 
+      }
     }
     readonly ILocation location;
 
@@ -72,7 +90,10 @@ namespace Microsoft.Cci {
     /// in the same location should be replaced with this collection.
     /// </summary>
     public IEnumerable<IErrorMessage> Errors {
-      get { return this.errors; }
+      get {
+        Contract.Ensures(Contract.Result<IEnumerable<IErrorMessage>>() != null);
+        return this.errors; 
+      }
     }
     readonly IEnumerable<IErrorMessage> errors;
   }
@@ -90,6 +111,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// Provides efficient readonly access to the content of an IBinaryDocument instance via an unsafe byte pointer.
   /// </summary>
+  [ContractClass(typeof(IBinaryDocumentMemoryBlockContract))]
   public unsafe interface IBinaryDocumentMemoryBlock {
     /// <summary>
     /// The binary document for which this is the memory block
@@ -107,9 +129,34 @@ namespace Microsoft.Cci {
     uint Length { get; }
   }
 
+  #region IBinaryDocumentMemoryBlock contract binding
+  [ContractClassFor(typeof(IBinaryDocumentMemoryBlock))]
+  abstract class IBinaryDocumentMemoryBlockContract : IBinaryDocumentMemoryBlock {
+    #region IBinaryDocumentMemoryBlock Members
+
+    public unsafe IBinaryDocument BinaryDocument {
+      get {
+        Contract.Ensures(Contract.Result<IBinaryDocument>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public unsafe byte* Pointer {
+      get { throw new NotImplementedException(); }
+    }
+
+    public unsafe uint Length {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// Represents the location in binary document.
   /// </summary>
+  [ContractClass(typeof(IBinaryLocationContract))]
   public interface IBinaryLocation : ILocation {
     /// <summary>
     /// The binary document containing this location range.
@@ -126,6 +173,37 @@ namespace Microsoft.Cci {
       //^ ensures result <= this.BinaryDocument.Length;
     }
   }
+
+  #region IBinaryLocation contract binding
+  [ContractClassFor(typeof(IBinaryLocation))]
+  abstract class IBinaryLocationContract : IBinaryLocation {
+    #region IBinaryLocation Members
+
+    public IBinaryDocument BinaryDocument {
+      get {
+        Contract.Ensures(Contract.Result<IBinaryDocument>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
+    public uint Offset {
+      get {
+        Contract.Ensures(Contract.Result<uint>() <= this.BinaryDocument.Length);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+
+    #region ILocation Members
+
+    public IDocument Document {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
 
   /// <summary>
   /// Provides a standard abstraction over the applications that host components that provide or consume objects from the metadata model.
@@ -297,6 +375,7 @@ namespace Microsoft.Cci {
     bool PreserveILLocations { get; }
   }
 
+  #region IMetadataHost contract binding
   [ContractClassFor(typeof(IMetadataHost))]
   abstract class IMetadataHostContract : IMetadataHost {
     public event EventHandler<ErrorEventArgs> Errors;
@@ -416,6 +495,7 @@ namespace Microsoft.Cci {
       Contract.Requires(referringUnit != null);
       Contract.Requires(referencedAssembly != null);
       Contract.Ensures(Contract.Result<AssemblyIdentity>() != null);
+
       throw new NotImplementedException();
     }
 
@@ -442,6 +522,7 @@ namespace Microsoft.Cci {
       get { throw new NotImplementedException(); }
     }
   }
+  #endregion
 
   /// <summary>
   /// Implemented by types that contain a collection of members of type MemberType. For example a namespace contains a collection of INamespaceMember instances.
@@ -456,6 +537,7 @@ namespace Microsoft.Cci {
     IEnumerable<MemberType> Members { get; }
   }
 
+  #region IContainer contract binding
   [ContractClassFor(typeof(IContainer<>))]
   abstract class IContainerContract<MemberType> : IContainer<MemberType>
     where MemberType : class {
@@ -467,11 +549,13 @@ namespace Microsoft.Cci {
       }
     }
   }
+  #endregion
 
   /// <summary>
   /// Implemented by types whose instances belong to a specific type of container (see IContainer&lt;MemberType&gt;).
   /// </summary>
   /// <typeparam name="ContainerType">The type of the container that has members of this type.</typeparam>
+  [ContractClass(typeof(IContainerMemberContract<>))]
   public interface IContainerMember<ContainerType> : INamedEntity {
     /// <summary>
     /// The container instance with a Members collection that includes this instance.
@@ -484,6 +568,37 @@ namespace Microsoft.Cci {
     new IName Name { get; }
   }
 
+  #region IContainerMember<ContainerType> contract binding
+  [ContractClassFor(typeof(IContainerMember<>))]
+  abstract class IContainerMemberContract<ContainerType> : IContainerMember<ContainerType> {
+    #region IContainerMember<ContainerType> Members
+
+    public ContainerType Container {
+      get {
+        Contract.Ensures(Contract.Result<ContainerType>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    IName IContainerMember<ContainerType>.Name {
+      get {
+        Contract.Ensures(Contract.Result<IName>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+
+    #region INamedEntity Members
+
+    IName INamedEntity.Name {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// An object corresponding to a metadata entity such as a type or a field.
   /// </summary>
@@ -493,6 +608,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// An object corresponding to reference to a metadata entity such as a type or a field.
   /// </summary>
+  [ContractClass(typeof(IReferenceContract))]
   public interface IReference : IObjectWithLocations {
 
     /// <summary>
@@ -516,9 +632,44 @@ namespace Microsoft.Cci {
 
   }
 
+  #region IReference contract binding
+  [ContractClassFor(typeof(IReference))]
+  abstract class IReferenceContract : IReference {
+    #region IReference Members
+
+    public IEnumerable<ICustomAttribute> Attributes {
+      get {
+        Contract.Ensures(Contract.Result<IEnumerable<ICustomAttribute>>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public void Dispatch(IMetadataVisitor visitor) {
+      Contract.Requires(visitor != null);
+      throw new NotImplementedException();
+    }
+
+    public void DispatchAsReference(IMetadataVisitor visitor) {
+      Contract.Requires(visitor != null);
+      throw new NotImplementedException();
+    }
+
+    #endregion
+
+    #region IObjectWithLocations Members
+
+    public IEnumerable<ILocation> Locations {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// An object that represents a document. This can be either source or binary or designer surface etc
   /// </summary>
+  [ContractClass(typeof(IDocumentContract))]
   public interface IDocument {
 
     /// <summary>
@@ -534,9 +685,33 @@ namespace Microsoft.Cci {
 
   }
 
+  #region IDocument contract binding
+  [ContractClassFor(typeof(IDocument))]
+  abstract class IDocumentContract : IDocument {
+    #region IDocument Members
+
+    public string Location {
+      get {
+        Contract.Ensures(Contract.Result<string>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public IName Name {
+      get {
+        Contract.Ensures(Contract.Result<IName>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// Error information relating to a portion of a document.
   /// </summary>
+  [ContractClass(typeof(IErrorMessageContract))]
   public interface IErrorMessage {
 
     /// <summary>
@@ -578,6 +753,62 @@ namespace Microsoft.Cci {
 
   }
 
+  #region IErrorMessage contract binding
+  [ContractClassFor(typeof(IErrorMessage))]
+  abstract class IErrorMessageContract : IErrorMessage {
+    #region IErrorMessage Members
+
+    public object ErrorReporter {
+      get {
+        Contract.Ensures(Contract.Result<object>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public string ErrorReporterIdentifier {
+      get {
+        Contract.Ensures(Contract.Result<string>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public long Code {
+      get { 
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public bool IsWarning {
+      get { 
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public string Message {
+      get {
+        Contract.Ensures(Contract.Result<string>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public ILocation Location {
+      get {
+        Contract.Ensures(Contract.Result<ILocation>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public IEnumerable<ILocation> RelatedLocations {
+      get {
+        Contract.Ensures(Contract.Result<IEnumerable<ILocation>>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// Implemented by metadata objects that have been obtained from a CLR PE file.
   /// </summary>
@@ -595,305 +826,13 @@ namespace Microsoft.Cci {
   /// Implemented by methods that can turn tokens into metadata objects. For example, a method definition implemented
   /// by a metadata reader might implement this interface.
   /// </summary>
-  [ContractClass(typeof(ITokenDecoderContract))]
   public interface ITokenDecoder : IMethodDefinition {
     /// <summary>
-    /// Returns an instance of IMetadataObjectWithToken whose TokenValue property is the given token value.
+    /// Returns a metadata model object that corresponds to this token value.
     /// If no such object can be found then the result is null.
     /// </summary>
-    IMetadataObjectWithToken/*?*/ GetObjectForToken(uint token);
+    object/*?*/ GetObjectForToken(uint token);
   }
-
-  #region ITokenDecoder contract binding
-  [ContractClassFor(typeof(ITokenDecoder))]
-  abstract class ITokenDecoderContract : ITokenDecoder {
-    public IMetadataObjectWithToken GetObjectForToken(uint token) {
-      Contract.Ensures(Contract.Result<IMetadataObjectWithToken>() == null || Contract.Result<IMetadataObjectWithToken>().TokenValue == token);
-      throw new NotImplementedException();
-    }
-
-    #region IMethodDefinition Members
-
-    public IMethodBody Body {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<IGenericMethodParameter> GenericParameters {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool HasDeclarativeSecurity {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool HasExplicitThisParameter {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsAbstract {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsAccessCheckedOnOverride {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsAggressivelyInlined {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsCil {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsConstructor {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsExternal {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsForwardReference {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsHiddenBySignature {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsNativeCode {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsNewSlot {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsNeverInlined {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsNeverOptimized {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsPlatformInvoke {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsRuntimeImplemented {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsRuntimeInternal {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsRuntimeSpecial {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsSealed {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsSpecialName {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsStaticConstructor {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsSynchronized {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsVirtual {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsUnmanaged {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<IParameterDefinition> Parameters {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool PreserveSignature {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IPlatformInvokeInformation PlatformInvokeData {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool RequiresSecurityObject {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<ICustomAttribute> ReturnValueAttributes {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool ReturnValueIsMarshalledExplicitly {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IMarshallingInformation ReturnValueMarshallingInformation {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IName ReturnValueName {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<ISecurityAttribute> SecurityAttributes {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ITypeDefinitionMember Members
-
-    public ITypeDefinition ContainingTypeDefinition {
-      get { throw new NotImplementedException(); }
-    }
-
-    public TypeMemberVisibility Visibility {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ITypeMemberReference Members
-
-    public ITypeReference ContainingType {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ITypeDefinitionMember ResolvedTypeDefinitionMember {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IReference Members
-
-    public IEnumerable<ICustomAttribute> Attributes {
-      get { throw new NotImplementedException(); }
-    }
-
-    public void Dispatch(IMetadataVisitor visitor) {
-      throw new NotImplementedException();
-    }
-
-    public void DispatchAsReference(IMetadataVisitor visitor) {
-      throw new NotImplementedException();
-    }
-
-    #endregion
-
-    #region IObjectWithLocations Members
-
-    public IEnumerable<ILocation> Locations {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region INamedEntity Members
-
-    public IName Name {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IContainerMember<ITypeDefinition> Members
-
-    public ITypeDefinition Container {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IScopeMember<IScope<ITypeDefinitionMember>> Members
-
-    public IScope<ITypeDefinitionMember> ContainingScope {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IMethodReference Members
-
-    public bool AcceptsExtraArguments {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ushort GenericParameterCount {
-      get { throw new NotImplementedException(); }
-    }
-
-    public uint InternedKey {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsGeneric {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ushort ParameterCount {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IMethodDefinition ResolvedMethod {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<IParameterTypeInformation> ExtraParameters {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ISignature Members
-
-    public CallingConvention CallingConvention {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsStatic {
-      get { throw new NotImplementedException(); }
-    }
-
-    IEnumerable<IParameterTypeInformation> ISignature.Parameters {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<ICustomModifier> ReturnValueCustomModifiers {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool ReturnValueIsByRef {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool ReturnValueIsModified {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ITypeReference Type {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
 
   /// <summary>
   /// A collection of named members, with routines to search the collection.
@@ -941,6 +880,7 @@ namespace Microsoft.Cci {
     IEnumerable<MemberType> Members { get; }
   }
 
+  #region IScope<MemberType> contract binding
   [ContractClassFor(typeof(IScope<>))]
   abstract class ISCopeContract<MemberType> : IScope<MemberType>
     where MemberType : class, INamedEntity {
@@ -990,18 +930,43 @@ namespace Microsoft.Cci {
       }
     }
   }
-
+  #endregion
 
   /// <summary>
   /// Implemented by types whose instances belong to a specific type of scope (see IScope&lt;MemberType&gt;).
   /// </summary>
   /// <typeparam name="ScopeType">The type of the scope that has members of this type.</typeparam>
+  [ContractClass(typeof(IScopeMemberContract<>))]
   public interface IScopeMember<ScopeType> : INamedEntity {
     /// <summary>
     /// The scope instance with a Members collection that includes this instance.
     /// </summary>
     ScopeType ContainingScope { get; }
   }
+
+  #region IScopeMember<ScopeType> contract binding
+  [ContractClassFor(typeof(IScopeMember<>))]
+  abstract class IScopeMemberContract<ScopeType> : IScopeMember<ScopeType> {
+    #region IScopeMember<ScopeType> Members
+
+    public ScopeType ContainingScope {
+      get {
+        Contract.Ensures(Contract.Result<ScopeType>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+
+    #region INamedEntity Members
+
+    public IName Name {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
 
   /// <summary>
   /// Implemented by types whose instances are usually derived from documents.
@@ -1016,6 +981,7 @@ namespace Microsoft.Cci {
 
   }
 
+  #region IObjectWithLocations contract binding
   [ContractClassFor(typeof(IObjectWithLocations))]
   abstract class IObjectWithLocationsContract : IObjectWithLocations {
     public IEnumerable<ILocation> Locations {
@@ -1026,10 +992,12 @@ namespace Microsoft.Cci {
       }
     }
   }
+  #endregion
 
   /// <summary>
   /// Represents a location in IL operation stream.
   /// </summary>
+  [ContractClass(typeof(IILLocationContract))]
   public interface IILLocation : ILocation {
 
     /// <summary>
@@ -1043,9 +1011,75 @@ namespace Microsoft.Cci {
     uint Offset { get; }
   }
 
+  #region IILLocation contract binding
+  [ContractClassFor(typeof(IILLocation))]
+  abstract class IILLocationContract : IILLocation {
+    #region IILLocation Members
+
+    public IMethodDefinition MethodDefinition {
+      get {
+        Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public uint Offset {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region ILocation Members
+
+    public IDocument Document {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
+  /// <summary>
+  /// A location that represents a metadata object with a token.
+  /// </summary>
+  [ContractClass(typeof(IMetadataLocationContract))]
+  public interface IMetadataLocation : ILocation {
+
+    /// <summary>
+    /// The metadata object whose definition contains this location.
+    /// </summary>
+    IMetadataObjectWithToken Definition { get; }
+
+  }
+
+  #region IMetadataLocation contract binding
+  [ContractClassFor(typeof(IMetadataLocation))]
+  abstract class IMetadataLocationContract : IMetadataLocation {
+    #region IMetadataLocation Members
+
+    public IMetadataObjectWithToken Definition {
+      get {
+        Contract.Ensures(Contract.Result<IMetadataObjectWithToken>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+
+    #region ILocation Members
+
+    public IDocument Document {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// Represents a location in some document.
   /// </summary>
+  [ContractClass(typeof(ILocationContract))]
   public interface ILocation {
     /// <summary>
     /// The document containing this location.
@@ -1055,11 +1089,28 @@ namespace Microsoft.Cci {
     }
   }
 
+  #region ILocation contract binding
+  [ContractClassFor(typeof(ILocation))]
+  abstract class ILocationContract : ILocation {
+    #region ILocation Members
+
+    public IDocument Document {
+      get {
+        Contract.Ensures(Contract.Result<IDocument>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// A collection of methods that associate unique integers with metadata model entities.
   /// The association is based on the identities of the entities and the factory does not retain
   /// references to the given metadata model objects.
   /// </summary>
+  [ContractClass(typeof(IInternFactoryContract))]
   public interface IInternFactory {
     /// <summary>
     /// Returns the interned key corresponding to given assembly. The assembly is unified using ICompilationHostEnvironment.UnifyAssembly.
@@ -1142,10 +1193,123 @@ namespace Microsoft.Cci {
     uint GetTypeReferenceInternedKey(ITypeReference typeReference);
   }
 
+  #region IInternFactory contract binding
+  [ContractClassFor(typeof(IInternFactory))]
+  abstract class IInternFactoryContract : IInternFactory {
+    #region IInternFactory Members
+
+    public uint GetAssemblyInternedKey(AssemblyIdentity assemblyIdentity) {
+      Contract.Requires(assemblyIdentity != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetFieldInternedKey(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+      Contract.Requires(!(fieldReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetMethodInternedKey(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
+      Contract.Requires(!(methodReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetModuleInternedKey(ModuleIdentity moduleIdentity) {
+      Contract.Requires(moduleIdentity != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetNamespaceTypeReferenceInternedKey(IUnitNamespaceReference containingUnitNamespace, IName typeName, uint genericParameterCount) {
+      Contract.Requires(containingUnitNamespace != null);
+      Contract.Requires(!(containingUnitNamespace is Dummy));
+      Contract.Requires(typeName != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetNestedTypeReferenceInternedKey(ITypeReference containingTypeReference, IName typeName, uint genericParameterCount) {
+      Contract.Requires(containingTypeReference != null);
+      Contract.Requires(!(containingTypeReference is Dummy));
+      Contract.Requires(typeName != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetVectorTypeReferenceInternedKey(ITypeReference elementTypeReference) {
+      Contract.Requires(elementTypeReference != null);
+      Contract.Requires(!(elementTypeReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetMatrixTypeReferenceInternedKey(ITypeReference elementTypeReference, int rank, IEnumerable<ulong> sizes, IEnumerable<int> lowerBounds) {
+      Contract.Requires(elementTypeReference != null);
+      Contract.Requires(!(elementTypeReference is Dummy));
+      Contract.Requires(sizes != null);
+      Contract.Requires(lowerBounds != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetGenericTypeInstanceReferenceInternedKey(ITypeReference genericTypeReference, IEnumerable<ITypeReference> genericArguments) {
+      Contract.Requires(genericTypeReference != null);
+      Contract.Requires(!(genericTypeReference is Dummy));
+      Contract.Requires(genericArguments != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetPointerTypeReferenceInternedKey(ITypeReference targetTypeReference) {
+      Contract.Requires(targetTypeReference != null);
+      Contract.Requires(!(targetTypeReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetManagedPointerTypeReferenceInternedKey(ITypeReference targetTypeReferece) {
+      Contract.Requires(targetTypeReferece != null);
+      Contract.Requires(!(targetTypeReferece is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetGenericTypeParameterReferenceInternedKey(ITypeReference definingTypeReference, int index) {
+      Contract.Requires(definingTypeReference != null);
+      Contract.Requires(!(definingTypeReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetGenericMethodParameterReferenceInternedKey(IMethodReference defininingMethodReference, int index) {
+      Contract.Requires(defininingMethodReference != null);
+      Contract.Requires(!(defininingMethodReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetFunctionPointerTypeReferenceInternedKey(CallingConvention callingConvention, IEnumerable<IParameterTypeInformation> parameters, IEnumerable<IParameterTypeInformation> extraArgumentTypes, IEnumerable<ICustomModifier> returnValueCustomModifiers, bool returnValueIsByRef, ITypeReference returnType) {
+      Contract.Requires(parameters != null);
+      Contract.Requires(extraArgumentTypes != null);
+      Contract.Requires(returnValueCustomModifiers != null);
+      Contract.Requires(returnType != null);
+      Contract.Requires(!(returnType is Dummy));
+      throw new NotImplementedException();
+    }
+
+    public uint GetModifiedTypeReferenceInternedKey(ITypeReference typeReference, IEnumerable<ICustomModifier> customModifiers) {
+      Contract.Requires(typeReference != null);
+      Contract.Requires(!(typeReference is Dummy));
+      Contract.Requires(customModifiers != null);
+      throw new NotImplementedException();
+    }
+
+    public uint GetTypeReferenceInternedKey(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
+      Contract.Requires(!(typeReference is Dummy));
+      throw new NotImplementedException();
+    }
+
+    #endregion
+  }
+  #endregion
+
   /// <summary>
   /// Implemented by classes that visit nodes of object graphs via a double dispatch mechanism, usually performing some computation of a subset of the nodes in the graph.
   /// Contains a specialized Visit routine for each standard type of object defined in this object model. 
   /// </summary>
+  [ContractClass(typeof(IMetadataVisitorContract))]
   public interface IMetadataVisitor {
     /// <summary>
     /// Performs some computation with the given array type reference.
@@ -1417,5 +1581,350 @@ namespace Microsoft.Cci {
     /// </summary>
     void Visit(IWin32Resource win32Resource);
   }
+
+  #region IMetadataVisitor contract binding
+  [ContractClassFor(typeof(IMetadataVisitor))]
+  abstract class IMetadataVisitorContract : IMetadataVisitor {
+    #region IMetadataVisitor Members
+
+    public void Visit(IArrayTypeReference arrayTypeReference) {
+      Contract.Requires(arrayTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IAssembly assembly) {
+      Contract.Requires(assembly != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IAssemblyReference assemblyReference) {
+      Contract.Requires(assemblyReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ICustomAttribute customAttribute) {
+      Contract.Requires(customAttribute != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ICustomModifier customModifier) {
+      Contract.Requires(customModifier != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IEventDefinition eventDefinition) {
+      Contract.Requires(eventDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IFieldDefinition fieldDefinition) {
+      Contract.Requires(fieldDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IFileReference fileReference) {
+      Contract.Requires(fileReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IFunctionPointerTypeReference functionPointerTypeReference) {
+      Contract.Requires(functionPointerTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGenericMethodInstanceReference genericMethodInstanceReference) {
+      Contract.Requires(genericMethodInstanceReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGenericMethodParameter genericMethodParameter) {
+      Contract.Requires(genericMethodParameter != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGenericMethodParameterReference genericMethodParameterReference) {
+      Contract.Requires(genericMethodParameterReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGlobalFieldDefinition globalFieldDefinition) {
+      Contract.Requires(globalFieldDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGlobalMethodDefinition globalMethodDefinition) {
+      Contract.Requires(globalMethodDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGenericTypeInstanceReference genericTypeInstanceReference) {
+      Contract.Requires(genericTypeInstanceReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGenericTypeParameter genericTypeParameter) {
+      Contract.Requires(genericTypeParameter != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IGenericTypeParameterReference genericTypeParameterReference) {
+      Contract.Requires(genericTypeParameterReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ILocalDefinition localDefinition) {
+      Contract.Requires(localDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void VisitReference(ILocalDefinition localDefinition) {
+      Contract.Requires(localDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IManagedPointerTypeReference managedPointerTypeReference) {
+      Contract.Requires(managedPointerTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMarshallingInformation marshallingInformation) {
+      Contract.Requires(marshallingInformation != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMetadataConstant constant) {
+      Contract.Requires(constant != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMetadataCreateArray createArray) {
+      Contract.Requires(createArray != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMetadataExpression expression) {
+      Contract.Requires(expression != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMetadataNamedArgument namedArgument) {
+      Contract.Requires(namedArgument != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMetadataTypeOf typeOf) {
+      Contract.Requires(typeOf != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMethodDefinition method) {
+      Contract.Requires(method != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMethodImplementation methodImplementation) {
+      Contract.Requires(methodImplementation != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IMethodReference methodReference) {
+      Contract.Requires(methodReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IModifiedTypeReference modifiedTypeReference) {
+      Contract.Requires(modifiedTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IModule module) {
+      Contract.Requires(module != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IModuleReference moduleReference) {
+      Contract.Requires(moduleReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INamespaceAliasForType namespaceAliasForType) {
+      Contract.Requires(namespaceAliasForType != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INamespaceTypeDefinition namespaceTypeDefinition) {
+      Contract.Requires(namespaceTypeDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INamespaceTypeReference namespaceTypeReference) {
+      Contract.Requires(namespaceTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INestedAliasForType nestedAliasForType) {
+      Contract.Requires(nestedAliasForType != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INestedTypeDefinition nestedTypeDefinition) {
+      Contract.Requires(nestedTypeDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INestedTypeReference nestedTypeReference) {
+      Contract.Requires(nestedTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INestedUnitNamespace nestedUnitNamespace) {
+      Contract.Requires(nestedUnitNamespace != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INestedUnitNamespaceReference nestedUnitNamespaceReference) {
+      Contract.Requires(nestedUnitNamespaceReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(INestedUnitSetNamespace nestedUnitSetNamespace) {
+      Contract.Requires(nestedUnitSetNamespace != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IOperation operation) {
+      Contract.Requires(operation != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IOperationExceptionInformation operationExceptionInformation) {
+      Contract.Requires(operationExceptionInformation != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IParameterDefinition parameterDefinition) {
+      Contract.Requires(parameterDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void VisitReference(IParameterDefinition parameterDefinition) {
+      Contract.Requires(parameterDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IParameterTypeInformation parameterTypeInformation) {
+      Contract.Requires(parameterTypeInformation != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IPESection peSection) {
+      Contract.Requires(peSection != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IPlatformInvokeInformation platformInvokeInformation) {
+      Contract.Requires(platformInvokeInformation != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IPointerTypeReference pointerTypeReference) {
+      Contract.Requires(pointerTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IPropertyDefinition propertyDefinition) {
+      Contract.Requires(propertyDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IResourceReference resourceReference) {
+      Contract.Requires(resourceReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IRootUnitNamespace rootUnitNamespace) {
+      Contract.Requires(rootUnitNamespace != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IRootUnitNamespaceReference rootUnitNamespaceReference) {
+      Contract.Requires(rootUnitNamespaceReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IRootUnitSetNamespace rootUnitSetNamespace) {
+      Contract.Requires(rootUnitSetNamespace != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISecurityAttribute securityAttribute) {
+      Contract.Requires(securityAttribute != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedEventDefinition specializedEventDefinition) {
+      Contract.Requires(specializedEventDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedFieldDefinition specializedFieldDefinition) {
+      Contract.Requires(specializedFieldDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedFieldReference specializedFieldReference) {
+      Contract.Requires(specializedFieldReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedMethodDefinition specializedMethodDefinition) {
+      Contract.Requires(specializedMethodDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedMethodReference specializedMethodReference) {
+      Contract.Requires(specializedMethodReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+      Contract.Requires(specializedPropertyDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
+      Contract.Requires(specializedNestedTypeDefinition != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(ISpecializedNestedTypeReference specializedNestedTypeReference) {
+      Contract.Requires(specializedNestedTypeReference != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IUnitSet unitSet) {
+      Contract.Requires(unitSet != null);
+      throw new NotImplementedException();
+    }
+
+    public void Visit(IWin32Resource win32Resource) {
+      Contract.Requires(win32Resource != null);
+      throw new NotImplementedException();
+    }
+
+    #endregion
+  }
+  #endregion
+
 
 }

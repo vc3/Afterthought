@@ -190,16 +190,16 @@ namespace Microsoft.Cci.MetadataReader {
           }
         }
         NamespaceReference systemNSR = peFileToObjectModel.GetNamespaceReferenceForString(coreAssemblyRef, nameTable.System);
-        if (this.SystemEnum == null)
-          this.SystemEnum = peFileToObjectModel.typeCache.CreateCoreTypeReference(coreAssemblyRef, systemNSR, nameTable.Enum, MetadataReaderSignatureTypeCode.NotModulePrimitive);
-        if (this.SystemValueType == null)
-          this.SystemValueType = peFileToObjectModel.typeCache.CreateCoreTypeReference(coreAssemblyRef, systemNSR, nameTable.ValueType, MetadataReaderSignatureTypeCode.NotModulePrimitive);
-        if (this.SystemMulticastDelegate == null)
-          this.SystemMulticastDelegate = peFileToObjectModel.typeCache.CreateCoreTypeReference(coreAssemblyRef, systemNSR, nameTable.MulticastDelegate, MetadataReaderSignatureTypeCode.NotModulePrimitive);
-        if (this.SystemType == null)
-          this.SystemType = peFileToObjectModel.typeCache.CreateCoreTypeReference(coreAssemblyRef, systemNSR, nameTable.Type, MetadataReaderSignatureTypeCode.NotModulePrimitive);
-        if (this.SystemParamArrayAttribute == null)
-          this.SystemParamArrayAttribute = peFileToObjectModel.typeCache.CreateCoreTypeReference(coreAssemblyRef, systemNSR, peReader.ParamArrayAttribute, MetadataReaderSignatureTypeCode.NotModulePrimitive);
+        if (this.SystemEnum == null || (peFileToObjectModel.SystemEnumAssembly != null && coreAssemblyRef != peFileToObjectModel.SystemEnumAssembly))
+          this.SystemEnum = peFileToObjectModel.typeCache.CreateCoreTypeReference(peFileToObjectModel.SystemEnumAssembly??coreAssemblyRef, systemNSR, nameTable.Enum, MetadataReaderSignatureTypeCode.NotModulePrimitive);
+        if (this.SystemValueType == null || (peFileToObjectModel.SystemValueTypeAssembly != null && coreAssemblyRef != peFileToObjectModel.SystemValueTypeAssembly))
+          this.SystemValueType = peFileToObjectModel.typeCache.CreateCoreTypeReference(peFileToObjectModel.SystemValueTypeAssembly??coreAssemblyRef, systemNSR, nameTable.ValueType, MetadataReaderSignatureTypeCode.NotModulePrimitive);
+        if (this.SystemMulticastDelegate == null || (peFileToObjectModel.SystemMulticastDelegateAssembly != null && coreAssemblyRef != peFileToObjectModel.SystemMulticastDelegateAssembly))
+          this.SystemMulticastDelegate = peFileToObjectModel.typeCache.CreateCoreTypeReference(peFileToObjectModel.SystemMulticastDelegateAssembly??coreAssemblyRef, systemNSR, nameTable.MulticastDelegate, MetadataReaderSignatureTypeCode.NotModulePrimitive);
+        if (this.SystemType == null || (peFileToObjectModel.SystemTypeAssembly != null && coreAssemblyRef != peFileToObjectModel.SystemTypeAssembly))
+          this.SystemType = peFileToObjectModel.typeCache.CreateCoreTypeReference(peFileToObjectModel.SystemTypeAssembly??coreAssemblyRef, systemNSR, nameTable.Type, MetadataReaderSignatureTypeCode.NotModulePrimitive);
+        if (this.SystemParamArrayAttribute == null || (peFileToObjectModel.SystemParamArrayAttributeAssembly != null && coreAssemblyRef != peFileToObjectModel.SystemParamArrayAttributeAssembly))
+          this.SystemParamArrayAttribute = peFileToObjectModel.typeCache.CreateCoreTypeReference(peFileToObjectModel.SystemParamArrayAttributeAssembly??coreAssemblyRef, systemNSR, peReader.ParamArrayAttribute, MetadataReaderSignatureTypeCode.NotModulePrimitive);
       }
     }
   }

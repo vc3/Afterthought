@@ -40,18 +40,22 @@ namespace Afterthought.Amender
 		Dictionary<Type, ITypeDefinition> resolvedTypes = new Dictionary<Type, ITypeDefinition>();
 		Dictionary<ITypeDefinition, Type> resolvedTypeDefs = new Dictionary<ITypeDefinition, Type>();
 
-		internal AssemblyAmender(IMetadataHost host, PdbReader pdbReader, IEnumerable<ITypeAmendment> typeAmendments, IEnumerable<System.Reflection.Assembly> assemblies)
+		internal AssemblyAmender(IMetadataHost host, PdbReader pdbReader, IEnumerable<ITypeAmendment> typeAmendments, IEnumerable<System.Reflection.Assembly> assemblies, bool preCacheAssemblies)
 			: base(host, true)
 		{
 			// Preload assemblies
-			foreach (var assembly in assemblies)
+			this.PreCacheAssemblies = preCacheAssemblies;
+			if (PreCacheAssemblies)
 			{
-				var assemblyDef = ResolveAssembly(assembly);
-				foreach (var reference in assemblyDef.AssemblyReferences.Select(a => a.ResolvedAssembly).Where(a => a.Name.Value != "" && !a.Name.Value.StartsWith("mscorlib")))
+				foreach (var assembly in assemblies)
 				{
-					var assemblyRef = System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value);
-					if (assemblyRef != null)
-						CacheAssembly(assemblyRef, reference);
+					var assemblyDef = ResolveAssembly(assembly);
+					foreach (var reference in assemblyDef.AssemblyReferences.Select(a => a.ResolvedAssembly).Where(a => a.Name.Value != "" && !a.Name.Value.StartsWith("mscorlib")))
+					{
+						var assemblyRef = System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value);
+						if (assemblyRef != null)
+							CacheAssembly(assemblyRef, reference);
+					}
 				}
 			}
 
@@ -60,9 +64,13 @@ namespace Afterthought.Amender
 			iAmendmentAttribute = ResolveType(typeof(IAmendmentAttribute));
 		}
 
-		private bool IsAmending { get; set; }
+		bool IsAmending { get; set; }
+
+		bool PreCacheAssemblies { get; set; }
 
 		internal string TargetRuntimeVersion { get; set; }
+
+		ITypeAmendment CurrentAmendment { get; set; }
 
 		Dictionary<IFieldDefinition, IFieldAmendment> Fields { get; set; }
 
@@ -155,6 +163,7 @@ namespace Afterthought.Amender
 			}
 
 			IsAmending = true;
+			CurrentAmendment = typeAmendment;
 
 			// Attributes
 			type = AddAttributes(type, typeAmendment);
@@ -2036,7 +2045,7 @@ namespace Afterthought.Amender
 				var genericTypeDef = ResolveType(genericType);
 
 				// Return the generic type
-				typeDef = GenericTypeInstance.GetGenericTypeInstance((INamedTypeReference)genericTypeDef, type.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeReference>(), host.InternFactory);
+				typeDef = GenericTypeInstance.GetGenericTypeInstance((INamedTypeDefinition)genericTypeDef, type.GetGenericArguments().Select(t => ResolveType(t)).Cast<ITypeReference>(), host.InternFactory);
 			}
 
 			// Generic parameter
@@ -2083,7 +2092,8 @@ namespace Afterthought.Amender
 				assemblyDef = (IAssembly)host.LoadUnitFrom(assembly.Location);
 
 			// Cache the assembly
-			CacheAssembly(assembly, assemblyDef);
+			if (PreCacheAssemblies)
+				CacheAssembly(assembly, assemblyDef);
 
 			return assemblyDef;
 		}
@@ -2309,7 +2319,7 @@ namespace Afterthought.Amender
 			var genericMethod =
 				(
 					declaringType.IsGeneric ?
-					GenericTypeInstance.GetGenericTypeInstance((INamedTypeReference)declaringType, new ITypeReference[] { propertyDef.ContainingType }, host.InternFactory) :
+					GenericTypeInstance.GetGenericTypeInstance((INamedTypeDefinition)declaringType, new ITypeReference[] { propertyDef.ContainingType }, host.InternFactory) :
 					declaringType
 				)
 				.Methods.Where(m => m.Name.Value == method.Name && m.ParameterCount == method.GetParameters().Length).FirstOrDefault();
@@ -2336,7 +2346,7 @@ namespace Afterthought.Amender
 
 			// Create a concrete type instance
 			if (declaringType.IsGeneric)
-				declaringType = GenericTypeInstance.GetGenericTypeInstance((INamedTypeReference)declaringType, new ITypeReference[] { instanceType }, host.InternFactory);
+				declaringType = GenericTypeInstance.GetGenericTypeInstance((INamedTypeDefinition)declaringType, new ITypeReference[] { instanceType }, host.InternFactory);
 
 			// Then get the Amendment method
 			var targetMethodDef = declaringType.Methods.Where(m => m.Name.Value == method.Name && m.ParameterCount == method.GetParameters().Length).FirstOrDefault();
@@ -2351,15 +2361,16 @@ namespace Afterthought.Amender
 				delegateType = delegateType | MethodDelegateType.HasResultParameter;
 
 			// Determine if the target method uses the object array or explicit parameter syntax
-			if (parameters[1].ParameterType == typeof(string) && // Method Name
-				parameters[delegateType.HasFlag(MethodDelegateType.WithContext) && !delegateType.HasFlag(MethodDelegateType.Before) ? 3 : 2].ParameterType == typeof(object[]) && // Method Parameters
-				(!delegateType.HasFlag(MethodDelegateType.HasResultParameter) || (parameters[parameters.Length - 1].ParameterType == typeof(object) && method.ReturnType == typeof(object)))) // Method Result
+			if (parameters.Exists<string>(1) && // Method Name
+				parameters.Exists<object[]>(delegateType.HasFlag(MethodDelegateType.WithContext) && !delegateType.HasFlag(MethodDelegateType.Before) ? 3 : 2) && // Method Parameters
+				(!delegateType.HasFlag(MethodDelegateType.HasResultParameter) || (parameters.Exists<object>(parameters.Length - 1) && method.ReturnType == typeof(object)))) // Method Result
 				delegateType |= MethodDelegateType.ArraySyntax;
 			else
 				delegateType |= MethodDelegateType.ExplicitSyntax;
 
 			// Ensure the instance parameter is compatible
-			if (!TypeHelper.TypesAreAssignmentCompatible(methodDef.ContainingType.ResolvedType, targetMethodDef.Parameters.First().Type.ResolvedType))
+			var instanceParameterType = targetMethodDef.Parameters.First().Type.ResolvedType;
+			if (!IsAssignable(targetMethodDef.Parameters.First().Type.ResolvedType, methodDef.ContainingType.ResolvedType))
 				throw new ArgumentException("The specified method delegate does not have the correct instance parameter type.");
 
 			// Determine if there are name, context, and/or exception parameters
@@ -2401,6 +2412,32 @@ namespace Afterthought.Amender
 			return targetMethodDef;
 		}
 
+		/// <summary>
+		/// Determines whether the candidate type can be assigned to a variable of the target type,
+		/// taking into account that the candidate, or its base types, may be amended to implement
+		/// interfaces that will be assignable to the target type.
+		/// </summary>
+		/// <param name="target"></param>
+		/// <param name="candidate"></param>
+		/// <returns></returns>
+		bool IsAssignable(ITypeDefinition target, ITypeDefinition candidate)
+		{
+			while (candidate != null)
+			{
+				if (TypeHelper.TypesAreAssignmentCompatible(target, candidate))
+					return true;
+
+				// See if the candidate type is being amended
+				ITypeAmendment amendment;
+				if (typeAmendments.TryGetValue(GetTypeName(candidate), out amendment))
+				{
+					if (amendment.Interfaces.Any(i => TypeHelper.TypesAreAssignmentCompatible(target, ResolveType(i))))
+						return true;
+				}
+				candidate = candidate.BaseClasses.FirstOrDefault().ResolvedType;
+			}
+			return false;
+		}
 
 		/// <summary>
 		/// Gets the delegate to call to amend an event.
@@ -2416,7 +2453,7 @@ namespace Afterthought.Amender
 			var genericMethod =
 				(
 					declaringType.IsGeneric ?
-					GenericTypeInstance.GetGenericTypeInstance((INamedTypeReference)declaringType, new ITypeReference[] { eventDef.ContainingType }, host.InternFactory) :
+					GenericTypeInstance.GetGenericTypeInstance((INamedTypeDefinition)declaringType, new ITypeReference[] { eventDef.ContainingType }, host.InternFactory) :
 					declaringType
 				)
 				.Methods.Where(m => m.Name.Value == method.Name && m.ParameterCount == method.GetParameters().Length).FirstOrDefault();
@@ -2482,6 +2519,20 @@ namespace Afterthought.Amender
 				}
 			})
 			.Any();
+		}
+	}
+
+	internal static class ParameterHelper
+	{
+		/// <summary>
+		/// Extension method that checks to see if the specified parameter exists in an array of parameters.
+		/// </summary>
+		/// <param name="parameters"></param>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		internal static bool Exists<T>(this System.Reflection.ParameterInfo[] parameters, int index)
+		{
+			return parameters != null && index < parameters.Length && parameters[index].ParameterType == typeof(T);
 		}
 	}
 }

@@ -21,10 +21,13 @@ namespace Microsoft.Cci {
     string fileName;
     ISourceLocationProvider sourceLocationProvider;
     uint currentMethodToken;
+    ISymUnmanagedWriter5/*?*/ symWriter5;
+    bool emitTokenSourceInfo;
 
-    public PdbWriter(string fileName, ISourceLocationProvider sourceLocationProvider) {
+    public PdbWriter(string fileName, ISourceLocationProvider sourceLocationProvider, bool emitTokenSourceInfo = false) {
       this.fileName = fileName;
       this.sourceLocationProvider = sourceLocationProvider;
+      this.emitTokenSourceInfo = emitTokenSourceInfo;
     }
 
     public void Dispose() {
@@ -50,6 +53,29 @@ namespace Microsoft.Cci {
 
     public void CloseScope(uint offset) {
       this.SymWriter.CloseScope(offset);
+    }
+
+    public void CloseTokenSourceLocationsScope() {
+      if (this.symWriter5 != null)
+        this.symWriter5.CloseMapTokensToSourceSpans();
+      this.symWriter5 = null;
+    }
+
+    public void DefineTokenSourceLocation(uint token, ILocation location) {
+      if (this.symWriter5 == null) return;
+      IPrimarySourceLocation ploc = null;
+      foreach (IPrimarySourceLocation psloc in this.sourceLocationProvider.GetPrimarySourceLocationsFor(location)) {
+        ploc = psloc;
+        break;
+      }
+      if (ploc == null) return;
+      ISymUnmanagedDocumentWriter document = this.GetDocumentWriterFor(ploc.PrimarySourceDocument);
+      this.symWriter5.MapTokenToSourceSpan(token, document, (uint)ploc.StartLine, (uint)ploc.StartColumn, (uint)ploc.EndLine, (uint)ploc.EndColumn);
+    }
+
+    public void OpenTokenSourceLocationsScope() {
+      if (this.symWriter5 != null)
+        this.symWriter5.OpenMapTokensToSourceSpans();
     }
 
     public unsafe void DefineCustomMetadata(string name, byte[] metadata) {
@@ -172,13 +198,13 @@ namespace Microsoft.Cci {
     }
 
     public void SetMetadataEmitter(object metadataEmitter) {
-      ISymUnmanagedWriter2 symWriter = null;
       Type t = Type.GetTypeFromProgID("CorSymWriter_SxS", false);
       if (t != null) {
-        symWriter = (ISymUnmanagedWriter2)Activator.CreateInstance(t);
-        symWriter.Initialize(metadataEmitter, this.fileName, null, true);
+        this.symWriter = (ISymUnmanagedWriter2)Activator.CreateInstance(t);
+        this.symWriter.Initialize(metadataEmitter, this.fileName, null, true);
+        if (this.emitTokenSourceInfo)
+          this.symWriter5 = this.symWriter as ISymUnmanagedWriter5;
       }
-      this.symWriter = symWriter;
     }
 
     ISymUnmanagedWriter2 SymWriter {
@@ -188,7 +214,6 @@ namespace Microsoft.Cci {
       }
     }
     ISymUnmanagedWriter2/*?*/ symWriter;
-
 
     public void UsingNamespace(string fullName) {
       this.SymWriter.UsingNamespace(fullName);

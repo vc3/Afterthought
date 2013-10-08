@@ -73,10 +73,12 @@
     <Compile Include="DelegateType.cs" />
     <Compile Include="ILAmender.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\ControlFlowInferencer.cs" />
+    <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\ControlFlowQueries.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\DataFlowInferencer.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\Graph.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\TypeInferencer.cs" />
     <Compile Include="Microsoft.CCI\ILGenerator\ILGenerator.cs" />
+    <Compile Include="Microsoft.CCI\ILGenerator\ILRewriter.cs" />
     <Compile Include="Microsoft.CCI\ILGenerator\MethodBody.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\AttributeHelper.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\CommandLineOptions.cs" />
@@ -84,6 +86,7 @@
     <Compile Include="Microsoft.CCI\MetadataHelper\GlobalAssemblyCache.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\MemberHelper.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\Members.cs" />
+    <Compile Include="Microsoft.CCI\MetadataHelper\MonoAssemblyCache.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\PlatformTypes.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\TypeHelper.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\Types.cs" />
@@ -133,6 +136,7 @@
     <Compile Include="Microsoft.CCI\PdbReader\PdbScope.cs" />
     <Compile Include="Microsoft.CCI\PdbReader\PdbSlot.cs" />
     <Compile Include="Microsoft.CCI\PdbReader\PdbSource.cs" />
+    <Compile Include="Microsoft.CCI\PdbReader\PdbTokenLine.cs" />
     <Compile Include="Microsoft.CCI\PdbReader\SourceLocationProvider.cs" />
     <Compile Include="Microsoft.CCI\PdbWriter\GlobalSuppressions.cs" />
     <Compile Include="Microsoft.CCI\PdbWriter\ISymbolWriter.cs" />

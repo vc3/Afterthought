@@ -13,13 +13,13 @@ using System.Diagnostics.Contracts;
 using Microsoft.Cci.Immutable;
 using Microsoft.Cci.UtilityDataStructures;
 
-namespace Microsoft.Cci.ControlAndDataFlowGraph {
+namespace Microsoft.Cci.Analysis {
   /// <summary>
   /// 
   /// </summary>
   internal class TypeInferencer<BasicBlock, Instruction>
-    where BasicBlock : Microsoft.Cci.BasicBlock<Instruction>, new()
-    where Instruction : Microsoft.Cci.Instruction, new() {
+    where BasicBlock : Microsoft.Cci.Analysis.BasicBlock<Instruction>, new()
+    where Instruction : Microsoft.Cci.Analysis.Instruction, new() {
 
     private TypeInferencer(IMetadataHost host, ControlAndDataFlowGraph<BasicBlock, Instruction> cfg, Stack<Instruction> stack, Queue<BasicBlock> blocksToVisit, SetOfObjects blocksAlreadyVisited) {
       Contract.Requires(host != null);
@@ -59,6 +59,10 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
     internal static void FillInTypes(IMetadataHost host, ControlAndDataFlowGraph<BasicBlock, Instruction> cfg) {
       Contract.Requires(host != null);
       Contract.Requires(cfg != null);
+
+      //If this is a dummy body, do nothing.
+      if (cfg.AllBlocks.Count == 1 && cfg.AllBlocks[0] != null && cfg.AllBlocks[0].Instructions.Count <= 1) return;
+
       var stack = new Stack<Instruction>(cfg.MethodBody.MaxStack, new List<Instruction>(0));
       var numberOfBlocks = cfg.BlockFor.Count;
       var blocksToVisit = new Queue<BasicBlock>((int)numberOfBlocks);
@@ -67,6 +71,13 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
 
       foreach (var root in cfg.RootBlocks) {
         blocksToVisit.Enqueue(root);
+        while (blocksToVisit.Count != 0)
+          inferencer.DequeueBlockAndFillInItsTypes();
+      }
+      //At this point, all reachable code blocks have had their types inferred. Now look for unreachable blocks.
+      foreach (var block in cfg.AllBlocks) {
+        if (blocksAlreadyVisited.Contains(block)) continue;
+        blocksToVisit.Enqueue(block);
         while (blocksToVisit.Count != 0)
           inferencer.DequeueBlockAndFillInItsTypes();
       }
@@ -80,7 +91,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       //The block either has no operand stack setup instructions, or we presume that a predecessor block has already assigned types to them.
       foreach (var stackSetupInstruction in block.OperandStack) {
         Contract.Assume(stackSetupInstruction != null); //block.OperandStack only has non null elements, but we can't put that in a contract that satisfies the checker
-        stack.Push(stackSetupInstruction);
+        this.stack.Push(stackSetupInstruction);
       }
 
       foreach (var instruction in block.Instructions) {
@@ -104,7 +115,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       for (int i = 0, n = this.stack.Top; i <= n; i++) {
         var producer = this.stack.Peek(i);
         var consumer = successor.OperandStack[i];
-        if (consumer.Type == Dummy.Type)
+        if (consumer.Type is Dummy)
           consumer.Type = producer.Type;
         else
           consumer.Type = TypeHelper.MergedType(consumer.Type, producer.Type);
@@ -116,20 +127,31 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       switch (instruction.Operation.OperationCode) {
         case OperationCode.Add:
         case OperationCode.Add_Ovf:
-        case OperationCode.And:
         case OperationCode.Div:
         case OperationCode.Mul:
         case OperationCode.Mul_Ovf:
-        case OperationCode.Or:
         case OperationCode.Rem:
         case OperationCode.Sub:
         case OperationCode.Sub_Ovf:
-        case OperationCode.Xor:
           this.stack.Pop();
           this.stack.Pop();
           instruction.Type = this.GetBinaryNumericOperationType(instruction);
           this.stack.Push(instruction);
           break;
+        case OperationCode.And:
+        case OperationCode.Or:
+        case OperationCode.Xor:
+          Contract.Assume(instruction.Operand1 != null);
+          Contract.Assume(instruction.Operand2 is Instruction);
+          if (instruction.Operand1.Type.TypeCode == PrimitiveTypeCode.Boolean && ((Instruction)instruction.Operand2).Type.TypeCode == PrimitiveTypeCode.Boolean) {
+            this.stack.Pop();
+            this.stack.Pop();
+            instruction.Type = this.platformType.SystemBoolean;
+            this.stack.Push(instruction);
+            break;
+          }
+          goto case OperationCode.Add;
+
         case OperationCode.Add_Ovf_Un:
         case OperationCode.Div_Un:
         case OperationCode.Mul_Ovf_Un:
@@ -249,17 +271,29 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
           instruction.Type = this.platformType.SystemVoid;
           break;
         case OperationCode.Call:
-        case OperationCode.Calli:
         case OperationCode.Callvirt:
           var signature = instruction.Operation.Value as ISignature;
           Contract.Assume(signature != null); //This is an informally specified property of the Metadata model.
-          if (instruction.Operation.OperationCode != OperationCode.Call || !signature.IsStatic)
-            this.stack.Pop();
           var numArguments = IteratorHelper.EnumerableCount(signature.Parameters);
           for (var i = numArguments; i > 0; i--)
             this.stack.Pop();
+          if (!signature.IsStatic)
+            this.stack.Pop();
           instruction.Type = signature.Type;
           if (signature.Type.TypeCode != PrimitiveTypeCode.Void)
+            this.stack.Push(instruction);
+          break;
+        case OperationCode.Calli:
+          var funcPointer = instruction.Operation.Value as IFunctionPointerTypeReference;
+          Contract.Assume(funcPointer != null); //This is an informally specified property of the Metadata model.
+          this.stack.Pop(); //The function pointer
+          numArguments = IteratorHelper.EnumerableCount(funcPointer.Parameters);
+          for (var i = numArguments; i > 0; i--)
+            this.stack.Pop();
+          if (!funcPointer.IsStatic)
+            this.stack.Pop();
+          instruction.Type = funcPointer.Type;
+          if (funcPointer.Type.TypeCode != PrimitiveTypeCode.Void)
             this.stack.Push(instruction);
           break;
         case OperationCode.Castclass:
@@ -430,10 +464,13 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Ldarga:
         case OperationCode.Ldarga_S:
           parameter = instruction.Operation.Value as IParameterDefinition;
-          Contract.Assume(parameter != null); //This is an informally specified property of the Metadata model.
-          instruction.Type = ManagedPointerType.GetManagedPointerType(parameter.Type, this.internFactory);
-          if (parameter.IsByReference)
-            instruction.Type = ManagedPointerType.GetManagedPointerType(instruction.Type, this.internFactory);
+          if (parameter == null) { //this arg
+            instruction.Type = ManagedPointerType.GetManagedPointerType(this.cfg.MethodBody.MethodDefinition.ContainingType, this.internFactory);
+          } else {
+            instruction.Type = ManagedPointerType.GetManagedPointerType(parameter.Type, this.internFactory);
+            if (parameter.IsByReference)
+              instruction.Type = ManagedPointerType.GetManagedPointerType(instruction.Type, this.internFactory);
+          }
           this.stack.Push(instruction);
           break;
         case OperationCode.Ldc_I4:
@@ -471,7 +508,6 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
           this.stack.Push(instruction);
           break;
         case OperationCode.Ldobj:
-        case OperationCode.Refanyval:
         case OperationCode.Unbox_Any:
           this.stack.Pop();
           Contract.Assume(instruction.Operation.Value is ITypeReference); //This is an informally specified property of the Metadata model.
@@ -512,8 +548,11 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
           this.stack.Pop();
           this.stack.Pop();
           Contract.Assume(instruction.Operand1 != null); //Assumed because of the informal specification of the DataFlowInferencer
-          Contract.Assume(instruction.Operand1.Type is IArrayTypeReference); //Assumed because of the informal specification of the DataFlowInferencer
-          instruction.Type = ((IArrayTypeReference)instruction.Operand1.Type).ElementType;
+          arrayType = instruction.Operand1.Type as IArrayTypeReference;
+          if (arrayType != null)
+            instruction.Type = arrayType.ElementType;
+          else //Should only get here if the IL is bad.
+            instruction.Type = this.platformType.SystemObject;
           this.stack.Push(instruction);
           break;
         case OperationCode.Ldelem_R4:
@@ -641,6 +680,10 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
           }
           this.stack.Push(instruction);
           break;
+        case OperationCode.Leave:
+        case OperationCode.Leave_S:
+          this.stack.Clear();
+          break;
         case OperationCode.Mkrefany:
           this.stack.Pop();
           instruction.Type = this.platformType.SystemTypedReference;
@@ -649,7 +692,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Newarr:
           this.stack.Pop();
           Contract.Assume(instruction.Operation.Value is ITypeReference); //This is an informally specified property of the Metadata model.
-          instruction.Type = Vector.GetVector((ITypeReference)instruction.Operation.Value, this.internFactory);
+          instruction.Type = (ITypeReference)instruction.Operation.Value;
           this.stack.Push(instruction);
           break;
         case OperationCode.Newobj:
@@ -664,6 +707,17 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
           this.stack.Pop();
           instruction.Type = this.platformType.SystemRuntimeTypeHandle;
           this.stack.Push(instruction);
+          break;
+        case OperationCode.Refanyval:
+          this.stack.Pop();
+          Contract.Assume(instruction.Operation.Value is ITypeReference); //This is an informally specified property of the Metadata model.
+          instruction.Type = ManagedPointerType.GetManagedPointerType((ITypeReference)instruction.Operation.Value, this.internFactory);
+          this.stack.Push(instruction);
+          break;
+        case OperationCode.Ret:
+          if (this.cfg.MethodBody.MethodDefinition.Type.TypeCode != PrimitiveTypeCode.Void)
+            instruction.Operand1 = this.stack.Pop();
+          instruction.Type = this.platformType.SystemVoid;
           break;
         case OperationCode.Shl:
         case OperationCode.Shr:
@@ -697,6 +751,8 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
 
     private ITypeReference GetBinaryNumericOperationType(Instruction instruction) {
       Contract.Requires(instruction != null);
+      Contract.Ensures(Contract.Result<ITypeReference>() != null);
+
       var leftOperand = instruction.Operand1;
       var rightOperand = (Instruction)instruction.Operand2;
       Contract.Assume(leftOperand != null); //Assumed because of the informal specification of the DataFlowInferencer
@@ -921,6 +977,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
             case PrimitiveTypeCode.Int16:
             case PrimitiveTypeCode.Int32:
             case PrimitiveTypeCode.Int64:
+            case PrimitiveTypeCode.Char:
             case PrimitiveTypeCode.UInt8:
             case PrimitiveTypeCode.UInt16:
             case PrimitiveTypeCode.UInt32:

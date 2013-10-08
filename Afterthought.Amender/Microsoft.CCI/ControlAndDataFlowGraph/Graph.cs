@@ -14,16 +14,15 @@ using System.Diagnostics.Contracts;
 using System.Text;
 using Microsoft.Cci.UtilityDataStructures;
 
-namespace Microsoft.Cci {
-  using Microsoft.Cci.ControlAndDataFlowGraph;
+namespace Microsoft.Cci.Analysis {
 
   /// <summary>
   /// A set of basic blocks, each of which has a list of successor blocks and some other information.
   /// Each block consists of a list of instructions, each of which can point to previous instructions that compute the operands it consumes.
   /// </summary>
-  public class ControlAndDataFlowGraph<BasicBlock, Instruction> 
-    where BasicBlock : Microsoft.Cci.BasicBlock<Instruction>, new ()
-    where Instruction : Microsoft.Cci.Instruction, new () {
+  public class ControlAndDataFlowGraph<BasicBlock, Instruction>
+    where BasicBlock : Microsoft.Cci.Analysis.BasicBlock<Instruction>, new()
+    where Instruction : Microsoft.Cci.Analysis.Instruction, new() {
 
     internal ControlAndDataFlowGraph(IMethodBody body, List<BasicBlock> successorEdges, List<BasicBlock> allBlocks, List<BasicBlock> rootBlocks, Hashtable<BasicBlock> blockFor) {
       Contract.Requires(body != null);
@@ -54,11 +53,11 @@ namespace Microsoft.Cci {
     public IMethodBody MethodBody {
       get {
         Contract.Ensures(Contract.Result<IMethodBody>() != null);
-        return this.methodBody; 
+        return this.methodBody;
       }
       set {
         Contract.Requires(value != null);
-        this.methodBody = value; 
+        this.methodBody = value;
       }
     }
     private IMethodBody methodBody;
@@ -69,11 +68,11 @@ namespace Microsoft.Cci {
     public List<BasicBlock> RootBlocks {
       get {
         Contract.Ensures(Contract.Result<List<BasicBlock>>() != null);
-        return this.rootBlocks; 
+        return this.rootBlocks;
       }
       set {
         Contract.Requires(value != null);
-        this.rootBlocks = value; 
+        this.rootBlocks = value;
       }
     }
     List<BasicBlock> rootBlocks;
@@ -100,11 +99,11 @@ namespace Microsoft.Cci {
     public Hashtable<BasicBlock> BlockFor {
       get {
         Contract.Ensures(Contract.Result<Hashtable<BasicBlock>>() != null);
-        return this.blockFor; 
+        return this.blockFor;
       }
       set {
         Contract.Requires(value != null);
-        this.blockFor = value; 
+        this.blockFor = value;
       }
     }
     private Hashtable<BasicBlock> blockFor;
@@ -144,7 +143,7 @@ namespace Microsoft.Cci {
       Contract.Requires(host != null);
       Contract.Requires(methodBody != null);
       Contract.Ensures(Contract.Result<ControlAndDataFlowGraph<BasicBlock, Instruction>>() != null);
-      
+
       var cdfg = ControlFlowInferencer<BasicBlock, Instruction>.SetupControlFlow(host, methodBody, localScopeProvider);
       DataFlowInferencer<BasicBlock, Instruction>.SetupDataFlow(host, methodBody, cdfg);
       TypeInferencer<BasicBlock, Instruction>.FillInTypes(host, cdfg);
@@ -157,10 +156,10 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A block of instructions of which only the first instruction can be reached via explicit control flow.
   /// </summary>
-  public class BasicBlock<Instruction> {
+  public class BasicBlock<Instruction> where Instruction : Microsoft.Cci.Analysis.Instruction {
 
     /// <summary>
-    /// The first edge in the ControlAndDataFlowGraph that contains the basic block, which represents a control flow from this block to a successor block.
+    /// The first edge that leaves this block. The edges are a contiguous sublist of the the SuccessorEdges list of the ControlAndDataFlowGraph that contains this block.
     /// </summary>
     internal int firstSuccessorEdge;
 
@@ -173,12 +172,29 @@ namespace Microsoft.Cci {
     /// A list of pseudo instructions that initialize the operand stack when the block is entered. No actual code should be generated for these instructions
     /// as the actual stack will be set up by the code transferring control to this block.
     /// </summary>
-    public Sublist<Instruction> OperandStack; //TODO: should we have explicit Phi nodes?
+    public Sublist<Instruction> OperandStack;
 
     /// <summary>
     /// The instructions making up this block.
     /// </summary>
     public Sublist<Instruction> Instructions;
+
+    /// <summary>
+    /// The IL offset of the first instruction in this basic block. If the block is empty, it is the same as the Offset of the following block. If there is no following block, 
+    /// it is the offset where the next instruction would have appeared.
+    /// </summary>
+    public uint Offset {
+      get { if (this.Instructions.Count == 0) return 0; else return this.Instructions[0].Operation.Offset; }
+    }
+
+    /// <summary>
+    /// Returns a string describing the basic block.
+    /// </summary>
+    /// <returns></returns>
+    public override string ToString() {
+      if (this.Instructions.Count == 0) return "Empty BasicBlock";
+      return "BasicBlock at "+this.Offset.ToString("x4");
+    }
 
   }
 
@@ -209,11 +225,11 @@ namespace Microsoft.Cci {
     public IOperation Operation {
       get {
         Contract.Ensures(Contract.Result<IOperation>() != null);
-        return operation; 
+        return operation;
       }
       set {
         Contract.Requires(value != null);
-        operation = value; 
+        operation = value;
       }
     }
     private IOperation operation;
@@ -270,7 +286,7 @@ namespace Microsoft.Cci {
       Contract.Requires(instruction != null);
       Contract.Requires(stringBuilder != null);
 
-      if (instruction.Operation == Dummy.Operation)
+      if (instruction.Operation is Dummy)
         stringBuilder.Append("stack");
       else
         stringBuilder.Append(instruction.Operation.Offset.ToString("x4"));
@@ -282,20 +298,18 @@ namespace Microsoft.Cci {
     public ITypeReference Type {
       get {
         Contract.Ensures(Contract.Result<ITypeReference>() != null);
-        return type; 
+        return type;
       }
       set {
         Contract.Requires(value != null);
-        type = value; 
+        Contract.Assume(!(value is Dummy)); //It is a bit too onerous on the client code to prove this statically, but it does seem a very desirable check.
+        type = value;
       }
     }
     private ITypeReference type;
 
   }
 
-}
-
-namespace Microsoft.Cci.ControlAndDataFlowGraph {
   internal class Stack<Instruction> where Instruction : class {
 
     internal Stack(int maxStack, List<Instruction> operandStackSetup) {
@@ -347,7 +361,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
 
     internal Instruction Pop() {
       Contract.Ensures(Contract.Result<Instruction>() != null);
-      
+
       Contract.Assume(this.top >= 0); //This is an optimistic assumption. Clients have to match their Pop and Push calls, but enforcing this convention via contracts is too verbose.
       return this.elements[this.top--];
     }

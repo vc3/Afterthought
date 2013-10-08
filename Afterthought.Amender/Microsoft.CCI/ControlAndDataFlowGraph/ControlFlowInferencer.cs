@@ -12,11 +12,11 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using Microsoft.Cci.UtilityDataStructures;
 
-namespace Microsoft.Cci.ControlAndDataFlowGraph {
+namespace Microsoft.Cci.Analysis {
 
   internal class ControlFlowInferencer<BasicBlock, Instruction>
-    where BasicBlock : Microsoft.Cci.BasicBlock<Instruction>, new()
-    where Instruction : Microsoft.Cci.Instruction, new() {
+    where BasicBlock : Microsoft.Cci.Analysis.BasicBlock<Instruction>, new()
+    where Instruction : Microsoft.Cci.Analysis.Instruction, new() {
 
     private ControlFlowInferencer(IMetadataHost host, IMethodBody methodBody, ILocalScopeProvider/*?*/ localScopeProvider = null) {
       Contract.Requires(host != null);
@@ -33,9 +33,10 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       Hashtable<BasicBlock> blockFor = new Hashtable<BasicBlock>((uint)size);
       List<BasicBlock> allBlocks = new List<BasicBlock>(size);
       List<BasicBlock> rootBlocks = new List<BasicBlock>(1+(int)IteratorHelper.EnumerableCount(methodBody.OperationExceptionInformation));
-      this.edges = new List<BasicBlock>(size);
-      this.cdfg = new ControlAndDataFlowGraph<BasicBlock, Instruction>(methodBody, this.edges, allBlocks, rootBlocks, blockFor);
+      this.successorEdges = new List<BasicBlock>(size);
+      this.cdfg = new ControlAndDataFlowGraph<BasicBlock, Instruction>(methodBody, this.successorEdges, allBlocks, rootBlocks, blockFor);
       this.instructions = new List<Instruction>(size);
+      this.blocksThatTarget = new MultiHashtable<BasicBlock>((uint)size);
     }
 
     IPlatformType platformType;
@@ -43,8 +44,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
     IMethodBody methodBody;
     ILocalScopeProvider/*?*/ localScopeProvider;
     ControlAndDataFlowGraph<BasicBlock, Instruction> cdfg;
-    List<BasicBlock> edges;
+    List<BasicBlock> successorEdges;
     List<Instruction> instructions;
+    MultiHashtable<BasicBlock> blocksThatTarget;
 
     [ContractInvariantMethod]
     private void ObjectInvariant() {
@@ -52,8 +54,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       Contract.Invariant(this.internFactory != null);
       Contract.Invariant(this.methodBody != null);
       Contract.Invariant(this.cdfg != null);
-      Contract.Invariant(this.edges != null);
+      Contract.Invariant(this.successorEdges != null);
       Contract.Invariant(this.instructions != null);
+      Contract.Invariant(this.blocksThatTarget != null);
     }
 
     /// <summary>
@@ -77,9 +80,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       this.CreateBlocksForLocalScopes();
       this.CreateBlocksForBranchTargetsAndFallthroughs();
       this.CreateBlocksForExceptionHandlers();
-      this.CreateEdges(firstBlock);
+      this.CreateSuccessorEdges(firstBlock);
 
-      this.edges.TrimExcess();
+      this.successorEdges.TrimExcess();
       this.instructions.TrimExcess();
       this.cdfg.AllBlocks.TrimExcess();
       this.cdfg.RootBlocks.TrimExcess();
@@ -135,6 +138,11 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
             this.CreateBlock((uint)ilOperation.Value);
             lastInstructionWasBranch = true;
             break;
+          case OperationCode.Ret:
+          case OperationCode.Throw:
+            //The code following these instructions will be dead unless its a branch target, but we may as well end the basic block with the transfer.
+            lastInstructionWasBranch = true;
+            break;
           case OperationCode.Switch: {
               Contract.Assume(ilOperation.Value is uint[]); //This is an informally specified property of the Metadata model.
               uint[] branches = (uint[])ilOperation.Value;
@@ -171,7 +179,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       return result;
     }
 
-    private void CreateEdges(BasicBlock currentBlock) {
+    private void CreateSuccessorEdges(BasicBlock currentBlock) {
       Contract.Requires(currentBlock != null);
 
       this.cdfg.AllBlocks.Add(currentBlock);
@@ -181,43 +189,46 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       foreach (var ilOperation in this.methodBody.Operations) {
         Contract.Assume(ilOperation != null); //This is formally specified in the Metadata model, but the checker does not yet understand it well enough to prove this.
         Contract.Assume(startingInstruction <= instructions.Count); //due to the limitations of the contract language and checker
-        Contract.Assume(startingEdge <= edges.Count); //due to the limitations of the contract language and checker
+        Contract.Assume(startingEdge <= successorEdges.Count); //due to the limitations of the contract language and checker
         var newBlock = this.cdfg.BlockFor.Find(ilOperation.Offset);
         if (newBlock != null && currentBlock != newBlock) {
           this.cdfg.AllBlocks.Add(newBlock);
           currentBlock.Instructions = new Sublist<Instruction>(instructions, startingInstruction, instructions.Count-startingInstruction);
           if (!lastInstructionWasUnconditionalTransfer)
-            AddToSuccessorListIfNotAlreadyInIt(edges, startingEdge, newBlock);
+            this.AddToSuccessorListIfNotAlreadyInIt(successorEdges, startingEdge, newBlock, currentBlock);
           currentBlock.firstSuccessorEdge = startingEdge;
-          currentBlock.successorCount = edges.Count-startingEdge;
-          startingEdge = edges.Count;
+          currentBlock.successorCount = successorEdges.Count-startingEdge;
+          startingEdge = successorEdges.Count;
           startingInstruction = instructions.Count;
           currentBlock = newBlock;
         }
-        instructions.Add(this.GetInstruction(ilOperation, edges, out lastInstructionWasUnconditionalTransfer));
+        instructions.Add(this.GetInstruction(ilOperation, currentBlock, successorEdges, out lastInstructionWasUnconditionalTransfer));
       }
       if (instructions.Count > startingInstruction)
         currentBlock.Instructions = new Sublist<Instruction>(instructions, startingInstruction, instructions.Count-startingInstruction);
-      if (edges.Count > startingEdge) {
+      if (successorEdges.Count > startingEdge) {
         currentBlock.firstSuccessorEdge = startingEdge;
-        currentBlock.successorCount = edges.Count-startingEdge;
+        currentBlock.successorCount = successorEdges.Count-startingEdge;
       }
     }
 
-    private static void AddToSuccessorListIfNotAlreadyInIt(List<BasicBlock> edges, int startingEdge, BasicBlock target) {
+    private void AddToSuccessorListIfNotAlreadyInIt(List<BasicBlock> edges, int startingEdge, BasicBlock target, BasicBlock current) {
       Contract.Requires(edges != null);
       Contract.Requires(startingEdge >= 0);
       Contract.Requires(target != null);
+      Contract.Requires(current != null);
       Contract.Ensures(Contract.OldValue(edges.Count) <= edges.Count);
 
       for (int i = startingEdge, n = edges.Count; i < n; i++) {
         if (edges[i] == target) return;
       }
       edges.Add(target);
+      this.blocksThatTarget.Add(target.Offset, current);
     }
 
-    private Instruction GetInstruction(IOperation ilOperation, List<BasicBlock> edges, out bool isUnconditionalTransfer) {
+    private Instruction GetInstruction(IOperation ilOperation, BasicBlock currentBlock, List<BasicBlock> edges, out bool isUnconditionalTransfer) {
       Contract.Requires(ilOperation != null);
+      Contract.Requires(currentBlock != null);
       Contract.Requires(edges != null);
 
       isUnconditionalTransfer = false;
@@ -244,7 +255,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Bne_Un:
         case OperationCode.Bne_Un_S:
           Contract.Assume(ilOperation.Value is uint); //This is an informally specified property of the Metadata model.
-          edges.Add(this.cdfg.BlockFor[(uint)ilOperation.Value]);
+          var targetOffset = (uint)ilOperation.Value;
+          this.blocksThatTarget.Add(targetOffset, currentBlock);
+          edges.Add(this.cdfg.BlockFor[targetOffset]);
           break;
 
         case OperationCode.Br:
@@ -252,7 +265,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Leave:
         case OperationCode.Leave_S:
           Contract.Assume(ilOperation.Value is uint); //This is an informally specified property of the Metadata model.
-          edges.Add(this.cdfg.BlockFor[(uint)ilOperation.Value]);
+          targetOffset = (uint)ilOperation.Value;
+          this.blocksThatTarget.Add(targetOffset, currentBlock);
+          edges.Add(this.cdfg.BlockFor[targetOffset]);
           isUnconditionalTransfer = true;
           break;
 
@@ -261,7 +276,9 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         case OperationCode.Brtrue:
         case OperationCode.Brtrue_S:
           Contract.Assume(ilOperation.Value is uint); //This is an informally specified property of the Metadata model.
-          edges.Add(this.cdfg.BlockFor[(uint)ilOperation.Value]);
+          targetOffset = (uint)ilOperation.Value;
+          this.blocksThatTarget.Add(targetOffset, currentBlock);
+          edges.Add(this.cdfg.BlockFor[targetOffset]);
           break;
 
         case OperationCode.Endfilter:
@@ -274,14 +291,15 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
           break;
 
         case OperationCode.Switch:
-          this.AddEdgesForSwitch(ilOperation, edges, instruction);
+          this.AddEdgesForSwitch(ilOperation, currentBlock, edges, instruction);
           break;
       }
       return instruction;
     }
 
-    private void AddEdgesForSwitch(IOperation ilOperation, List<BasicBlock> edges, Instruction instruction) {
+    private void AddEdgesForSwitch(IOperation ilOperation, BasicBlock currentBlock, List<BasicBlock> edges, Instruction instruction) {
       Contract.Requires(ilOperation != null);
+      Contract.Requires(currentBlock != null);
       Contract.Requires(ilOperation.OperationCode == OperationCode.Switch);
       Contract.Requires(edges != null);
       Contract.Requires(instruction != null);
@@ -290,6 +308,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
       uint[] branches = (uint[])ilOperation.Value;
       SetOfObjects currentSuccesors = new SetOfObjects((uint)branches.Length);
       foreach (uint targetAddress in branches) {
+        this.blocksThatTarget.Add(targetAddress, currentBlock);
         var target = this.cdfg.BlockFor[targetAddress];
         Contract.Assume(target != null); //All branch targets must have blocks, but we can't put that in a contract that satisfies the checker.
         if (currentSuccesors.Contains(target)) continue;
@@ -297,5 +316,7 @@ namespace Microsoft.Cci.ControlAndDataFlowGraph {
         edges.Add(target);
       }
     }
+
+
   }
 }

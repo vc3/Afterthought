@@ -42,6 +42,8 @@ namespace Afterthought
 
 		#endregion
 
+
+
 		#region MethodEnumeration
 
 		public partial class MethodEnumeration : MemberEnumeration<MethodEnumeration>, IEnumerable
@@ -95,6 +97,13 @@ namespace Afterthought
 				foreach (Amendment.Method method in this)
 					method.BeforeMethod = before.Method;
 				return this;
+			}
+
+			public Method.Context<TContext>.Enumeration Before<TContext>(Method.Context<TContext>.BeforeMethod before)
+			{
+				foreach (Amendment.Method method in this)
+					method.BeforeMethod = before.Method;
+				return new Method.Context<TContext>.Enumeration(methods.Select(m => new Method.Context<TContext>(m)));
 			}
 
 			public MethodEnumeration After(AfterMethodAction after)

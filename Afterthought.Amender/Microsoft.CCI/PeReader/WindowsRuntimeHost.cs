@@ -114,18 +114,19 @@ namespace Microsoft.Cci.MetadataReader {
       this.Animation = nameTable.GetNameFor("Animation");
       this.Collections = nameTable.GetNameFor("Collections");
       this.Controls = nameTable.GetNameFor("Controls");
-      this.CultureName = nameTable.GetNameFor("CultureName");
       this.Data = nameTable.GetNameFor("Data");
       this.Foundation = nameTable.GetNameFor("Foundation");
       this.HResult = nameTable.GetNameFor("HResult");
       this.IBindableIterable = nameTable.GetNameFor("IBindableIterable");
       this.IBindableVector = nameTable.GetNameFor("IBindableVector");
+      this.IClosable = nameTable.GetNameFor("IClosable");
       this.IIterable = nameTable.GetNameFor("IIterable");
       this.IKeyValuePair = nameTable.GetNameFor("IKeyValuePair");
       this.IMap = nameTable.GetNameFor("IMap");
       this.IMapView = nameTable.GetNameFor("IMapView");
       this.INotifyCollectionChanged = nameTable.GetNameFor("INotifyCollectionChanged");
       this.INotifyPropertyChanged = nameTable.GetNameFor("INotifyPropertyChanged");
+      this.Input = nameTable.GetNameFor("Input");
       this.Interop = nameTable.GetNameFor("Interop");
       this.IReference = nameTable.GetNameFor("IReference");
       this.IVector = nameTable.GetNameFor("IVector");
@@ -151,18 +152,19 @@ namespace Microsoft.Cci.MetadataReader {
     IName Animation;
     IName Collections;
     IName Controls;
-    IName CultureName;
     IName Data;
     IName Foundation;
     IName HResult;
     IName IBindableIterable;
     IName IBindableVector;
+    IName IClosable;
     IName IIterable;
     IName IKeyValuePair;
     IName IMap;
     IName IMapView;
     IName INotifyCollectionChanged;
     IName INotifyPropertyChanged;
+    IName Input;
     IName Interop;
     IName IReference;
     IName IVector;
@@ -215,19 +217,55 @@ namespace Microsoft.Cci.MetadataReader {
     }
 
     /// <summary>
+    /// Provides the host with an opportunity to add, remove or substitute assembly references in the given list.
+    /// This avoids the cost of rewriting the entire unit in order to make such changes.
+    /// </summary>
+    /// <param name="referringUnit">The unit that contains these references.</param>
+    /// <param name="assemblyReferences">The assembly references to substitute.</param>
+    /// <returns>Usually assemblyReferences, but occasionally a modified enumeration.</returns>
+    public override IEnumerable<IAssemblyReference> Redirect(IUnit referringUnit, IEnumerable<IAssemblyReference> assemblyReferences) {
+      if (!this.projectToCLRTypes) return assemblyReferences;
+      var referringModule = referringUnit as IModule;
+      if (referringModule == null || referringModule.ContainingAssembly == null || !(referringModule.ContainingAssembly.ContainsForeignTypes)) return assemblyReferences;
+      var platformType = (WindowsRuntimePlatform)this.PlatformType;
+      var standardRefs = new SetOfObjects();
+      if (string.Equals(this.CoreAssemblySymbolicIdentity.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase)) {
+        standardRefs.Add(platformType.SystemObjectModel.AssemblyIdentity);
+      } else {
+        standardRefs.Add(platformType.System.AssemblyIdentity);
+      }
+      standardRefs.Add(platformType.CoreAssemblyRef.AssemblyIdentity);
+      standardRefs.Add(platformType.SystemRuntimeWindowsRuntime.AssemblyIdentity);
+      standardRefs.Add(platformType.SystemRuntimeWindowsRuntimeUIXaml.AssemblyIdentity);
+      var result = new List<IAssemblyReference>();
+      foreach (var aref in assemblyReferences) {
+        if (string.Equals(aref.Name.Value, "mscorlib", StringComparison.OrdinalIgnoreCase)) continue;
+        result.Add(aref);
+        standardRefs.Remove(aref.AssemblyIdentity);
+      }
+      if (standardRefs.Contains(platformType.CoreAssemblyRef.AssemblyIdentity)) result.Add(platformType.CoreAssemblyRef);
+      if (standardRefs.Contains(platformType.SystemRuntimeInteropServicesWindowsRuntime.AssemblyIdentity)) result.Add(platformType.SystemRuntimeInteropServicesWindowsRuntime);
+      if (standardRefs.Contains(platformType.SystemRuntimeWindowsRuntime.AssemblyIdentity)) result.Add(platformType.SystemRuntimeWindowsRuntime);
+      if (standardRefs.Contains(platformType.SystemRuntimeWindowsRuntimeUIXaml.AssemblyIdentity)) result.Add(platformType.SystemRuntimeWindowsRuntimeUIXaml);
+      if (standardRefs.Contains(platformType.SystemObjectModel.AssemblyIdentity)) result.Add(platformType.SystemObjectModel);
+      if (standardRefs.Contains(platformType.System.AssemblyIdentity)) result.Add(platformType.System);
+      return IteratorHelper.GetReadonly(result.ToArray());
+    }
+
+    /// <summary>
     /// Provides the host with an opportunity to substitute one type reference for another during metadata reading.
     /// This avoids the cost of rewriting the entire unit in order to make such changes.
     /// </summary>
-    /// <param name="referringUnit">The unit that is referencing the type.</param>
+    /// <param name="referringUnit">The unit that contains the reference.</param>
     /// <param name="typeReference">A type reference encountered during metadata reading.</param>
     /// <returns>
     /// Usually the value in typeReference, but occassionally something else.
     /// </returns>
-    public override ITypeReference Redirect(IUnit referringUnit, ITypeReference typeReference) {
+    public override INamedTypeReference Redirect(IUnit referringUnit, INamedTypeReference typeReference) {
       if (!this.projectToCLRTypes) return typeReference;
+      var referringModule = referringUnit as IModule;
+      if (referringModule == null || referringModule.ContainingAssembly == null || !(referringModule.ContainingAssembly.ContainsForeignTypes)) return typeReference;
       var platformType = (WindowsRuntimePlatform)this.PlatformType;
-      var referringAssembly = referringUnit as IAssembly;
-      if (referringAssembly == null || !(referringAssembly.ContainsForeignTypes)) return typeReference;
       var namespaceTypeReference = typeReference as INamespaceTypeReference;
       if (namespaceTypeReference == null) return typeReference;
       var namespaceReference = namespaceTypeReference.ContainingUnitNamespace as INestedUnitNamespaceReference;
@@ -235,8 +273,9 @@ namespace Microsoft.Cci.MetadataReader {
       if (this.IsWindowsFoundationMetadata(namespaceReference)) {
         if (namespaceTypeReference.Name == platformType.SystemAttributeUsageAttribute.Name) return platformType.SystemAttributeUsageAttribute;
         if (namespaceTypeReference.Name == platformType.SystemAttributeTargets.Name) return platformType.SystemAttributeTargets;
+      } else if (this.IsWindowsUI(namespaceReference)) {
+        if (namespaceTypeReference.Name == platformType.WindowsUIColor.Name) return platformType.WindowsUIColor;
       } else if (this.IsWindowsFoundation(namespaceReference)) {
-        if (namespaceTypeReference.Name == platformType.WindowsFoundationColor.Name) return platformType.WindowsFoundationColor;
         if (namespaceTypeReference.Name == platformType.SystemDateTime.Name) return platformType.SystemDateTimeOffset;
         if (namespaceTypeReference.Name == platformType.SystemEventHandler1.Name && namespaceTypeReference.GenericParameterCount == 1)
           return platformType.SystemEventHandler1;
@@ -250,6 +289,7 @@ namespace Microsoft.Cci.MetadataReader {
         if (namespaceTypeReference.Name == platformType.WindowsFoundationSize.Name) return platformType.WindowsFoundationSize;
         if (namespaceTypeReference.Name == platformType.SystemTimeSpan.Name) return platformType.SystemTimeSpan;
         if (namespaceTypeReference.Name == platformType.SystemUri.Name) return platformType.SystemUri;
+        if (namespaceTypeReference.Name == this.IClosable) return platformType.SystemIDisposable;
       } else if (this.IsWindowsFoundationCollections(namespaceReference)) {
         if (namespaceTypeReference.Name == this.IIterable) return platformType.SystemCollectionsGenericIEnumerable;
         if (namespaceTypeReference.Name == this.IVector) return platformType.SystemCollectionsGenericIList;
@@ -257,41 +297,42 @@ namespace Microsoft.Cci.MetadataReader {
         if (namespaceTypeReference.Name == this.IMap) return platformType.SystemCollectionsGenericIDictionary;
         if (namespaceTypeReference.Name == this.IMapView) return platformType.SystemCollectionsGenericReadOnlyDictionary;
         if (namespaceTypeReference.Name == this.IKeyValuePair) return platformType.SystemCollectionsGenericKeyValuePair;
-      } else if (this.IsWindowsUIXaml(namespaceReference)) {
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUICornerRadius.Name) return platformType.WindowsUIDirectUICornerRadius;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIDuration.Name) return platformType.WindowsUIDirectUIDuration;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIDurationType.Name) return platformType.WindowsUIDirectUIDurationType;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIGridLength.Name) return platformType.WindowsUIDirectUIGridLength;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIGridUnitType.Name) return platformType.WindowsUIDirectUIGridUnitType;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIThickness.Name) return platformType.WindowsUIDirectUIThickness;
+      } else if (this.IsWindowsUIXamlInput(namespaceReference)) {
+        if (namespaceTypeReference.Name == platformType.SystemWindowsInputICommand.Name) return platformType.SystemWindowsInputICommand;
+      } else if (this.IsWindowsUIXamlInterop(namespaceReference)) {
+        if (namespaceTypeReference.Name == this.IBindableIterable) return platformType.SystemCollectionsIEnumerable;
+        if (namespaceTypeReference.Name == this.IBindableVector) return platformType.SystemCollectionsIList;
+        if (namespaceTypeReference.Name == this.INotifyCollectionChanged) return platformType.SystemCollectionsSpecializedINotifyColletionChanged;
+        if (namespaceTypeReference.Name == this.NotifyCollectionChangedEventHandler) return platformType.SystemCollectionsSpecializedNotifyCollectionChangedEventHandler;
+        if (namespaceTypeReference.Name == this.NotifyCollectionChangedEventArgs) return platformType.SystemCollectionsSpecializedNotifyCollectionChangedEventArgs;
+        if (namespaceTypeReference.Name == this.NotifyCollectionChangedAction) return platformType.SystemCollectionsSpecializedNotifyCollectionChangedAction;
+        if (namespaceTypeReference.Name == this.TypeName) return platformType.SystemType;
       } else if (this.IsWindowsUIXamlData(namespaceReference)) {
         if (namespaceTypeReference.Name == this.INotifyPropertyChanged) return platformType.SystemComponentModelINotifyPropertyChanged;
         if (namespaceTypeReference.Name == this.PropertyChangedEventArgs) return platformType.SystemComponentModelPropertyChangedEventArgs;
         if (namespaceTypeReference.Name == this.PropertyChangedEventHandler) return platformType.SystemComponentModelPropertyChangedEventHandler;
-      } else if (this.IsWindowsUIXamlInterop(namespaceReference)) {
-        if (namespaceTypeReference.Name == this.CultureName) return platformType.SystemGlobalizationCultureInfo;
-        if (namespaceTypeReference.Name == this.IBindableIterable) return platformType.SystemCollectionsIEnumerable;
-        if (namespaceTypeReference.Name == this.IBindableVector) return platformType.SystemCollectionsIList;
-        if (namespaceTypeReference.Name == this.INotifyCollectionChanged) return platformType.SystemCollectionsSpecializedINotifyColletionChanged;
-        if (namespaceTypeReference.Name == this.NotifyCollectionChangedAction) return platformType.SystemCollectionsSpecializedNotifyCollectionChangedAction;
-        if (namespaceTypeReference.Name == this.NotifyCollectionChangedEventArgs) return platformType.SystemCollectionsSpecializedNotifyCollectionChangedEventArgs;
-        if (namespaceTypeReference.Name == this.NotifyCollectionChangedEventHandler) return platformType.SystemCollectionsSpecializedNotifyCollectionChangedEventHandler;
-        if (namespaceTypeReference.Name == this.TypeName) return platformType.SystemType;
+      } else if (this.IsWindowsUIXaml(namespaceReference)) {
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlCornerRadius.Name) return platformType.WindowsUIXamlCornerRadius;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlDuration.Name) return platformType.WindowsUIXamlDuration;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlDurationType.Name) return platformType.WindowsUIXamlDurationType;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlGridLength.Name) return platformType.WindowsUIXamlGridLength;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlGridUnitType.Name) return platformType.WindowsUIXamlGridUnitType;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlThickness.Name) return platformType.WindowsUIXamlThickness;
       } else if (this.IsWindowsUIXamlControlsPrimitives(namespaceReference)) {
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIControlsPrimitivesGeneratorPosition.Name)
-          return platformType.WindowsUIDirectUIControlsPrimitivesGeneratorPosition;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlControlsPrimitivesGeneratorPosition.Name)
+          return platformType.WindowsUIXamlControlsPrimitivesGeneratorPosition;
       } else if (this.IsWindowsUIXamlMedia(namespaceReference)) {
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIMediaMatrix.Name) return platformType.WindowsUIDirectUIMediaMatrix;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlMediaMatrix.Name) return platformType.WindowsUIXamlMediaMatrix;
       } else if (this.IsWindowsUIXamlMediaAnimation(namespaceReference)) {
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIMediaAnimationKeyTime.Name)
-          return platformType.WindowsUIDirectUIMediaAnimationKeyTime;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIMediaAnimationRepeatBehavior.Name)
-          return platformType.WindowsUIDirectUIMediaAnimationRepeatBehavior;
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIMediaAnimationRepeatBehaviorType.Name)
-          return platformType.WindowsUIDirectUIMediaAnimationRepeatBehaviorType;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlMediaAnimationKeyTime.Name)
+          return platformType.WindowsUIXamlMediaAnimationKeyTime;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlMediaAnimationRepeatBehavior.Name)
+          return platformType.WindowsUIXamlMediaAnimationRepeatBehavior;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlMediaAnimationRepeatBehaviorType.Name)
+          return platformType.WindowsUIXamlMediaAnimationRepeatBehaviorType;
       } else if (this.IsWindowsUIXamlMediaMedia3D(namespaceReference)) {
-        if (namespaceTypeReference.Name == platformType.WindowsUIDirectUIMediaMedia3DMatrix3D.Name)
-          return platformType.WindowsUIDirectUIMediaMedia3DMatrix3D;
+        if (namespaceTypeReference.Name == platformType.WindowsUIXamlMediaMedia3DMatrix3D.Name)
+          return platformType.WindowsUIXamlMediaMedia3DMatrix3D;
       }
       return typeReference;
     }
@@ -300,7 +341,7 @@ namespace Microsoft.Cci.MetadataReader {
     /// Provides the host with an opportunity to substitute a custom attribute with another during metadata reading.
     /// This avoids the cost of rewriting the entire unit in order to make such changes.
     /// </summary>
-    /// <param name="referringUnit">The unit that is referencing the type.</param>
+    /// <param name="referringUnit">The unit that contains the custom attribute.</param>
     /// <param name="customAttribute">The custom attribute to rewrite (fix up).</param>
     /// <returns>
     /// Usually the value in customAttribute, but occassionally another custom attribute.
@@ -308,8 +349,8 @@ namespace Microsoft.Cci.MetadataReader {
     public override ICustomAttribute Rewrite(IUnit referringUnit, ICustomAttribute customAttribute) {
       CustomAttribute customAttr = customAttribute as CustomAttribute;
       if (customAttr == null) return customAttribute;
-      var referringAssembly = referringUnit as IAssembly;
-      if (referringAssembly == null || !(referringAssembly.ContainsForeignTypes)) return customAttribute;
+      var referringModule = referringUnit as IModule;
+      if (referringModule == null || referringModule.ContainingAssembly == null || !(referringModule.ContainingAssembly.ContainsForeignTypes)) return customAttribute;
       if (!TypeHelper.TypesAreEquivalent(customAttribute.Type, this.PlatformType.SystemAttributeUsageAttribute)) return customAttribute;
       //The custom attribute constructor has been redirected from Windows.Foundation.AttributeUsageAttribute, which has a different
       //set of flags from System.AttributeUsageAttribute for its first and only constructor parameter and also does not have an AllowMultiple property. 
@@ -351,6 +392,20 @@ namespace Microsoft.Cci.MetadataReader {
           return true;
       }
       return false;
+    }
+
+    /// <summary>
+    /// Default implementation of UnifyAssembly. Override this method to change the behavior.
+    /// </summary>
+    public override AssemblyIdentity UnifyAssembly(AssemblyIdentity assemblyIdentity) {
+      if (assemblyIdentity.Name.UniqueKeyIgnoringCase == this.CoreAssemblySymbolicIdentity.Name.UniqueKeyIgnoringCase &&
+        assemblyIdentity.Culture == this.CoreAssemblySymbolicIdentity.Culture && 
+        IteratorHelper.EnumerablesAreEqual(assemblyIdentity.PublicKeyToken, this.CoreAssemblySymbolicIdentity.PublicKeyToken))
+        return this.CoreAssemblySymbolicIdentity;
+      if (this.CoreIdentities.Contains(assemblyIdentity)) return this.CoreAssemblySymbolicIdentity;
+      if (string.Equals(assemblyIdentity.Name.Value, "mscorlib", StringComparison.OrdinalIgnoreCase) && assemblyIdentity.Version == new Version(255, 255, 255, 255))
+        return this.CoreAssemblySymbolicIdentity;
+      return assemblyIdentity;
     }
 
     private bool IsWindows(INestedUnitNamespaceReference/*?*/ namespaceReference) {
@@ -398,6 +453,11 @@ namespace Microsoft.Cci.MetadataReader {
       return IsWindowsUIXaml(namespaceReference.ContainingUnitNamespace as INestedUnitNamespaceReference);
     }
 
+    private bool IsWindowsUIXamlInput(INestedUnitNamespaceReference/*?*/ namespaceReference) {
+      if (namespaceReference == null || namespaceReference.Name != this.Input) return false;
+      return IsWindowsUIXaml(namespaceReference.ContainingUnitNamespace as INestedUnitNamespaceReference);
+    }
+
     private bool IsWindowsUIXamlInterop(INestedUnitNamespaceReference/*?*/ namespaceReference) {
       if (namespaceReference == null || namespaceReference.Name != this.Interop) return false;
       return IsWindowsUIXaml(namespaceReference.ContainingUnitNamespace as INestedUnitNamespaceReference);
@@ -428,7 +488,7 @@ namespace Microsoft.Cci.MetadataReader {
     /// <param name="host">
     /// An object that provides a standard abstraction over the applications that host components that provide or consume objects from the metadata model.
     /// </param>
-    internal WindowsRuntimePlatform(IMetadataHost host)
+    internal WindowsRuntimePlatform(IMetadataHost host) 
       : base(host) {
     }
 
@@ -450,10 +510,60 @@ namespace Microsoft.Cci.MetadataReader {
     private AssemblyIdentity GetSystemSymbolicIdentity() {
       var core = this.host.CoreAssemblySymbolicIdentity;
       var name = this.host.NameTable.System;
-      var location = core.Location;
-      if (location != null)
-        location = Path.Combine(Path.GetDirectoryName(location), "System.dll");
+      var location = "";
+      if (core.Location.Length > 0)
+        location = Path.Combine(Path.GetDirectoryName(core.Location)??"", "System.dll");
       return new AssemblyIdentity(name, core.Culture, core.Version, core.PublicKeyToken, location);
+    }
+
+    /// <summary>
+    /// A reference to the CLR System.ObjectModel contract assembly
+    /// </summary>
+    internal IAssemblyReference SystemObjectModel {
+      get {
+        if (this.systemObjectModel == null)
+          this.systemObjectModel = new Microsoft.Cci.Immutable.AssemblyReference(this.host, this.GetSystemObjectModelSymbolicIdentity());
+        return this.systemObjectModel;
+      }
+    }
+    private IAssemblyReference/*?*/ systemObjectModel;
+
+    /// <summary>
+    /// Returns an identity that is the same as CoreAssemblyIdentity, except that the name is "System".
+    /// </summary>
+    private AssemblyIdentity GetSystemObjectModelSymbolicIdentity() {
+      var core = this.host.CoreAssemblySymbolicIdentity;
+      var name = this.host.NameTable.System;
+      var location = "";
+      if (core.Location.Length > 0)
+        location = Path.Combine(Path.GetDirectoryName(core.Location)??"", "System.ObjectModel.dll");
+      return new AssemblyIdentity(name, core.Culture, core.Version, core.PublicKeyToken, location);
+    }
+
+    /// <summary>
+    /// A reference to the assembly that contains CLR types to substitute for Windows Runtime interop types, i.e. System.Runtime.InteropServices.WindowsRuntime.
+    /// </summary>
+    internal IAssemblyReference SystemRuntimeInteropServicesWindowsRuntime {
+      get {
+        if (this.systemRuntimeInteropServicesWindowsRuntime == null)
+          this.systemRuntimeInteropServicesWindowsRuntime = new Microsoft.Cci.Immutable.AssemblyReference(this.host, this.GetSystemRuntimeInteropServicesWindowsRuntimeSymbolicIdentity());
+        return this.systemRuntimeInteropServicesWindowsRuntime;
+      }
+    }
+    private IAssemblyReference/*?*/ systemRuntimeInteropServicesWindowsRuntime;
+
+    /// <summary>
+    /// Returns an identity that is the same as CoreAssemblyIdentity, except that the name is "System.Runtime.InteropServices.WindowsRuntime" and the version is at least 4.0.
+    /// </summary>
+    private AssemblyIdentity GetSystemRuntimeInteropServicesWindowsRuntimeSymbolicIdentity() {
+      var core = this.host.CoreAssemblySymbolicIdentity;
+      var name = this.host.NameTable.GetNameFor("System.Runtime.InteropServices.WindowsRuntime");
+      var location = "";
+      if (core.Location.Length > 0)
+        location = Path.Combine(Path.GetDirectoryName(core.Location)??"", "System.Runtime.InteropServices.WindowsRuntime.dll");
+      var version = new Version(4, 0, 0, 0);
+      if (version < core.Version) version = core.Version;
+      return new AssemblyIdentity(name, core.Culture, version, core.PublicKeyToken, location);
     }
 
     /// <summary>
@@ -474,9 +584,35 @@ namespace Microsoft.Cci.MetadataReader {
     private AssemblyIdentity GetSystemRuntimeWindowsRuntimeSymbolicIdentity() {
       var core = this.host.CoreAssemblySymbolicIdentity;
       var name = this.host.NameTable.GetNameFor("System.Runtime.WindowsRuntime");
-      var location = core.Location;
-      if (location != null)
-        location = Path.Combine(Path.GetDirectoryName(location), "System.Runtime.WindowsRuntime.dll");
+      var location = "";
+      if (core.Location.Length > 0)
+        location = Path.Combine(Path.GetDirectoryName(core.Location)??"", "System.Runtime.WindowsRuntime.dll");
+      var version = new Version(4, 0, 0, 0);
+      if (version < core.Version) version = core.Version;
+      return new AssemblyIdentity(name, core.Culture, version, core.PublicKeyToken, location);
+    }
+
+    /// <summary>
+    /// A reference to the assembly that contains Xaml types to substitute for Windows Runtime types.
+    /// </summary>
+    internal IAssemblyReference SystemRuntimeWindowsRuntimeUIXaml {
+      get {
+        if (this.systemRuntimeWindowsRuntimeUIXaml == null)
+          this.systemRuntimeWindowsRuntimeUIXaml = new Microsoft.Cci.Immutable.AssemblyReference(this.host, this.GetSystemRuntimeWindowsRuntimeUIXamlSymbolicIdentity());
+        return this.systemRuntimeWindowsRuntimeUIXaml;
+      }
+    }
+    private IAssemblyReference/*?*/ systemRuntimeWindowsRuntimeUIXaml;
+
+    /// <summary>
+    /// Returns an identity that is the same as CoreAssemblyIdentity, except that the name is "System.Runtime.WindowsRuntime.UI.Xaml" and the version is at least 4.0.
+    /// </summary>
+    private AssemblyIdentity GetSystemRuntimeWindowsRuntimeUIXamlSymbolicIdentity() {
+      var core = this.host.CoreAssemblySymbolicIdentity;
+      var name = this.host.NameTable.GetNameFor("System.Runtime.WindowsRuntime.UI.Xaml");
+      var location = "";
+      if (core.Location.Length > 0)
+        location = Path.Combine(Path.GetDirectoryName(core.Location)??"", "System.Runtime.WindowsRuntime.UI.Xaml.dll");
       var version = new Version(4, 0, 0, 0);
       if (version < core.Version) version = core.Version;
       return new AssemblyIdentity(name, core.Culture, version, core.PublicKeyToken, location);
@@ -554,7 +690,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemCollectionsSpecializedINotifyColletionChanged {
       get {
         if (this.systemCollectionsSpecializedINotifyColletionChanged == null) {
-          this.systemCollectionsSpecializedINotifyColletionChanged = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "INotifyCollectionChanged");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "Collections", "Specialized", "INotifyCollectionChanged");
+          else
+            this.systemCollectionsSpecializedINotifyColletionChanged = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "INotifyCollectionChanged");
         }
         return this.systemCollectionsSpecializedINotifyColletionChanged;
       }
@@ -567,7 +706,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemCollectionsSpecializedNotifyCollectionChangedAction {
       get {
         if (this.systemCollectionsSpecializedNotifyCollectionChangedAction == null) {
-          this.systemCollectionsSpecializedNotifyCollectionChangedAction = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "NotifyCollectionChangedAction");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "Collections", "Specialized", "NotifyCollectionChangedAction");
+          else
+            this.systemCollectionsSpecializedNotifyCollectionChangedAction = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "NotifyCollectionChangedAction");
         }
         return this.systemCollectionsSpecializedNotifyCollectionChangedAction;
       }
@@ -580,7 +722,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemCollectionsSpecializedNotifyCollectionChangedEventArgs {
       get {
         if (this.systemCollectionsSpecializedNotifyCollectionChangedEventArgs == null) {
-          this.systemCollectionsSpecializedNotifyCollectionChangedEventArgs = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "NotifyCollectionChangedEventArgs");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "Collections", "Specialized", "NotifyCollectionChangedEventArgs");
+          else
+            this.systemCollectionsSpecializedNotifyCollectionChangedEventArgs = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "NotifyCollectionChangedEventArgs");
         }
         return this.systemCollectionsSpecializedNotifyCollectionChangedEventArgs;
       }
@@ -593,7 +738,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemCollectionsSpecializedNotifyCollectionChangedEventHandler {
       get {
         if (this.systemCollectionsSpecializedNotifyCollectionChangedEventHandler == null) {
-          this.systemCollectionsSpecializedNotifyCollectionChangedEventHandler = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "NotifyCollectionChangedEventHandler");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "ComponentModel", "INotifyPropertyChanged");
+          else
+            this.systemCollectionsSpecializedNotifyCollectionChangedEventHandler = this.CreateReference(this.System, 1, "System", "Collections", "Specialized", "NotifyCollectionChangedEventHandler");
         }
         return this.systemCollectionsSpecializedNotifyCollectionChangedEventHandler;
       }
@@ -606,7 +754,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemComponentModelINotifyPropertyChanged {
       get {
         if (this.systemComponentModelINotifyPropertyChanged == null) {
-          this.systemComponentModelINotifyPropertyChanged = this.CreateReference(this.System, "System", "ComponentModel", "INotifyPropertyChanged");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "ComponentModel", "INotifyPropertyChanged");
+          else
+            this.systemComponentModelINotifyPropertyChanged = this.CreateReference(this.System, "System", "ComponentModel", "INotifyPropertyChanged");
         }
         return this.systemComponentModelINotifyPropertyChanged;
       }
@@ -619,7 +770,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemComponentModelPropertyChangedEventArgs {
       get {
         if (this.systemComponentModelPropertyChangedEventArgs == null) {
-          this.systemComponentModelPropertyChangedEventArgs = this.CreateReference(this.System, "System", "ComponentModel", "PropertyChangedEventArgs");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "ComponentModel", "PropertyChangedEventArgs");
+          else
+            this.systemComponentModelPropertyChangedEventArgs = this.CreateReference(this.System, "System", "ComponentModel", "PropertyChangedEventArgs");
         }
         return this.systemComponentModelPropertyChangedEventArgs;
       }
@@ -632,7 +786,10 @@ namespace Microsoft.Cci.MetadataReader {
     public INamespaceTypeReference SystemComponentModelPropertyChangedEventHandler {
       get {
         if (this.systemComponentModelPropertyChangedEventHandler == null) {
-          this.systemComponentModelPropertyChangedEventHandler = this.CreateReference(this.System, "System", "ComponentModel", "PropertyChangedEventHandler");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "ComponentModel", "PropertyChangedEventHandler");
+          else
+            this.systemComponentModelPropertyChangedEventHandler = this.CreateReference(this.System, "System", "ComponentModel", "PropertyChangedEventHandler");
         }
         return this.systemComponentModelPropertyChangedEventHandler;
       }
@@ -653,6 +810,19 @@ namespace Microsoft.Cci.MetadataReader {
     INamespaceTypeReference/*?*/ systemEventHandler1;
 
     /// <summary>
+    /// System.IDisposable
+    /// </summary>
+    internal INamespaceTypeReference SystemIDisposable {
+      get {
+        if (this.systemIDisposable == null) {
+          this.systemIDisposable = this.CreateReference(this.CoreAssemblyRef, "System", "IDisposable");
+        }
+        return this.systemIDisposable;
+      }
+    }
+    INamespaceTypeReference/*?*/ systemIDisposable;
+
+    /// <summary>
     /// System.Nullable`1
     /// </summary>
     internal INamespaceTypeReference SystemNullable1 {
@@ -671,8 +841,12 @@ namespace Microsoft.Cci.MetadataReader {
     internal INamespaceTypeReference SystemRuntimeInteropServicesWindowsRuntimeEventRegistrationToken {
       get {
         if (this.systemRuntimeInteropServicesWindowsRuntimeEventRegistrationToken == null) {
-          this.systemRuntimeInteropServicesWindowsRuntimeEventRegistrationToken = 
-            this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "System", "Runtime", "InteropServices", "WindowsRuntime", "EventRegistrationToken");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemRuntimeInteropServicesWindowsRuntimeEventRegistrationToken = 
+              this.CreateReference(this.SystemRuntimeInteropServicesWindowsRuntime, true, "System", "Runtime", "InteropServices", "WindowsRuntime", "EventRegistrationToken");
+          else
+            this.systemRuntimeInteropServicesWindowsRuntimeEventRegistrationToken = 
+              this.CreateReference(this.CoreAssemblyRef, true, "System", "Runtime", "InteropServices", "WindowsRuntime", "EventRegistrationToken");
         }
         return this.systemRuntimeInteropServicesWindowsRuntimeEventRegistrationToken;
       }
@@ -698,7 +872,10 @@ namespace Microsoft.Cci.MetadataReader {
     internal INamespaceTypeReference SystemUri {
       get {
         if (this.systemUri == null) {
-          this.systemUri = this.CreateReference(this.System, "System", "Uri");
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemUri = this.CreateReference(this.CoreAssemblyRef, "System", "Uri");
+          else
+            this.systemUri = this.CreateReference(this.System, "System", "Uri");
         }
         return this.systemUri;
       }
@@ -706,12 +883,28 @@ namespace Microsoft.Cci.MetadataReader {
     INamespaceTypeReference/*?*/ systemUri;
 
     /// <summary>
-    /// Windows.Foundation.Color
+    /// System.Windows.Input.ICommand
     /// </summary>
-    public INamespaceTypeReference WindowsFoundationColor {
+    internal INamespaceTypeReference SystemWindowsInputICommand {
+      get {
+        if (this.systemWindowsInputICommand == null) {
+          if (string.Equals(this.CoreAssemblyRef.Name.Value, "System.Runtime", StringComparison.OrdinalIgnoreCase))
+            this.systemWindowsInputICommand = this.CreateReference(this.SystemObjectModel, "System", "Windows", "Input", "ICommand");
+          else
+            this.systemWindowsInputICommand = this.CreateReference(this.System, "System", "Windows", "Input", "ICommand");
+        }
+        return this.systemWindowsInputICommand;
+      }
+    }
+    INamespaceTypeReference/*?*/ systemWindowsInputICommand;
+
+    /// <summary>
+    /// Windows.UI.Color
+    /// </summary>
+    public INamespaceTypeReference WindowsUIColor {
       get {
         if (this.windowsFoundationColor == null) {
-          this.windowsFoundationColor = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "Foundation", "Color");
+          this.windowsFoundationColor = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "Color");
         }
         return this.windowsFoundationColor;
       }
@@ -758,165 +951,165 @@ namespace Microsoft.Cci.MetadataReader {
     INamespaceTypeReference/*?*/ windowsFoundationSize;
 
     /// <summary>
-    /// Windows.UI.DirectUI.CornerRadius
+    /// Windows.UI.Xaml.CornerRadius
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUICornerRadius {
+    public INamespaceTypeReference WindowsUIXamlCornerRadius {
       get {
-        if (this.windowsUIDirectUICornerRadius == null) {
-          this.windowsUIDirectUICornerRadius = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "CornerRadius");
+        if (this.windowsUIXamlCornerRadius == null) {
+          this.windowsUIXamlCornerRadius = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "CornerRadius");
         }
-        return this.windowsUIDirectUICornerRadius;
+        return this.windowsUIXamlCornerRadius;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUICornerRadius;
+    INamespaceTypeReference/*?*/ windowsUIXamlCornerRadius;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Duration
+    /// Windows.UI.Xaml.Duration
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIDuration {
+    public INamespaceTypeReference WindowsUIXamlDuration {
       get {
-        if (this.windowsUIDirectUIDuration == null) {
-          this.windowsUIDirectUIDuration = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Duration");
+        if (this.windowsUIXamlDuration == null) {
+          this.windowsUIXamlDuration = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Duration");
         }
-        return this.windowsUIDirectUIDuration;
+        return this.windowsUIXamlDuration;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIDuration;
+    INamespaceTypeReference/*?*/ windowsUIXamlDuration;
 
     /// <summary>
-    /// Windows.UI.DirectUI.DurationType
+    /// Windows.UI.Xaml.DurationType
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIDurationType {
+    public INamespaceTypeReference WindowsUIXamlDurationType {
       get {
-        if (this.windowsUIDirectUIDurationType == null) {
-          this.windowsUIDirectUIDurationType = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "DurationType");
+        if (this.windowsUIXamlDurationType == null) {
+          this.windowsUIXamlDurationType = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "DurationType");
         }
-        return this.windowsUIDirectUIDurationType;
+        return this.windowsUIXamlDurationType;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIDurationType;
+    INamespaceTypeReference/*?*/ windowsUIXamlDurationType;
 
     /// <summary>
-    /// Windows.UI.DirectUI.GridLength
+    /// Windows.UI.Xaml.GridLength
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIGridLength {
+    public INamespaceTypeReference WindowsUIXamlGridLength {
       get {
-        if (this.windowsUIDirectUIGridLength == null) {
-          this.windowsUIDirectUIGridLength = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "GridLength");
+        if (this.windowsUIXamlGridLength == null) {
+          this.windowsUIXamlGridLength = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "GridLength");
         }
-        return this.windowsUIDirectUIGridLength;
+        return this.windowsUIXamlGridLength;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIGridLength;
+    INamespaceTypeReference/*?*/ windowsUIXamlGridLength;
 
     /// <summary>
-    /// Windows.UI.DirectUI.GridUnitType
+    /// Windows.UI.Xaml.GridUnitType
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIGridUnitType {
+    public INamespaceTypeReference WindowsUIXamlGridUnitType {
       get {
-        if (this.windowsUIDirectUIGridUnitType == null) {
-          this.windowsUIDirectUIGridUnitType = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "GridUnitType");
+        if (this.windowsUIXamlGridUnitType == null) {
+          this.windowsUIXamlGridUnitType = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "GridUnitType");
         }
-        return this.windowsUIDirectUIGridUnitType;
+        return this.windowsUIXamlGridUnitType;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIGridUnitType;
+    INamespaceTypeReference/*?*/ windowsUIXamlGridUnitType;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Thickness
+    /// Windows.UI.Xaml.Thickness
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIThickness {
+    public INamespaceTypeReference WindowsUIXamlThickness {
       get {
-        if (this.windowsUIDirectUIThickness == null) {
-          this.windowsUIDirectUIThickness = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Thickness");
+        if (this.windowsUIXamlThickness == null) {
+          this.windowsUIXamlThickness = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Thickness");
         }
-        return this.windowsUIDirectUIThickness;
+        return this.windowsUIXamlThickness;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIThickness;
+    INamespaceTypeReference/*?*/ windowsUIXamlThickness;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Controls.Primitives.GeneratorPosition
+    /// Windows.UI.Xaml.Controls.Primitives.GeneratorPosition
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIControlsPrimitivesGeneratorPosition {
+    public INamespaceTypeReference WindowsUIXamlControlsPrimitivesGeneratorPosition {
       get {
-        if (this.windowsUIDirectUIControlsPrimitivesGeneratorPosition == null) {
-          this.windowsUIDirectUIControlsPrimitivesGeneratorPosition = 
-            this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Controls", "Primitives", "GeneratorPosition");
+        if (this.windowsUIXamlControlsPrimitivesGeneratorPosition == null) {
+          this.windowsUIXamlControlsPrimitivesGeneratorPosition = 
+            this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Controls", "Primitives", "GeneratorPosition");
         }
-        return this.windowsUIDirectUIControlsPrimitivesGeneratorPosition;
+        return this.windowsUIXamlControlsPrimitivesGeneratorPosition;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIControlsPrimitivesGeneratorPosition;
+    INamespaceTypeReference/*?*/ windowsUIXamlControlsPrimitivesGeneratorPosition;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Media.Matrix
+    /// Windows.UI.Xaml.Media.Matrix
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIMediaMatrix {
+    public INamespaceTypeReference WindowsUIXamlMediaMatrix {
       get {
-        if (this.windowsUIDirectUIMediaMatrix == null) {
-          this.windowsUIDirectUIMediaMatrix = this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Media", "Matrix");
+        if (this.windowsUIXamlMediaMatrix == null) {
+          this.windowsUIXamlMediaMatrix = this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Media", "Matrix");
         }
-        return this.windowsUIDirectUIMediaMatrix;
+        return this.windowsUIXamlMediaMatrix;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIMediaMatrix;
+    INamespaceTypeReference/*?*/ windowsUIXamlMediaMatrix;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Media.Animation.KeyTime
+    /// Windows.UI.Xaml.Media.Animation.KeyTime
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIMediaAnimationKeyTime {
+    public INamespaceTypeReference WindowsUIXamlMediaAnimationKeyTime {
       get {
-        if (this.windowsUIDirectUIMediaAnimationKeyTime == null) {
-          this.windowsUIDirectUIMediaAnimationKeyTime = 
-            this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Media", "Animation", "KeyTime");
+        if (this.windowsUIXamlMediaAnimationKeyTime == null) {
+          this.windowsUIXamlMediaAnimationKeyTime = 
+            this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Media", "Animation", "KeyTime");
         }
-        return this.windowsUIDirectUIMediaAnimationKeyTime;
+        return this.windowsUIXamlMediaAnimationKeyTime;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIMediaAnimationKeyTime;
+    INamespaceTypeReference/*?*/ windowsUIXamlMediaAnimationKeyTime;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Media.Animation.RepeatBehavior
+    /// Windows.UI.Xaml.Media.Animation.RepeatBehavior
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIMediaAnimationRepeatBehavior {
+    public INamespaceTypeReference WindowsUIXamlMediaAnimationRepeatBehavior {
       get {
-        if (this.windowsUIDirectUIMediaAnimationRepeatBehavior == null) {
-          this.windowsUIDirectUIMediaAnimationRepeatBehavior = 
-            this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Media", "Animation", "RepeatBehavior");
+        if (this.windowsUIXamlMediaAnimationRepeatBehavior == null) {
+          this.windowsUIXamlMediaAnimationRepeatBehavior = 
+            this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Media", "Animation", "RepeatBehavior");
         }
-        return this.windowsUIDirectUIMediaAnimationRepeatBehavior;
+        return this.windowsUIXamlMediaAnimationRepeatBehavior;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIMediaAnimationRepeatBehavior;
+    INamespaceTypeReference/*?*/ windowsUIXamlMediaAnimationRepeatBehavior;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Media.Animation.RepeatBehaviorType
+    /// Windows.UI.Xaml.Media.Animation.RepeatBehaviorType
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIMediaAnimationRepeatBehaviorType {
+    public INamespaceTypeReference WindowsUIXamlMediaAnimationRepeatBehaviorType {
       get {
-        if (this.windowsUIDirectUIMediaAnimationRepeatBehaviorType == null) {
-          this.windowsUIDirectUIMediaAnimationRepeatBehaviorType = 
-            this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Media", "Animation", "RepeatBehaviorType");
+        if (this.windowsUIXamlMediaAnimationRepeatBehaviorType == null) {
+          this.windowsUIXamlMediaAnimationRepeatBehaviorType = 
+            this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Media", "Animation", "RepeatBehaviorType");
         }
-        return this.windowsUIDirectUIMediaAnimationRepeatBehaviorType;
+        return this.windowsUIXamlMediaAnimationRepeatBehaviorType;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIMediaAnimationRepeatBehaviorType;
+    INamespaceTypeReference/*?*/ windowsUIXamlMediaAnimationRepeatBehaviorType;
 
     /// <summary>
-    /// Windows.UI.DirectUI.Media.Media3D.Matrix3D
+    /// Windows.UI.Xaml.Media.Media3D.Matrix3D
     /// </summary>
-    public INamespaceTypeReference WindowsUIDirectUIMediaMedia3DMatrix3D {
+    public INamespaceTypeReference WindowsUIXamlMediaMedia3DMatrix3D {
       get {
-        if (this.windowsUIDirectUIMediaMedia3DMatrix3D == null) {
-          this.windowsUIDirectUIMediaMedia3DMatrix3D = 
-            this.CreateReference(this.SystemRuntimeWindowsRuntime, true, "Windows", "UI", "DirectUI", "Media", "Media3D", "Matrix3D");
+        if (this.windowsUIXamlMediaMedia3DMatrix3D == null) {
+          this.windowsUIXamlMediaMedia3DMatrix3D = 
+            this.CreateReference(this.SystemRuntimeWindowsRuntimeUIXaml, true, "Windows", "UI", "Xaml", "Media", "Media3D", "Matrix3D");
         }
-        return this.windowsUIDirectUIMediaMedia3DMatrix3D;
+        return this.windowsUIXamlMediaMedia3DMatrix3D;
       }
     }
-    INamespaceTypeReference/*?*/ windowsUIDirectUIMediaMedia3DMatrix3D;
+    INamespaceTypeReference/*?*/ windowsUIXamlMediaMedia3DMatrix3D;
 
   }
 

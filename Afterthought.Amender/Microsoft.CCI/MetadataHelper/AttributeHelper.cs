@@ -17,7 +17,7 @@ using System.Diagnostics.Contracts;
 
 namespace Microsoft.Cci {
   /// <summary>
-  /// Class conraining helper routines for Attributes
+  /// Class containing helper routines for Attributes
   /// </summary>
   public static class AttributeHelper {
     /// <summary>
@@ -34,10 +34,10 @@ namespace Microsoft.Cci {
     /// </summary>
     public static bool Contains(IEnumerable<ICustomAttribute> attributes, ITypeReference attributeType) {
       Contract.Requires(attributes != null);
-      Contract.Requires(Contract.ForAll(attributes, x => x != null));
       Contract.Requires(attributeType != null);
 
       foreach (ICustomAttribute attribute in attributes) {
+        if (attribute == null) continue;
         if (TypeHelper.TypesAreEquivalent(attribute.Type, attributeType)) return true;
       }
       return false;

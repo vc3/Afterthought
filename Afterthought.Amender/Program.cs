@@ -104,11 +104,10 @@ namespace Afterthought.Amender
 			var amendments = AmendmentAttribute.GetAmendments(assemblies.First(), assemblies.Skip(1).ToArray()).ToList();
 
 			// Exit immediately if there are no amendments in the target assemblies
-			//if (amendments.Count == 0)
-			//    return;
+			if (amendments.Count == 0)
+			    return;
 
 			// Amend the target assembly
-
 			Console.Write("Amending " + Path.GetFileName(targetAssembly));
 			var start = DateTime.Now;
 
@@ -139,8 +138,10 @@ namespace Afterthought.Amender
 				// Amend and persist the target assembly
 				using (pdbReader)
 				{
+	
+
 					// Create and execute a new assembly amender
-					AssemblyAmender amender = new AssemblyAmender(host, pdbReader, amendments, assemblies);
+					AssemblyAmender amender = new AssemblyAmender(host, pdbReader, amendments, assemblies, module.TargetRuntimeVersion.StartsWith("v2"));
 					amender.TargetRuntimeVersion = module.TargetRuntimeVersion;
 					module = amender.Visit(module);
 

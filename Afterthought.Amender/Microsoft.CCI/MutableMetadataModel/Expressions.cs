@@ -111,7 +111,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ITypeReference elementType;
 
     /// <summary>
-    /// The initial values of the array elements. May be empty.
+    /// The initial values of the array elements. May be empty or null.
     /// </summary>
     /// <value></value>
     public List<IMetadataExpression>/*?*/ Initializers {
@@ -121,7 +121,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IMetadataExpression>/*?*/ initializers;
 
     /// <summary>
-    /// The index value of the first element in each dimension.
+    /// The index value of the first element in each dimension. May be null.
     /// </summary>
     /// <value></value>
     public List<int>/*?*/ LowerBounds {
@@ -141,7 +141,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     uint rank;
 
     /// <summary>
-    /// The number of elements allowed in each dimension.
+    /// The number of elements allowed in each dimension. May be null.
     /// </summary>
     /// <value></value>
     public List<ulong>/*?*/ Sizes {
@@ -211,7 +211,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public abstract void Dispatch(IMetadataVisitor visitor);
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {

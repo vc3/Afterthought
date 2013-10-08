@@ -70,6 +70,11 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     IMetadataReaderModuleReference ModuleReference { get; }
     IName/*?*/ NamespaceFullName { get; }
     IName MangledTypeName { get; }
+    /// <summary>
+    /// Type references resolve to type definitions. The resolution process traverses zero or more entries in exported type tables, also known as type aliases.
+    /// If a reference is indirected via a type alias, ITypeReference.IsAlias is true and ITypeReference.AliasForType exposes the information in the relevant row of the exported type table.
+    /// This method returns an object with that information, if available. If not available, it returns null.
+    /// </summary>
     ExportedTypeAliasBase/*?*/ TryResolveAsExportedType();
   }
 
@@ -207,7 +212,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     INamespaceTypeDefinition INamespaceTypeReference.ResolvedType {
       get {
         INamespaceTypeDefinition/*?*/ nsTypeDef = this.ResolvedType as INamespaceTypeDefinition;
-        if (nsTypeDef == null)
+        if (nsTypeDef == null || nsTypeDef is Dummy)
           return Dummy.NamespaceTypeDefinition;
         return nsTypeDef;
       }
@@ -451,6 +456,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public abstract void DispatchAsReference(IMetadataVisitor visitor);
 
+    public override string ToString() {
+      return TypeHelper.GetTypeName(this);
+    }
+
     #region ITypeReference Members
 
     public IAliasForType AliasForType {
@@ -488,7 +497,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     ITypeDefinition ITypeReference.ResolvedType {
       get {
         var result = this.GetResolvedType();
-        if (result == Dummy.NamedTypeDefinition) return Dummy.Type;
+        if (result is Dummy) return Dummy.TypeDefinition;
         return result;
       }
     }
@@ -582,7 +591,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
           this.typeCode = PrimitiveTypeCode.NotPrimitive;
           if (this.Module.ContainingAssembly.AssemblyIdentity.Equals(this.PEFileToObjectModel.ModuleReader.metadataReaderHost.CoreAssemblySymbolicIdentity)) {
             var td = this.ResolvedType;
-            if (td != Dummy.Type)
+            if (!(td is Dummy))
               this.typeCode = td.TypeCode;
             else
               this.typeCode = this.UseNameToResolveTypeCode();
@@ -730,7 +739,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
         INestedTypeDefinition/*?*/ result = this.resolvedType;
         if (result == null) {
           result = this.Resolve() as INestedTypeDefinition;
-          if (result == null) result = Dummy.NestedType;
+          if (result == null) result = Dummy.NestedTypeDefinition;
           this.resolvedType = result;
         }
         return result;
@@ -817,6 +826,11 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get { return TokenTypeIds.TypeRef | this.TypeRefRowId; }
     }
 
+    /// <summary>
+    /// Type references resolve to type definitions. The resolution process traverses zero or more entries in exported type tables, also known as type aliases.
+    /// If a reference is indirected via a type alias, ITypeReference.IsAlias is true and ITypeReference.AliasForType exposes the information in the relevant row of the exported type table.
+    /// This method returns an object with that information, if available. If not available, it returns null.
+    /// </summary>
     public abstract ExportedTypeAliasBase/*?*/ TryResolveAsExportedType();
 
     internal void InitResolvedModuleType() {
@@ -875,7 +889,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     ITypeDefinition ITypeReference.ResolvedType {
       get {
         var resolvedTypeDefRef = this.ResolvedType;
-        if (resolvedTypeDefRef == Dummy.NamedTypeDefinition) return Dummy.Type;
+        if (resolvedTypeDefRef is Dummy) return Dummy.TypeDefinition;
         return resolvedTypeDefRef;
       }
     }
@@ -978,8 +992,13 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       visitor.Visit(this);
     }
 
+    /// <summary>
+    /// Type references resolve to type definitions. The resolution process traverses zero or more entries in exported type tables, also known as type aliases.
+    /// If a reference is indirected via a type alias, ITypeReference.IsAlias is true and ITypeReference.AliasForType exposes the information in the relevant row of the exported type table.
+    /// This method returns an object with that information, if available. If not available, it returns null.
+    /// </summary>
     public override ExportedTypeAliasBase/*?*/ TryResolveAsExportedType() {
-      return this.PEFileToObjectModel.ResolveNamespaceTypeRefReferenceAsExportedType(this);
+      return this.PEFileToObjectModel.TryToResolveNamespaceTypeReferenceAsExportedType(this);
     }
 
     public override IName/*?*/ NamespaceFullName {
@@ -1003,7 +1022,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public new INamespaceTypeDefinition ResolvedType {
       get {
         INamespaceTypeDefinition/*?*/ nsTypeDef = base.ResolvedType as INamespaceTypeDefinition;
-        if (nsTypeDef == null)
+        if (nsTypeDef == null || nsTypeDef is Dummy)
           return Dummy.NamespaceTypeDefinition;
         return nsTypeDef;
       }
@@ -1020,7 +1039,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     INamedTypeDefinition INamedTypeReference.ResolvedType {
       get {
         var result = this.ResolvedType;
-        if (result == Dummy.NamespaceTypeDefinition) return Dummy.NamedTypeDefinition;
+        if (result is Dummy) return Dummy.NamedTypeDefinition;
         return result;
       }
     }
@@ -1156,8 +1175,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public override ExportedTypeAliasBase/*?*/ TryResolveAsExportedType() {
       ExportedTypeAliasBase/*?*/ parentExportedType = this.parentTypeReference.TryResolveAsExportedType();
-      if (parentExportedType == null)
-        return null;
+      if (parentExportedType == null) return null;
       return parentExportedType.PEFileToObjectModel.ResolveExportedNestedType(parentExportedType, this.MangledTypeName);
     }
 
@@ -1176,8 +1194,8 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public new INestedTypeDefinition ResolvedType {
       get {
         INestedTypeDefinition/*?*/ nstTypeDef = base.ResolvedType as INestedTypeDefinition;
-        if (nstTypeDef == null)
-          return Dummy.NestedType;
+        if (nstTypeDef == null || nstTypeDef is Dummy)
+          return Dummy.NestedTypeDefinition;
         return nstTypeDef;
       }
     }
@@ -1855,6 +1873,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       }
     }
 
+    IName IContainerMember<INamespaceDefinition>.Name {
+      get { return this.Name; }
+    }
+
     #endregion
 
     #region IScopeMember<IScope<INamespaceMember>> Members
@@ -1910,7 +1932,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     public override IGenericTypeInstanceReference InstanceType {
-      get { return Dummy.GenericTypeInstance; }
+      get { return Dummy.GenericTypeInstanceReference; }
     }
 
     public override ushort GenericTypeParameterCardinality {
@@ -2200,6 +2222,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get { return PrimitiveTypeCode.NotPrimitive; }
     }
 
+    ushort INestedTypeDefinition.GenericParameterCount {
+      get { return this.GenericParameterCount; }
+    }
+
     #region ITypeDefinitionMember Members
 
     public ITypeDefinition ContainingTypeDefinition {
@@ -2232,6 +2258,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     public ITypeDefinition Container {
       get { return this.OwningModuleType; }
+    }
+
+    IName IContainerMember<ITypeDefinition>.Name {
+      get { return this.Name; }
     }
 
     #endregion
@@ -2297,7 +2327,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     public override IGenericTypeInstanceReference InstanceType {
-      get { return Dummy.GenericTypeInstance; }
+      get { return Dummy.GenericTypeInstanceReference; }
     }
 
     public override ushort GenericTypeParameterCardinality {
@@ -2495,7 +2525,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     public IGenericTypeInstanceReference InstanceType {
-      get { return Dummy.GenericTypeInstance; }
+      get { return Dummy.GenericTypeInstanceReference; }
     }
 
     public bool IsAbstract {
@@ -2790,7 +2820,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get {
         if (this.resolvedType == null)
           this.resolvedType = this.Resolve();
-        if (this.resolvedType == Dummy.GenericTypeParameter) return Dummy.Type;
+        if (this.resolvedType is Dummy) return Dummy.TypeDefinition;
         return this.resolvedType;
       }
     }
@@ -2805,6 +2835,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
         }
       }
       return Dummy.GenericTypeParameter;
+    }
+
+    public override string ToString() {
+      return TypeHelper.GetTypeName(this);
     }
 
     #region IGenericTypeParameter Members
@@ -2881,7 +2915,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get {
         if (this.resolvedType == null)
           this.Resolve();
-        if (this.resolvedType == Dummy.GenericMethodParameter) return Dummy.Type;
+        if (this.resolvedType is Dummy) return Dummy.TypeDefinition;
         return this.resolvedType;
       }
     }
@@ -2894,6 +2928,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       foreach (var genMethPar in definingMethod.GenericParameters) {
         if (genMethPar.Index == this.Index) { this.resolvedType = genMethPar; return; }
       }
+    }
+
+    public override string ToString() {
+      return TypeHelper.GetTypeName(this);
     }
 
     #region IGenericMethodParameter Members
@@ -2975,7 +3013,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     public IGenericTypeInstanceReference InstanceType {
-      get { return Dummy.GenericTypeInstance; }
+      get { return Dummy.GenericTypeInstanceReference; }
     }
 
     public bool IsAbstract {
@@ -3209,6 +3247,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
         }
         return this.genericParamConstraintRowIDEnd - this.genericParamConstraintRowIDStart;
       }
+    }
+
+    ushort INamedTypeDefinition.GenericParameterCount {
+      get { return this.GenericParameterCount; }
     }
 
     public override bool IsReferenceType {
@@ -3530,7 +3572,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public INamedTypeReference AliasedType {
       get {
         if (this.aliasTypeReference == null)
-          this.aliasTypeReference = this.PEFileToObjectModel.FindExportedType(this)??Dummy.NamedTypeReference;
+          this.aliasTypeReference = this.PEFileToObjectModel.GetReferenceToAliasedType(this)??Dummy.NamedTypeReference;
         return this.aliasTypeReference;
       }
     }
@@ -4074,7 +4116,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public ITypeReference ParamArrayElementType {
       get {
         IArrayTypeReference/*?*/ arrayTypeRef = this.TypeReference as IArrayTypeReference;
-        if (arrayTypeRef == null || !arrayTypeRef.IsVector)
+        if (arrayTypeRef == null || arrayTypeRef is Dummy || !arrayTypeRef.IsVector)
           return Dummy.TypeReference;
         return arrayTypeRef.ElementType;
       }
@@ -4083,7 +4125,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     public ITypeReference Type {
       get {
         ITypeReference/*?*/ moduleTypeRef = this.TypeReference;
-        if (moduleTypeRef == null)
+        if (moduleTypeRef == null || moduleTypeRef is Dummy)
           return Dummy.TypeReference;
         return moduleTypeRef;
       }
@@ -4281,7 +4323,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     ) {
       typeName = mangledTypeName;
       genericParamCount = 0;
-      int index = mangledTypeName.IndexOf('`');
+      int index = mangledTypeName.LastIndexOf('`');
       if (index == -1 || index == mangledTypeName.Length - 1)
         return;
       typeName = mangledTypeName.Substring(0, index);

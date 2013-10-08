@@ -60,6 +60,39 @@ namespace Microsoft.Cci {
     void DefineConstant2(string name, object value, uint sigToken);
   }
 
+  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("12F1E02C-1E05-4B0E-9468-EBC9D1BB040F")]
+  internal interface ISymUnmanagedWriter3 : ISymUnmanagedWriter2 {
+    void OpenMethod2(uint method, uint isect, uint offset);
+    void Commit();
+  }
+
+  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("BC7E3F53-F458-4C23-9DBD-A189E6E96594")]
+  internal interface ISymUnmanagedWriter4 : ISymUnmanagedWriter3 {
+    /*
+     * Functions the same as ISymUnmanagedWriter::GetDebugInfo with the exception
+     * that the path string is padded with zeros following the terminating null
+     * character to make the string data a fixed size of MAX_PATH. Padding is only
+     * given if the path string length itself is less than MAX_PATH.
+     *
+     * This makes writing tools that difference PE files easier.
+     */
+    void GetDebugInfoWithPadding(ref ImageDebugDirectory pIDD, uint cData, out uint pcData, IntPtr data);
+  }
+
+  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("DCF7780D-BDE9-45DF-ACFE-21731A32000C")]
+  interface ISymUnmanagedWriter5 : ISymUnmanagedWriter4 {
+    void OpenMapTokensToSourceSpans();
+
+    void CloseMapTokensToSourceSpans();
+
+    /// <summary>
+    /// Maps the given metadata token to the given source line span in the specified source file. 
+    /// Must be called between calls to OpenMapTokensToSourceSpans() and CloseMapTokensToSourceSpans().
+    /// </summary>
+    void MapTokenToSourceSpan(uint token, ISymUnmanagedDocumentWriter document, uint line, uint column, uint endLine, uint endColumn);
+
+  }
+
   internal struct ImageDebugDirectory {
     internal int Characteristics;
     internal int TimeDateStamp;

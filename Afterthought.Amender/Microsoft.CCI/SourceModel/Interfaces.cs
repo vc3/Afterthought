@@ -588,6 +588,7 @@ namespace Microsoft.Cci {
   /// An object that can map some kinds of ILocation objects to IPrimarySourceLocation objects. 
   /// For example, a PDB reader that maps offsets in an IL stream to source locations.
   /// </summary>
+  [ContractClass(typeof(ISourceLocationProviderContract))]
   public interface ISourceLocationProvider {
     /// <summary>
     /// Return zero or more locations in primary source documents that correspond to one or more of the given derived (non primary) document locations.
@@ -612,6 +613,36 @@ namespace Microsoft.Cci {
     /// </summary>
     string GetSourceNameFor(ILocalDefinition localDefinition, out bool isCompilerGenerated);
   }
+
+  #region ISourceLocationProvider contract binding
+  [ContractClassFor(typeof(ISourceLocationProvider))]
+  abstract class ISourceLocationProviderContract : ISourceLocationProvider {
+    #region ISourceLocationProvider Members
+
+    public IEnumerable<IPrimarySourceLocation> GetPrimarySourceLocationsFor(IEnumerable<ILocation> locations) {
+      Contract.Ensures(Contract.Result<IEnumerable<IPrimarySourceLocation>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<IPrimarySourceLocation> GetPrimarySourceLocationsFor(ILocation location) {
+      Contract.Ensures(Contract.Result<IEnumerable<IPrimarySourceLocation>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<IPrimarySourceLocation> GetPrimarySourceLocationsForDefinitionOf(ILocalDefinition localDefinition) {
+      Contract.Ensures(Contract.Result<IEnumerable<IPrimarySourceLocation>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public string GetSourceNameFor(ILocalDefinition localDefinition, out bool isCompilerGenerated) {
+      Contract.Ensures(Contract.Result<string>() != null);
+      throw new NotImplementedException();
+    }
+
+    #endregion
+  }
+  #endregion
+
 
   /// <summary>
   /// A range of CLR IL operations that comprise a lexical scope, specified as an IL offset and a length.
@@ -679,6 +710,12 @@ namespace Microsoft.Cci {
     /// </summary>
     bool IsIterator(IMethodBody methodBody);
 
+    /// <summary>
+    /// If the given method body is the "MoveNext" method of the state class of an asynchronous method, the returned
+    /// object describes where synchronization points occur in the IL operations of the "MoveNext" method. Otherwise
+    /// the result is null.
+    /// </summary>
+    ISynchronizationInformation/*?*/ GetSynchronizationInformation(IMethodBody methodBody);
   }
 
   [ContractClassFor(typeof(ILocalScopeProvider))]
@@ -717,13 +754,131 @@ namespace Microsoft.Cci {
       Contract.Requires(methodBody != null);
       throw new NotImplementedException();
     }
+
+    public ISynchronizationInformation/*?*/ GetSynchronizationInformation(IMethodBody methodBody) {
+      Contract.Requires(methodBody != null);
+      throw new NotImplementedException();
+    }
   }
 
+  /// <summary>
+  /// An object that describes where synchronization points occur in the IL operations of the "MoveNext" method of the state class of
+  /// an asynchronous method.
+  /// </summary>
+  [ContractClass(typeof(ISynchronizationInformationContract))]
+  public interface ISynchronizationInformation {
+    /// <summary>
+    /// The async method for which this object provides information about where its synchronization points are.
+    /// </summary>
+    IMethodDefinition AsyncMethod { get; }
+
+    /// <summary>
+    /// The "MoveNext" method of the state class of the asynchronous method for which this object provides information about where its synchronization points are.
+    /// </summary>
+    IMethodDefinition MoveNextMethod { get; }
+
+    /// <summary>
+    /// The offset of the first operation of the compiler generated catch all handler of the async method, if that method returns void.
+    /// Otherwise the value must be uint.MaxValue.
+    /// </summary>
+    /// <remarks>Exceptions propagated out of void async methods are rethrown in the caller's thread from deep inside
+    /// system code. A debugger that wants to stop execution only when an exception goes unhandled, might prefer to stop execution
+    /// when the exception is captured by the catch all handler, in which case the offending code is still on the stack, rather than when
+    /// the captured exception is rethrown.</remarks>
+    uint GeneratedCatchHandlerOffset { get; }
+
+    /// <summary>
+    /// Zero or more objects that describe points where synchronization occurs in an async method. 
+    /// </summary>
+    IEnumerable<ISynchronizationPoint> SynchronizationPoints { get; }
+  }
+
+  #region ISynchronizationInformation contract binding
+  [ContractClassFor(typeof(ISynchronizationInformation))]
+  abstract class ISynchronizationInformationContract : ISynchronizationInformation {
+    #region ISynchronizationInformation Members
+
+    public IMethodDefinition AsyncMethod {
+      get {
+        Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public IMethodDefinition MoveNextMethod {
+      get {
+        Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+        throw new NotImplementedException();
+      }
+    }
+
+    public uint GeneratedCatchHandlerOffset {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IEnumerable<ISynchronizationPoint> SynchronizationPoints {
+      get {
+        Contract.Ensures(Contract.Result<IEnumerable<ISynchronizationPoint>>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+  }
+  #endregion
+
+  /// <summary>
+  /// An object that provides the offset of the first IL operation that initiates a synchronization operation inside an async method, as well as the offset 
+  /// (and containing method) of the first IL operation that will execute after synchronization has been achieved.
+  /// </summary>
+  [ContractClass(typeof(ISynchronizationPointContract))]
+  public interface ISynchronizationPoint {
+    /// <summary>
+    /// The offset of the first IL operation of a sequence of instructions that will cause the thread executing the async method to synchronize with
+    /// the thread executing another async method. (This can cause execution of the async method to be temporarily suspended.) 
+    /// In C#, this sequence is generated for the await operation.
+    /// </summary>
+    uint SynchronizeOffset { get; }
+
+    /// <summary>
+    /// The method in which execution continues after synchronization has been achieved, if this is not the same method as the one
+    /// containing the operations that achieves synchronization (i.e. the "MoveNext" method of the state class of the async method).
+    /// </summary>
+    IMethodDefinition/*?*/ ContinuationMethod { get; }
+
+    /// <summary>
+    /// The offset of the first IL operation that will be executed after synchronization has been achieved. In C# this will be the offset of 
+    /// the first instruction following an await operation.
+    /// </summary>
+    uint ContinuationOffset { get; }
+  }
+
+  #region ISynchronizationPoint contract binding
+  [ContractClassFor(typeof(ISynchronizationPoint))]
+  abstract class ISynchronizationPointContract : ISynchronizationPoint {
+    #region ISynchronizationPoint Members
+
+    public uint SynchronizeOffset {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IMethodDefinition/*?*/ ContinuationMethod {
+      get { throw new NotImplementedException(); }
+    }
+
+    public uint ContinuationOffset {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
 
   /// <summary>
   /// A description of the lexical scope in which a namespace type has been nested. This scope is tied to a particular
   /// method body, so that partial types can be accommodated.
   /// </summary>
+  [ContractClass(typeof(INamespaceScopeContract))]
   public interface INamespaceScope {
 
     /// <summary>
@@ -733,10 +888,26 @@ namespace Microsoft.Cci {
 
   }
 
+  #region INamespaceScope contract binding
+  [ContractClassFor(typeof(INamespaceScope))]
+  abstract class INamespaceScopeContract : INamespaceScope {
+    #region INamespaceScope Members
+
+    public IEnumerable<IUsedNamespace> UsedNamespaces {
+      get {
+        Contract.Ensures(Contract.Result<IEnumerable<IUsedNamespace>>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+  }
+  #endregion
 
   /// <summary>
   /// A namespace that is used (imported) inside a namespace scope.
   /// </summary>
+  [ContractClass(typeof(IUsedNamespaceContract))]
   public interface IUsedNamespace {
     /// <summary>
     /// An alias for a namespace. For example the "x" of "using x = y.z;" in C#. Empty if no alias is present.
@@ -748,6 +919,29 @@ namespace Microsoft.Cci {
     /// </summary>
     IName NamespaceName { get; }
   }
+
+  #region IUsedNamedspace contract binding
+  [ContractClassFor(typeof(IUsedNamespace))]
+  abstract class IUsedNamespaceContract : IUsedNamespace {
+    #region IUsedNamespace Members
+
+    public IName Alias {
+      get {
+        Contract.Ensures(Contract.Result<IName>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public IName NamespaceName {
+      get {
+        Contract.Ensures(Contract.Result<IName>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+  }
+  #endregion
 
 
   /// <summary>

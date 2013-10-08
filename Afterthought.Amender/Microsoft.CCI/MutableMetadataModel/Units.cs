@@ -84,7 +84,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// A list of objects representing persisted instances of types that extend System.Attribute. Provides an extensible way to associate metadata
-    /// with this assembly.
+    /// with this assembly. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ AssemblyAttributes {
@@ -94,7 +94,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<ICustomAttribute>/*?*/ assemblyAttributes;
 
     /// <summary>
-    /// The Assembly that contains this module. If this module is main module then this returns this.
+    /// The Assembly that contains this module. If this module is main module then this returns this. May be null.
     /// </summary>
     /// <value></value>
     public override IAssembly/*?*/ ContainingAssembly {
@@ -126,7 +126,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Public types defined in other modules making up this assembly and to which other assemblies may refer to via this assembly.
+    /// Public types defined in other modules making up this assembly and to which other assemblies may refer to via this assembly. May be null.
     /// </summary>
     public List<IAliasForType>/*?*/ ExportedTypes {
       get { return this.exportedTypes; }
@@ -147,7 +147,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// A list of the files that constitute the assembly. These are not the source language files that may have been
     /// used to compile the assembly, but the files that contain constituent modules of a multi-module assembly as well
-    /// as any external resources. It corresonds to the File table of the .NET assembly file format.
+    /// as any external resources. It corresonds to the File table of the .NET assembly file format. May be null.
     /// </summary>
     /// <value></value>
     public List<IFileReference>/*?*/ Files {
@@ -194,7 +194,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A list of the modules that constitute the assembly.
+    /// A list of the modules that constitute the assembly. May be null.
     /// </summary>
     /// <value></value>
     public List<IModule>/*?*/ MemberModules {
@@ -234,7 +234,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// The public part of the key used to encrypt the SHA1 hash over the persisted form of this assembly. Null if not specified.
     /// This value is used by the loader to decrypt HashValue which it then compares with a freshly computed hash value to verify the
-    /// integrity of the assembly.
+    /// integrity of the assembly. May be null.
     /// </summary>
     public List<byte>/*?*/ PublicKey {
       get { return this.publicKey; }
@@ -251,7 +251,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<byte>/*?*/ publicKey;
 
     /// <summary>
-    /// A list of named byte sequences persisted with the assembly and used during execution, typically via .NET Framework helper classes.
+    /// A list of named byte sequences persisted with the assembly and used during execution, typically via .NET Framework helper classes. May be null.
     /// </summary>
     /// <value></value>
     public List<IResourceReference>/*?*/ Resources {
@@ -262,7 +262,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// A list of objects representing persisted instances of pairs of security actions and sets of security permissions.
-    /// These apply by default to every method reachable from the module.
+    /// These apply by default to every method reachable from the module. May be null.
     /// </summary>
     /// <value></value>
     public List<ISecurityAttribute>/*?*/ SecurityAttributes {
@@ -464,7 +464,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A list of aliases for the root namespace of the referenced assembly.
+    /// Calls vistor.Visit(IAssemblyReference).
+    /// </summary>
+    public override void DispatchAsReference(IMetadataVisitor visitor) {
+      visitor.Visit(this);
+    }
+
+    /// <summary>
+    /// A list of aliases for the root namespace of the referenced assembly. May be null.
     /// </summary>
     /// <value></value>
     public List<IName>/*?*/ Aliases {
@@ -490,7 +497,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.Host == null) return Dummy.Assembly;
       var unifiedIdentity = this.UnifiedAssemblyIdentity;
       var result = this.Host.FindAssembly(unifiedIdentity);
-      if (result != Dummy.Assembly) return result;
+      if (!(result is Dummy)) return result;
       if (this.ReferringUnit != null && (String.IsNullOrEmpty(unifiedIdentity.Location) || unifiedIdentity.Location.Equals("unknown://location")))
         unifiedIdentity = this.Host.ProbeAssemblyReference(this.ReferringUnit, unifiedIdentity);
       return this.Host.LoadAssembly(unifiedIdentity);
@@ -580,7 +587,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<byte>/*?*/ publicKey;
 
     /// <summary>
-    /// The hashed 8 bytes of the public key of the referenced assembly. This is empty if the referenced assembly does not have a public key.
+    /// The hashed 8 bytes of the public key of the referenced assembly. This is empty if the referenced assembly does not have a public key. May be null.
     /// </summary>
     /// <value></value>
     public List<byte>/*?*/ PublicKeyToken {
@@ -725,6 +732,8 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.sizeOfStackCommit = 0x1000;
       this.sizeOfStackReserve = 0x100000;
       this.strings = null;
+      this.subsystemMajorVersion = 4;
+      this.subsystemMinorVersion = 0;
       this.targetRuntimeVersion = "";
       this.trackDebugData = false;
       this.typeMemberReferences = null;
@@ -752,6 +761,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.baseAddress = module.BaseAddress;
       this.containingAssembly = module.ContainingAssembly;
       this.debugInformationLocation = module.DebugInformationLocation;
+      this.debugInformationVersion = module.DebugInformationVersion;
       this.dllCharacteristics = module.DllCharacteristics;
       if (module.Kind == ModuleKind.ConsoleApplication || module.Kind == ModuleKind.WindowsApplication)
         this.entryPoint = module.EntryPoint;
@@ -789,6 +799,8 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.strings = new List<string>(strs);
       else
         this.strings = null;
+      this.subsystemMajorVersion = module.SubsystemMajorVersion;
+      this.subsystemMinorVersion = module.SubsystemMinorVersion;
       this.targetRuntimeVersion = module.TargetRuntimeVersion;
       this.trackDebugData = module.TrackDebugData;
       var memberRefs = module.GetTypeMemberReferences();
@@ -846,7 +858,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ulong baseAddress;
 
     /// <summary>
-    /// The Assembly that contains this module. If this module is main module then this returns this.
+    /// The Assembly that contains this module. If this module is main module then this returns this. May be null.
     /// </summary>
     /// <value></value>
     public virtual IAssembly/*?*/ ContainingAssembly {
@@ -863,6 +875,15 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.debugInformationLocation = value; }
     }
     string debugInformationLocation;
+
+    /// <summary>
+    /// A hexadecimal string that is used to store and retrieve the debugging symbols from a symbol store.
+    /// </summary>
+    public virtual string DebugInformationVersion {
+      get { return this.debugInformationVersion; }
+      set { this.debugInformationVersion = value; }
+    }
+    string debugInformationVersion;
 
     /// <summary>
     /// Flags that control the behavior of the target operating system. CLI implementations are supposed to ignore this, but some operating system pay attention.
@@ -999,7 +1020,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// A list of objects representing persisted instances of types that extend System.Attribute. Provides an extensible way to associate metadata
-    /// with this module.
+    /// with this module. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ ModuleAttributes {
@@ -1018,7 +1039,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A list of the modules that are referenced by this module.
+    /// A list of the modules that are referenced by this module. May be null.
     /// </summary>
     /// <value></value>
     public List<IModuleReference>/*?*/ ModuleReferences {
@@ -1140,7 +1161,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ulong sizeOfStackReserve;
 
     /// <summary>
-    /// Gets or sets the strings.
+    /// Gets or sets the strings. May be null.
     /// </summary>
     /// <value>The strings.</value>
     public List<string>/*?*/ Strings {
@@ -1148,6 +1169,24 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.strings = value; }
     }
     List<string>/*?*/ strings;
+
+    /// <summary>
+    /// The first part of a two part version number indicating the operating subsystem that is expected to be the target environment for this module.
+    /// </summary>
+    public ushort SubsystemMajorVersion {
+      get { return this.subsystemMajorVersion; }
+      set { this.subsystemMajorVersion = value; }
+    }
+    ushort subsystemMajorVersion;
+
+    /// <summary>
+    /// The second part of a two part version number indicating the operating subsystem that is expected to be the target environment for this module.
+    /// </summary>
+    public ushort SubsystemMinorVersion {
+      get { return this.subsystemMinorVersion; }
+      set { this.subsystemMinorVersion = value; }
+    }
+    ushort subsystemMinorVersion;
 
     /// <summary>
     /// Identifies the version of the CLR that is required to load this module or assembly.
@@ -1173,7 +1212,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// Zero or more type references used in the module. May be null. If the module is produced by reading in a CLR PE file, then this will be the contents
     /// of the type reference table. If the module is produced some other way, the method may return an empty enumeration or an enumeration that is a
-    /// subset of the type references actually used in the module. 
+    /// subset of the type references actually used in the module. May be null.
     /// </summary>
     public List<ITypeReference>/*?*/ TypeReferences {
       get { return this.typeReferences; }
@@ -1184,7 +1223,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// Returns zero or more type member references used in the module. May be null. If the module is produced by reading in a CLR PE file, then this will be the contents
     /// of the member reference table (which only contains entries for fields and methods). If the module is produced some other way, 
-    /// the method may return an empty enumeration or an enumeration that is a subset of the member references actually used in the module. 
+    /// the method may return an empty enumeration or an enumeration that is a subset of the member references actually used in the module. May be null. 
     /// </summary>
     public List<ITypeMemberReference>/*?*/ TypeMemberReferences {
       get { return this.typeMemberReferences; }
@@ -1223,7 +1262,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// A list of named byte sequences persisted with the module and used during execution, typically via the Win32 API.
     /// A module will define Win32 resources rather than "managed" resources mainly to present metadata to legacy tools
-    /// and not typically use the data in its own code.
+    /// and not typically use the data in its own code. May be null.
     /// </summary>
     /// <value></value>
     public List<IWin32Resource>/*?*/ Win32Resources {
@@ -1387,7 +1426,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// An object representing the application that is hosting the object model that this reference forms a part of.
+    /// An object representing the application that is hosting the object model that this reference forms a part of. May be null.
     /// </summary>
     public IMetadataHost/*?*/ Host {
       get { return this.host; }
@@ -1440,7 +1479,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.Host == null) return Dummy.Module;
       var identity = this.ModuleIdentity;
       var result = this.Host.FindModule(identity);
-      if (result != Dummy.Module) return result;
+      if (!(result is Dummy)) return result;
       if (identity.Location == null && this.ReferringUnit != null)
         identity = this.Host.ProbeModuleReference(this.ReferringUnit, identity);
       return this.Host.LoadModule(identity);
@@ -1552,13 +1591,13 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// A sequence of PE sections that are not well known to PE readers and thus have not been decompiled into 
-    /// other parts of the Metadata Model. These sections may have meaning to other tools. 
+    /// other parts of the Metadata Model. These sections may have meaning to other tools.  May be null.
     /// </summary>
-    public virtual List<IPESection> UninterpretedSections {
+    public virtual List<IPESection>/*?*/ UninterpretedSections {
       get { return this.uninterpretedSections; }
       set { this.uninterpretedSections = value; }
     }
-    List<IPESection> uninterpretedSections;
+    List<IPESection>/*?*/ uninterpretedSections;
 
     /// <summary>
     /// A collection of well known types that must be part of every target platform and that are fundamental to modeling compiled code.
@@ -1647,7 +1686,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -1696,7 +1735,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     protected bool isFrozen;
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {

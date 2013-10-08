@@ -22,6 +22,7 @@ namespace Microsoft.Cci.Pdb {
 
     internal uint token;
     internal uint slotToken;
+    internal uint tokenOfMethodWhoseUsingInfoAppliesToThisMethod;
     //internal string name;
     //internal string module;
     //internal ushort flags;
@@ -40,6 +41,7 @@ namespace Microsoft.Cci.Pdb {
     internal IEnumerable<INamespaceScope>/*?*/ namespaceScopes;
     internal string/*?*/ iteratorClass;
     internal List<ILocalScope>/*?*/ iteratorScopes;
+    internal PdbSynchronizationInformation/*?*/ synchronizationInformation;
 
     private static string StripNamespace(string module) {
       int li = module.LastIndexOf('.');
@@ -267,6 +269,8 @@ namespace Microsoft.Cci.Pdb {
                     while (count-- > 0)
                       this.ReadCustomMetadata(bits);
                   }
+                } else if (name == "asyncMethodInfo") {
+                  this.synchronizationInformation = new PdbSynchronizationInformation(bits);
                 }
                 bits.Position = stop;
                 break;
@@ -349,7 +353,7 @@ namespace Microsoft.Cci.Pdb {
       bits.ReadUInt32(out numberOfBytesInItem);
       switch (kind) {
         case 0: this.ReadUsingInfo(bits); break;
-        case 1: break; // this.ReadForwardInfo(bits); break;
+        case 1: this.ReadForwardInfo(bits); break;
         case 2: break; // this.ReadForwardedToModuleInfo(bits); break;
         case 3: this.ReadIteratorLocals(bits); break;
         case 4: this.ReadForwardIterator(bits); break;
@@ -378,8 +382,9 @@ namespace Microsoft.Cci.Pdb {
     //private void ReadForwardedToModuleInfo(BitAccess bits) {
     //}
 
-    //private void ReadForwardInfo(BitAccess bits) {
-    //}
+    private void ReadForwardInfo(BitAccess bits) {
+      bits.ReadUInt32(out this.tokenOfMethodWhoseUsingInfoAppliesToThisMethod);
+    }
 
     private void ReadUsingInfo(BitAccess bits) {
       ushort numberOfNamespaces;
@@ -401,7 +406,7 @@ namespace Microsoft.Cci.Pdb {
           return 1;
         } else if (fx.address < fy.address) {
           return -1;
-        } else if (fx.address > fy.address) {  
+        } else if (fx.address > fy.address) {
           return 1;
         } else {
           return 0;
@@ -449,4 +454,67 @@ namespace Microsoft.Cci.Pdb {
 
     //}
   }
+
+  internal class PdbSynchronizationInformation : ISynchronizationInformation {
+    internal uint kickoffMethodToken;
+    internal IMethodDefinition asyncMethod;
+    internal IMethodDefinition moveNextMethod;
+    internal uint generatedCatchHandlerIlOffset;
+    internal PdbSynchronizationPoint[] synchronizationPoints;
+
+    internal PdbSynchronizationInformation(BitAccess bits) {
+      uint asyncStepInfoCount;
+      bits.ReadUInt32(out this.kickoffMethodToken);
+      bits.ReadUInt32(out this.generatedCatchHandlerIlOffset);
+      bits.ReadUInt32(out asyncStepInfoCount);
+      this.synchronizationPoints = new PdbSynchronizationPoint[asyncStepInfoCount];
+      for (uint i = 0; i < asyncStepInfoCount; i += 1) {
+        this.synchronizationPoints[i] = new PdbSynchronizationPoint(bits);
+      }
+      this.asyncMethod = Dummy.MethodDefinition;
+      this.moveNextMethod = Dummy.MethodDefinition;
+    }
+
+    public IMethodDefinition AsyncMethod {
+      get { return this.asyncMethod; }
+    }
+
+    public IMethodDefinition MoveNextMethod {
+      get { return this.moveNextMethod; }
+    }
+
+    public uint GeneratedCatchHandlerOffset {
+      get { return this.generatedCatchHandlerIlOffset; }
+    }
+
+    public IEnumerable<ISynchronizationPoint> SynchronizationPoints {
+      get { return IteratorHelper.GetConversionEnumerable<PdbSynchronizationPoint, ISynchronizationPoint>(this.synchronizationPoints); }
+    }
+  }
+
+  internal class PdbSynchronizationPoint : ISynchronizationPoint {
+    internal uint synchronizeOffset;
+    internal uint continuationMethodToken;
+    internal IMethodDefinition/*?*/ continuationMethod;
+    internal uint continuationOffset;
+
+    internal PdbSynchronizationPoint(BitAccess bits) {
+      bits.ReadUInt32(out this.synchronizeOffset);
+      bits.ReadUInt32(out this.continuationMethodToken);
+      bits.ReadUInt32(out this.continuationOffset);
+    }
+
+    public uint SynchronizeOffset {
+      get { return this.synchronizeOffset; }
+    }
+
+    public IMethodDefinition/*?*/ ContinuationMethod {
+      get { return this.continuationMethod; }
+    }
+
+    public uint ContinuationOffset {
+      get { return this.continuationOffset; }
+    }
+  }
+
 }

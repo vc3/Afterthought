@@ -61,7 +61,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     INamedTypeReference aliasedType;
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -143,7 +143,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -153,7 +153,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<ILocation>/*?*/ locations;
 
     /// <summary>
-    /// The collection of member objects comprising the type.
+    /// The collection of member objects comprising the type. May be null.
     /// </summary>
     /// <value></value>
     public List<IAliasMember>/*?*/ Members {
@@ -259,7 +259,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// A possibly empty list of lower bounds for dimension indices. When not explicitly specified, a lower bound defaults to zero.
-    /// The first lower bound in the list corresponds to the first dimension. Dimensions cannot be skipped.
+    /// The first lower bound in the list corresponds to the first dimension. Dimensions cannot be skipped. May be null.
     /// </summary>
     public virtual List<int>/*?*/ LowerBounds {
       get {
@@ -287,7 +287,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// A possible empty list of upper bounds for dimension indices.
     /// The first upper bound in the list corresponds to the first dimension. Dimensions cannot be skipped.
-    /// An unspecified upper bound means that instances of this type can have an arbitrary upper bound for that dimension.
+    /// An unspecified upper bound means that instances of this type can have an arbitrary upper bound for that dimension. May be null.
     /// </summary>
     /// <value></value>
     public virtual List<ulong>/*?*/ Sizes {
@@ -306,6 +306,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     /// <value>The type of the resolved.</value>
     public override ITypeDefinition ResolvedType {
+      [ContractVerification(false)]
       get {
         return this.ResolvedArrayType;
       }
@@ -512,7 +513,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public IFunctionPointer ResolvedFunctionPointer {
       get {
         Contract.Ensures(Contract.Result<ITypeDefinition>() != null);
-        //Contract.Ensures(Contract.Result<ITypeDefinition>() == Dummy.Type || this.IsAlias ||
+        //Contract.Ensures(Contract.Result<ITypeDefinition>() == Dummy.TypeDefinition || this.IsAlias ||
         //    Contract.Result<ITypeDefinition>().InternedKey == this.InternedKey);
         Contract.Ensures(this.IsFrozen);
 
@@ -728,7 +729,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public override ITypeDefinition ResolvedType {
       get {
         var result = ((IGenericMethodParameterReference)this).ResolvedType;
-        if (result == Dummy.GenericMethodParameter) return Dummy.Type;
+        if (result is Dummy) return Dummy.TypeDefinition;
         return result;
       }
     }
@@ -777,7 +778,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// A list of classes or interfaces. All type arguments matching this parameter must be derived from all of the classes and implement all of the interfaces.
+    /// A list of classes or interfaces. All type arguments matching this parameter must be derived from all of the classes and implement all of the interfaces. May be null.
     /// </summary>
     /// <value></value>
     public List<ITypeReference>/*?*/ Constraints {
@@ -822,7 +823,7 @@ namespace Microsoft.Cci.MutableCodeModel {
             this.flags |= (NamedTypeDefinition.Flags)0x00000400;
           else {
             ITypeDefinition baseClass = this.GetEffectiveBaseClass();
-            if (!TypeHelper.TypesAreEquivalent(baseClass, this.PlatformType.SystemObject) && baseClass != Dummy.Type) {
+            if (!TypeHelper.TypesAreEquivalent(baseClass, this.PlatformType.SystemObject) && !(baseClass is Dummy)) {
               if (baseClass.IsClass)
                 this.flags |= (NamedTypeDefinition.Flags)0x00000400;
               else if (baseClass.IsValueType)
@@ -939,7 +940,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     [ContractInvariantMethod]
     void ObjectInvariant() {
       Contract.Invariant(this.genericType != null);
-      //Contract.Invariant(this.genericType.ResolvedType == Dummy.Type || this.genericType.ResolvedType.IsGeneric);
+      //Contract.Invariant(this.genericType.ResolvedType == Dummy.TypeDefinition || this.genericType.ResolvedType.IsGeneric);
       //Contract.Invariant(this.genericArguments == null || Contract.ForAll(genericArguments, x => x != null));
       Contract.Invariant(this.IsFrozen || this.resolvedGenericTypeInstance == null);
     }
@@ -994,7 +995,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       set {
         Contract.Requires(!this.IsFrozen);
         Contract.Requires(value != null);
-        //Contract.Requires(value.ResolvedType == Dummy.Type || value.ResolvedType.IsGeneric);
+        //Contract.Requires(value.ResolvedType == Dummy.TypeDefinition || value.ResolvedType.IsGeneric);
         this.genericType = value;
       }
     }
@@ -1011,7 +1012,11 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (this.resolvedGenericTypeInstance == null) {
           this.isFrozen = true;
           var self = (IGenericTypeInstanceReference)this;
-          this.resolvedGenericTypeInstance = Immutable.GenericTypeInstance.GetGenericTypeInstance(this.genericType, self.GenericArguments, this.InternFactory);
+          var template = this.genericType.ResolvedType;
+          if (template is Dummy || !template.IsGeneric)
+            this.resolvedGenericTypeInstance = Dummy.GenericTypeInstance;
+          else
+            this.resolvedGenericTypeInstance = Immutable.GenericTypeInstance.GetGenericTypeInstance(template, self.GenericArguments, this.InternFactory);
         }
         return this.resolvedGenericTypeInstance;
       }
@@ -1045,13 +1050,11 @@ namespace Microsoft.Cci.MutableCodeModel {
   /// </summary>
   public sealed class GenericTypeParameter : GenericParameter, IGenericTypeParameter, ICopyFrom<IGenericTypeParameter> {
 
-    //^ [NotDelayed]
     /// <summary>
     /// 
     /// </summary>
     public GenericTypeParameter() {
-      this.definingType = Dummy.Type;
-      //^ base;
+      this.definingType = Dummy.TypeDefinition;
     }
 
     /// <summary>
@@ -1227,7 +1230,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public override ITypeDefinition ResolvedType {
       get {
         var result = ((IGenericTypeParameterReference)this).ResolvedType;
-        return result is Dummy ? Dummy.Type : result;
+        return result is Dummy ? Dummy.TypeDefinition : result;
       }
     }
 
@@ -1245,6 +1248,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public ManagedPointerTypeReference() {
+      Contract.Ensures(!this.IsFrozen);
+
       this.targetType = Dummy.TypeReference;
       this.TypeCode = PrimitiveTypeCode.Reference;
     }
@@ -1371,7 +1376,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// A possible empty list of lower bounds for dimension indices. When not explicitly specified, a lower bound defaults to zero.
-    /// The first lower bound in the list corresponds to the first dimension. Dimensions cannot be skipped.
+    /// The first lower bound in the list corresponds to the first dimension. Dimensions cannot be skipped. May be null.
     /// </summary>
     /// <value></value>
     public override List<int>/*?*/ LowerBounds {
@@ -1395,7 +1400,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// A possible empty list of upper bounds for dimension indices.
     /// The first upper bound in the list corresponds to the first dimension. Dimensions cannot be skipped.
-    /// An unspecified upper bound means that instances of this type can have an arbitrary upper bound for that dimension.
+    /// An unspecified upper bound means that instances of this type can have an arbitrary upper bound for that dimension. May be null.
     /// </summary>
     /// <value></value>
     public override List<ulong>/*?*/ Sizes {
@@ -1426,7 +1431,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public MethodImplementation() {
-      this.containingType = Dummy.Type;
+      this.containingType = Dummy.TypeDefinition;
       this.implementedMethod = Dummy.MethodReference;
       this.implementingMethod = Dummy.MethodReference;
     }
@@ -1495,7 +1500,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public NamespaceAliasForType() {
-      this.containingNamespace = Dummy.RootUnitNamespace;
+      this.containingNamespace = Dummy.NamespaceDefinition;
       this.isPublic = false;
       this.name = Dummy.Name;
     }
@@ -1574,7 +1579,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public NamespaceTypeDefinition() {
-      this.containingUnitNamespace = Dummy.RootUnitNamespace;
+      this.containingUnitNamespace = Dummy.UnitNamespace;
     }
 
     /// <summary>
@@ -1597,6 +1602,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// A map from type references to potentially empty enumerations of attributes.
     /// The references are expected to be references to interface types implemented by this type
     /// and the attributes are meant to provide additional information about the relationship between this type and its interface.
+    /// May be null.
     /// </summary>
     public Dictionary<ITypeReference, IEnumerable<ICustomAttribute>>/*?*/ AttributesFor {
       get { return this.attributesFor; }
@@ -1649,7 +1655,13 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// module as the reference to the type.
     /// </summary>
     public bool KeepDistinctFromDefinition {
-      get { return false; }
+      get { return (this.flags & Flags.KeepReferencesDistinctFromDefinition) != 0; }
+      set {
+        if (value)
+          this.flags |= Flags.KeepReferencesDistinctFromDefinition;
+        else
+          this.flags &= ~Flags.KeepReferencesDistinctFromDefinition;
+      }
     }
 
     /// <summary>
@@ -1677,6 +1689,10 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     INamespaceDefinition IContainerMember<INamespaceDefinition>.Container {
       get { return this.ContainingUnitNamespace; }
+    }
+
+    IName IContainerMember<INamespaceDefinition>.Name {
+      get { return this.Name; }
     }
 
     #endregion
@@ -1726,7 +1742,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public NamespaceTypeReference() {
       Contract.Ensures(!this.IsFrozen);
-      this.containingUnitNamespace = Dummy.RootUnitNamespace;
+
+      this.containingUnitNamespace = Dummy.UnitNamespaceReference;
       this.genericParameterCount = 0;
       this.mangleName = true;
       this.name = Dummy.Name;
@@ -1811,6 +1828,9 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     private INamespaceTypeDefinition Resolve() {
       Contract.Ensures(this.IsFrozen);
+      Contract.Ensures(Contract.Result<INamespaceTypeDefinition>() != null);
+      Contract.Ensures(this.aliasForType != null);
+
       this.isFrozen = true;
       this.aliasForType = Dummy.AliasForType;
       foreach (INamespaceMember member in this.ContainingUnitNamespace.ResolvedUnitNamespace.GetMembersNamed(this.name, false)) {
@@ -1824,7 +1844,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
       if (this.aliasForType != null) {
         var resolvedType = this.aliasForType.AliasedType.ResolvedType as INamespaceTypeDefinition;
-        if (resolvedType != null && resolvedType.GenericParameterCount == this.GenericParameterCount) return resolvedType;
+        if (resolvedType != null && !(resolvedType is Dummy) && resolvedType.GenericParameterCount == this.GenericParameterCount) return resolvedType;
       }
       return Dummy.NamespaceTypeDefinition;
     }
@@ -1837,7 +1857,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       get {
         if (this.resolvedType == null)
           this.resolvedType = this.Resolve();
-        return this.resolvedType == Dummy.NamespaceTypeDefinition ? Dummy.Type : this.resolvedType;
+        return this.resolvedType is Dummy ? Dummy.TypeDefinition : this.resolvedType;
       }
     }
 
@@ -1978,7 +1998,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public NestedTypeDefinition() {
-      this.containingTypeDefinition = Dummy.Type;
+      this.containingTypeDefinition = Dummy.TypeDefinition;
     }
 
     /// <summary>
@@ -2032,10 +2052,22 @@ namespace Microsoft.Cci.MutableCodeModel {
       visitor.Visit((INestedTypeReference)this);
     }
 
+    ushort INamedTypeDefinition.GenericParameterCount {
+      get { return this.GenericParameterCount; }
+    }
+
+    ushort INestedTypeDefinition.GenericParameterCount {
+      get { return this.GenericParameterCount; }
+    }
+
     #region IContainerMember<ITypeDefinition> Members
 
     ITypeDefinition IContainerMember<ITypeDefinition>.Container {
       get { return this.ContainingTypeDefinition; }
+    }
+
+    IName IContainerMember<ITypeDefinition>.Name {
+      get { return this.Name; }
     }
 
     #endregion
@@ -2086,7 +2118,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// 
     /// </summary>
     public SpecializedNestedTypeDefinition() {
-      this.unspecializedVersion = Dummy.NestedType;
+      this.unspecializedVersion = Dummy.NestedTypeDefinition;
     }
 
     /// <summary>
@@ -2143,6 +2175,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public NestedTypeReference() {
       Contract.Ensures(!this.IsFrozen);
+
       this.containingType = Dummy.TypeReference;
       this.genericParameterCount = 0;
       this.mangleName = true;
@@ -2183,7 +2216,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public override IAliasForType AliasForType {
       get {
         if (this.aliasForType == null)
-          this.Resolve();
+          this.resolvedType = this.Resolve(); //Also initializes this.aliasForType
         return this.aliasForType;
       }
     }
@@ -2253,6 +2286,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     private INestedTypeDefinition Resolve() {
       Contract.Ensures(Contract.Result<INestedTypeDefinition>() != null);
       Contract.Ensures(this.IsFrozen);
+      Contract.Ensures(this.aliasForType != null);
+
       this.isFrozen = true;
       this.aliasForType = Dummy.AliasForType;
       foreach (ITypeDefinitionMember member in this.ContainingType.ResolvedType.GetMembersNamed(this.name, false)) {
@@ -2275,7 +2310,7 @@ namespace Microsoft.Cci.MutableCodeModel {
           return neType;
         }
       }
-      return Dummy.NestedType;
+      return Dummy.NestedTypeDefinition;
     }
 
     /// <summary>
@@ -2289,13 +2324,17 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (this.resolvedType == null)
           this.resolvedType = this.Resolve();
         Contract.Assume(!(this is ITypeDefinition));
-        if (this.resolvedType == Dummy.NestedType) return Dummy.Type;
+        if (this.resolvedType is Dummy) return Dummy.TypeDefinition;
         return this.resolvedType;
       }
     }
 
     INamedTypeDefinition INamedTypeReference.ResolvedType {
-      get { return ((INestedTypeReference)this).ResolvedType; }
+      get {
+        var result = this.ResolvedType as INamedTypeDefinition;
+        if (result == null || result is Dummy) return Dummy.NamedTypeDefinition;
+        return result;
+      }
     }
 
     INestedTypeDefinition INestedTypeReference.ResolvedType {
@@ -2419,7 +2458,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public SpecializedNestedTypeReference() {
-      this.unspecializedVersion = Dummy.NestedType;
+      this.unspecializedVersion = Dummy.NestedTypeDefinition;
     }
 
     [ContractInvariantMethod]
@@ -2496,7 +2535,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.securityAttributes = null;
       this.sizeOf = 0;
       this.stringFormat = StringFormatKind.Ansi;
-      this.template = Dummy.Type;
+      this.template = Dummy.TypeDefinition;
       this.typeCode = PrimitiveTypeCode.NotPrimitive;
       this.underlyingType = Dummy.TypeReference;
     }
@@ -2603,7 +2642,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ushort alignment;
 
     /// <summary>
-    /// A collection of metadata custom attributes that are associated with this definition.
+    /// A collection of metadata custom attributes that are associated with this definition. May be null.
     /// </summary>
     /// <value></value>
     public List<ICustomAttribute>/*?*/ Attributes {
@@ -2614,7 +2653,7 @@ namespace Microsoft.Cci.MutableCodeModel {
 
     /// <summary>
     /// Zero or more classes from which this type is derived.
-    /// For CLR types this collection is empty for interfaces and System.Object and populated with exactly one base type for all other types.
+    /// For CLR types this collection is empty for interfaces and System.Object and populated with exactly one base type for all other types. May be null.
     /// </summary>
     /// <value></value>
     public virtual List<ITypeReference>/*?*/ BaseClasses {
@@ -2650,7 +2689,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public abstract void DispatchAsReference(IMetadataVisitor visitor);
 
     /// <summary>
-    /// Zero or more events defined by this type.
+    /// Zero or more events defined by this type. May be null.
     /// </summary>
     /// <value></value>
     public List<IEventDefinition>/*?*/ Events {
@@ -2660,7 +2699,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IEventDefinition>/*?*/ events;
 
     /// <summary>
-    /// Zero or more implementation overrides provided by the class.
+    /// Zero or more implementation overrides provided by the class. May be null.
     /// </summary>
     /// <value></value>
     public List<IMethodImplementation>/*?*/ ExplicitImplementationOverrides {
@@ -2670,7 +2709,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IMethodImplementation>/*?*/ explicitImplementationOverrides;
 
     /// <summary>
-    /// Zero or more fields defined by this type.
+    /// Zero or more fields defined by this type. May be null.
     /// </summary>
     /// <value></value>
     public List<IFieldDefinition>/*?*/ Fields {
@@ -2700,7 +2739,8 @@ namespace Microsoft.Cci.MutableCodeModel {
       MustBeValueType=0x00004000,
       MustHaveDefaultConstructor=0x00002000,
       MangleName=0x00001000,
-      IsForeignObject=0x00000800,
+      KeepReferencesDistinctFromDefinition=0x0000800,
+      IsForeignObject=0x00000400,
       None=0x00000000,
     }
     internal Flags flags;
@@ -2711,6 +2751,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <param name="typeDefinition">Unspecialized type definition to be specialized/instantiated.</param>
     /// <param name="internFactory">An internfactory. </param>
     public static ITypeDefinition SelfInstance(INamedTypeDefinition typeDefinition, IInternFactory internFactory) {
+      Contract.Ensures(Contract.Result<ITypeDefinition>() != null);
+
       INamespaceTypeDefinition namespaceTypeDefinition = typeDefinition as INamespaceTypeDefinition;
       if (namespaceTypeDefinition != null) {
         if (typeDefinition.IsGeneric)
@@ -2722,12 +2764,13 @@ namespace Microsoft.Cci.MutableCodeModel {
       INamedTypeDefinition result = typeDefinition;
       if (nestedTypeDefinition != null) {
         var containingTypeDefinition = SelfInstance((INamedTypeDefinition)nestedTypeDefinition.ContainingTypeDefinition, internFactory);
+        var ctDef = containingTypeDefinition;
         var genericTypeInstance = containingTypeDefinition as Immutable.GenericTypeInstance;
         while (genericTypeInstance == null) {
-          var specializedNestedTypeRef = containingTypeDefinition as ISpecializedNestedTypeReference;
+          var specializedNestedTypeRef = ctDef as ISpecializedNestedTypeReference;
           if (specializedNestedTypeRef != null) {
-            containingTypeDefinition = specializedNestedTypeRef.ContainingType.ResolvedType;
-            genericTypeInstance = containingTypeDefinition as Immutable.GenericTypeInstance;
+            ctDef = specializedNestedTypeRef.ContainingType.ResolvedType;
+            genericTypeInstance = ctDef as Immutable.GenericTypeInstance;
           } else {
             break;
           }
@@ -2746,7 +2789,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Zero or more parameters that can be used as type annotations.
+    /// Zero or more parameters that can be used as type annotations. May be null.
     /// </summary>
     /// <value></value>
     public virtual List<IGenericTypeParameter>/*?*/ GenericParameters {
@@ -2835,7 +2878,7 @@ namespace Microsoft.Cci.MutableCodeModel {
             if (this.instanceType == null) {
               List<ITypeReference> arguments = new List<ITypeReference>();
               foreach (IGenericTypeParameter gpar in this.GenericParameters) arguments.Add(gpar);
-              this.instanceType = Immutable.GenericTypeInstance.GetGenericTypeInstance(this.GetSpecializedType(this), arguments, this.InternFactory);
+              this.instanceType = new Immutable.GenericTypeInstanceReference(this.GetSpecializedType(this), arguments, this.InternFactory);
             }
           }
         }
@@ -2855,8 +2898,10 @@ namespace Microsoft.Cci.MutableCodeModel {
         ITypeReference containingTypeReference = null;
         if (nestedType.ContainingTypeDefinition.IsGeneric)
           containingTypeReference = nestedType.ContainingTypeDefinition.InstanceType;
-        else
+        else {
           containingTypeReference = this.GetSpecializedType((INamedTypeDefinition)nestedType.ContainingTypeDefinition);
+          if (containingTypeReference == nestedType.ContainingTypeDefinition) return typeDef;
+        }
         return new SpecializedNestedTypeReference() {
           ContainingType = containingTypeReference,
           InternFactory = this.InternFactory,
@@ -2869,7 +2914,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Zero or more interfaces implemented by this type.
+    /// Zero or more interfaces implemented by this type. May be null.
     /// </summary>
     /// <value></value>
     public virtual List<ITypeReference>/*?*/ Interfaces {
@@ -3106,7 +3151,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     LayoutKind layout;
 
     /// <summary>
-    /// A potentially empty collection of locations that correspond to this instance.
+    /// A potentially empty collection of locations that correspond to this instance. May be null.
     /// </summary>
     /// <value></value>
     public List<ILocation>/*?*/ Locations {
@@ -3159,7 +3204,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Zero or more methods defined by this type.
+    /// Zero or more methods defined by this type. May be null.
     /// </summary>
     /// <value></value>
     public List<IMethodDefinition>/*?*/ Methods {
@@ -3179,7 +3224,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     IName name;
 
     /// <summary>
-    /// Zero or more nested types defined by this type.
+    /// Zero or more nested types defined by this type. May be null.
     /// </summary>
     /// <value></value>
     public List<INestedTypeDefinition>/*?*/ NestedTypes {
@@ -3207,7 +3252,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       get {
         if (this.privateHelperMembers == null) {
           this.privateHelperMembers = new List<ITypeDefinitionMember>(this.template.PrivateHelperMembers);
-          this.template = Dummy.Type;
+          this.template = Dummy.TypeDefinition;
         }
         return this.privateHelperMembers;
       }
@@ -3217,7 +3262,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     ITypeDefinition template;
 
     /// <summary>
-    /// Zero or more properties defined by this type.
+    /// Zero or more properties defined by this type. May be null.
     /// </summary>
     /// <value></value>
     public List<IPropertyDefinition>/*?*/ Properties {
@@ -3227,7 +3272,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     List<IPropertyDefinition>/*?*/ properties;
 
     /// <summary>
-    /// Declarative security actions for this type. Will be empty if this.HasSecurity is false.
+    /// Declarative security actions for this type. Will be empty if this.HasSecurity is false. May be null.
     /// </summary>
     /// <value></value>
     public List<ISecurityAttribute>/*?*/ SecurityAttributes {
@@ -3559,6 +3604,8 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     internal TypeReference() {
+      Contract.Ensures(!this.IsFrozen);
+
       this.attributes = null;
       this.internFactory = Dummy.InternFactory;
       this.isEnum = false;
@@ -3651,7 +3698,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     [ContractClassFor(typeof(TypeReference))]
     abstract partial class TypeReferenceAbstractMethodContracts : TypeReference {
       public override void DispatchAsReference(IMetadataVisitor visitor) {
-        Contract.Requires(visitor != null);
+        throw new NotImplementedException();
       }
     }
 
@@ -3695,7 +3742,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public bool IsAlias {
       get {
         Contract.Assume(!(this is ITypeDefinition));
-        return this.AliasForType != Dummy.AliasForType;
+        return !(this.AliasForType is Dummy);
       }
     }
 
@@ -3753,7 +3800,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// The type definition being referred to.
     /// In case this type was alias, this is also the type of the aliased type.
-    /// If the type reference cannot be resolved, the result is Dummy.Type.
+    /// If the type reference cannot be resolved, the result is Dummy.TypeDefinition.
     /// </summary>
     public abstract ITypeDefinition ResolvedType {
       get;
@@ -3763,7 +3810,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       public override ITypeDefinition ResolvedType {
         get {
           Contract.Ensures(Contract.Result<ITypeDefinition>() != null);
-          //Contract.Ensures(Contract.Result<ITypeDefinition>() == Dummy.Type || this.IsAlias ||
+          //Contract.Ensures(Contract.Result<ITypeDefinition>() == Dummy.TypeDefinition || this.IsAlias ||
           //  Contract.Result<ITypeDefinition>().InternedKey == this.InternedKey);
           Contract.Ensures(this.IsFrozen);
           throw new NotImplementedException();
@@ -3831,6 +3878,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     IEnumerable<ILocation> IObjectWithLocations.Locations {
+      [ContractVerification(false)]
       get {
         if (this.Locations == null) return Dummy.TypeReference.Locations;
         return this.Locations.AsReadOnly();
@@ -3865,6 +3913,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </param>
     public void Copy(IArrayTypeReference vectorTypeReference, IInternFactory internFactory) {
       ((ICopyFrom<ITypeReference>)this).Copy(vectorTypeReference, internFactory);
+      Contract.Assume(!this.IsFrozen);
       this.ElementType = vectorTypeReference.ElementType;
     }
 

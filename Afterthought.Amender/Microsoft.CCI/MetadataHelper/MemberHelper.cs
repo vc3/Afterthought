@@ -225,18 +225,18 @@ namespace Microsoft.Cci {
 
     /// <summary>
     /// Returns the method from the closest base class that is overridden by the given method.
-    /// If no such method exists, Dummy.Method is returned.
+    /// If no such method exists, Dummy.MethodDefinition is returned.
     /// </summary>
     public static IMethodDefinition GetImplicitlyOverriddenBaseClassMethod(IMethodDefinition derivedClassMethod) {
       Contract.Requires(derivedClassMethod != null);
       Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
 
-      if (!derivedClassMethod.IsVirtual || derivedClassMethod.IsNewSlot) return Dummy.Method;
+      if (!derivedClassMethod.IsVirtual || derivedClassMethod.IsNewSlot) return Dummy.MethodDefinition;
       foreach (ITypeReference baseClassReference in derivedClassMethod.ContainingTypeDefinition.BaseClasses) {
         IMethodDefinition overriddenMethod = GetImplicitlyOverriddenBaseClassMethod(derivedClassMethod, baseClassReference.ResolvedType);
-        if (overriddenMethod != Dummy.Method) return overriddenMethod;
+        if (!(overriddenMethod is Dummy)) return overriddenMethod;
       }
-      return Dummy.Method;
+      return Dummy.MethodDefinition;
     }
 
     private static IMethodDefinition GetImplicitlyOverriddenBaseClassMethod(IMethodDefinition derivedClassMethod, ITypeDefinition baseClass) {
@@ -248,51 +248,50 @@ namespace Microsoft.Cci {
         IMethodDefinition/*?*/ baseMethod = baseMember as IMethodDefinition;
         if (baseMethod == null) continue;
         if (MemberHelper.SignaturesAreEqual(derivedClassMethod, baseMethod)) {
-          if (!baseMethod.IsVirtual || baseMethod.IsSealed) return Dummy.Method;
+          if (!baseMethod.IsVirtual || baseMethod.IsSealed) return Dummy.MethodDefinition;
           return baseMethod;
         }
         if (derivedClassMethod.GenericParameterCount == baseMethod.GenericParameterCount && derivedClassMethod.IsGeneric) {
           if (MemberHelper.GenericMethodSignaturesAreEqual(derivedClassMethod, baseMethod)) {
-            if (!baseMethod.IsVirtual || baseMethod.IsSealed) return Dummy.Method;
+            if (!baseMethod.IsVirtual || baseMethod.IsSealed) return Dummy.MethodDefinition;
             return baseMethod;
           }
         }
-        if (!derivedClassMethod.IsHiddenBySignature) return Dummy.Method;
+        if (!derivedClassMethod.IsHiddenBySignature) return Dummy.MethodDefinition;
       }
       foreach (ITypeReference baseClassReference in baseClass.BaseClasses) {
         IMethodDefinition overriddenMethod = GetImplicitlyOverriddenBaseClassMethod(derivedClassMethod, baseClassReference.ResolvedType);
-        if (overriddenMethod != Dummy.Method) return overriddenMethod;
+        if (!(overriddenMethod is Dummy)) return overriddenMethod;
       }
-      return Dummy.Method;
+      return Dummy.MethodDefinition;
     }
 
     /// <summary>
     /// Returns the method from the derived class that overrides the given method.
-    /// If no such method exists, Dummy.Method is returned.
+    /// If no such method exists, Dummy.MethodDefinition is returned.
     /// </summary>
     public static IMethodDefinition GetImplicitlyOverridingDerivedClassMethod(IMethodDefinition baseClassMethod, ITypeDefinition derivedClass) {
       Contract.Requires(baseClassMethod != null);
       Contract.Requires(derivedClass != null);
       Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
 
+      if (baseClassMethod.IsSealed) return Dummy.Method; 
       foreach (ITypeDefinitionMember derivedMember in derivedClass.GetMembersNamed(baseClassMethod.Name, false)) {
         IMethodDefinition/*?*/ derivedMethod = derivedMember as IMethodDefinition;
-        if (derivedMethod == null) continue;
+        if (derivedMethod == null || !derivedMethod.IsVirtual) continue;
         if (MemberHelper.MethodsAreEquivalent(baseClassMethod, derivedMethod)) {
-          if (!derivedMethod.IsVirtual || derivedMethod.IsSealed) return Dummy.Method;
+          if (derivedMethod.IsNewSlot) return Dummy.MethodDefinition;
           return derivedMethod;
-        } else {
-          if (!baseClassMethod.IsHiddenBySignature) return Dummy.Method;
         }
       }
-      return Dummy.Method;
+      return Dummy.MethodDefinition;
     }
 
     /// <summary>
     /// Returns a C#-like string that corresponds to the given type member definition and that conforms to the specified formatting options.
     /// </summary>
     [Pure]
-    public static string GetMemberSignature(ITypeMemberReference member, NameFormattingOptions formattingOptions) {
+    public static string GetMemberSignature(ITypeMemberReference member, NameFormattingOptions formattingOptions = NameFormattingOptions.None) {
       Contract.Requires(member != null);
       Contract.Ensures(Contract.Result<string>() != null);
 
@@ -303,7 +302,7 @@ namespace Microsoft.Cci {
     /// Returns a C#-like string that corresponds to the given method definition and that conforms to the specified formatting options.
     /// </summary>
     [Pure]
-    public static string GetMethodSignature(IMethodReference method, NameFormattingOptions formattingOptions) {
+    public static string GetMethodSignature(IMethodReference method, NameFormattingOptions formattingOptions = NameFormattingOptions.None) {
       Contract.Requires(method != null);
       Contract.Ensures(Contract.Result<string>() != null);
 
@@ -375,7 +374,7 @@ namespace Microsoft.Cci {
       foreach (IMethodImplementation methodImpl in containingTypeDefinition.ExplicitImplementationOverrides) {
         if (methodImpl.ImplementingMethod.InternedKey != methodReference.InternedKey) continue;
         var implementedMethod = methodImpl.ImplementedMethod.ResolvedMethod;
-        if (implementedMethod == Dummy.Method) {
+        if (implementedMethod is Dummy) {
           //If the method being implemented did not resolve it can only be because it is actually defined in another assembly, which implies that it is visible outside its assembly,
           //at least in the case where the implemented method is public or internal. Since we can't know that without resolving the method, we'll err on the "safe" side.
           return true;
@@ -450,6 +449,77 @@ namespace Microsoft.Cci {
     /// A static instance of type ParameterInformationComparer that will resolve types during the comparison.
     /// </summary>
     public readonly static ParameterInformationComparer ResolvingParameterInformationComparer = new ParameterInformationComparer(true);
+
+    /// <summary>
+    /// If the given event definition has been specialized, return its unspecialized version. Otherwise just return the given definition.
+    /// </summary>
+    public static IEventDefinition Unspecialize(IEventDefinition potentiallySpecializedEventDefinition) {
+      var specializedEventDefinition = potentiallySpecializedEventDefinition as ISpecializedEventDefinition;
+      if (specializedEventDefinition != null) return specializedEventDefinition.UnspecializedVersion;
+      return potentiallySpecializedEventDefinition;
+    }
+
+    /// <summary>
+    /// If the given field reference has been specialized, return its unspecialized version. Otherwise just return the given reference.
+    /// </summary>
+    public static IFieldReference Unspecialize(IFieldReference potentiallySpecializedFieldReference) {
+      var specializedFieldReference = potentiallySpecializedFieldReference as ISpecializedFieldReference;
+      if (specializedFieldReference != null) return specializedFieldReference.UnspecializedVersion;
+      return potentiallySpecializedFieldReference;
+    }
+
+    /// <summary>
+    /// If the given field definition has been specialized, return its unspecialized version. Otherwise just return the given definition.
+    /// </summary>
+    public static IFieldDefinition Unspecialize(IFieldDefinition potentiallySpecializedFieldDefinition) {
+      var specializedFieldDefinition = potentiallySpecializedFieldDefinition as ISpecializedFieldDefinition;
+      if (specializedFieldDefinition != null) return specializedFieldDefinition.UnspecializedVersion;
+      return potentiallySpecializedFieldDefinition;
+    }
+
+    /// <summary>
+    /// If the given method reference has been specialized, return the unspecialized method reference. For the purposes of this method, a generic method instance
+    /// reference counts as a specialized method reference and its unspecialized version is the generic method itself. The returned value is fully unspecialized.
+    /// </summary>
+    public static IMethodReference UninstantiateAndUnspecialize(IMethodReference potentiallySpecializedMethodReference) {
+      Contract.Requires(potentiallySpecializedMethodReference != null);
+      Contract.Ensures(Contract.Result<IMethodReference>() != null);
+
+      var genericMethodInstanceReference = potentiallySpecializedMethodReference as IGenericMethodInstanceReference;
+      if (genericMethodInstanceReference != null)
+        potentiallySpecializedMethodReference = genericMethodInstanceReference.GenericMethod;
+      var specializedMethodReference = potentiallySpecializedMethodReference as ISpecializedMethodReference;
+      if (specializedMethodReference != null)
+        return specializedMethodReference.UnspecializedVersion;
+      return potentiallySpecializedMethodReference;
+    }
+
+    /// <summary>
+    /// If the given method definition has been specialized, either by being a generic method instance or by being a member of a generic type instance, return
+    /// the original unspecialized method definition as stored in the module.
+    /// </summary>
+    public static IMethodDefinition UninstantiateAndUnspecialize(IMethodDefinition potentiallySpecializedMethod) {
+      Contract.Requires(potentiallySpecializedMethod != null);
+      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+
+      var genericMethodInstance = potentiallySpecializedMethod as IGenericMethodInstance;
+      if (genericMethodInstance != null)
+        potentiallySpecializedMethod = genericMethodInstance.GenericMethod.ResolvedMethod;
+      var specializedMethodDefinition = potentiallySpecializedMethod as ISpecializedMethodDefinition;
+      if (specializedMethodDefinition != null)
+        return specializedMethodDefinition.UnspecializedVersion;
+      return potentiallySpecializedMethod;
+    }
+
+    /// <summary>
+    /// If the given property definition has been specialized, return its unspecialized version. Otherwise just return the given definition.
+    /// </summary>
+    public static IPropertyDefinition Unspecialize(IPropertyDefinition potentiallySpecializedPropertyDefinition) {
+      var specializedPropertyDefinition = potentiallySpecializedPropertyDefinition as ISpecializedPropertyDefinition;
+      if (specializedPropertyDefinition != null) return specializedPropertyDefinition.UnspecializedVersion;
+      return potentiallySpecializedPropertyDefinition;
+    }
+
   }
 
   /// <summary>
@@ -474,7 +544,7 @@ namespace Microsoft.Cci {
       Contract.Requires(returnType != null);
       Contract.Requires(name != null);
       Contract.Requires(parameterTypes != null);
-      Contract.Requires(Contract.ForAll(parameterTypes, x => x != null));
+      //Contract.Requires(Contract.ForAll(parameterTypes, x => x != null));
 
       this.host = host;
       this.containingType = containingType;
@@ -509,9 +579,9 @@ namespace Microsoft.Cci {
       Contract.Requires(returnType != null);
       Contract.Requires(name != null);
       Contract.Requires(parameters != null);
-      Contract.Requires(Contract.ForAll(parameters, x => x != null));
+      //Contract.Requires(Contract.ForAll(parameters, x => x != null));
       Contract.Requires(extraParameterTypes != null);
-      Contract.Requires(Contract.ForAll(extraParameterTypes, x => x != null));
+      //Contract.Requires(Contract.ForAll(extraParameterTypes, x => x != null));
 
       this.host = host;
       this.containingType = containingType;
@@ -659,7 +729,7 @@ namespace Microsoft.Cci {
 
     /// <summary>
     /// Searches the given type, as well as its base classes or base interfaces (if it is an interface), for a method
-    /// that matches this method reference and returns the method. Returns Dummy.Method is no matching method can be found.
+    /// that matches this method reference and returns the method. Returns Dummy.MethodDefinition is no matching method can be found.
     /// </summary>
     private IMethodDefinition Resolve(ITypeDefinition typeToSearch) {
       Contract.Requires(typeToSearch != null);
@@ -669,15 +739,15 @@ namespace Microsoft.Cci {
       if (result != null) return result;
       foreach (ITypeReference baseClass in typeToSearch.BaseClasses) {
         result = TypeHelper.GetMethod(baseClass.ResolvedType, this, true);
-        if (result != Dummy.Method) return result;
+        if (!(result is Dummy)) return result;
       }
       if (typeToSearch.IsInterface) {
         foreach (ITypeReference baseInterface in typeToSearch.Interfaces) {
           result = TypeHelper.GetMethod(baseInterface.ResolvedType, this, true);
-          if (result != Dummy.Method) return result;
+          if (!(result is Dummy)) return result;
         }
       }
-      return Dummy.Method;
+      return Dummy.MethodDefinition;
     }
 
     /// <summary>
@@ -940,6 +1010,10 @@ namespace Microsoft.Cci {
         sb.Append(this.GetVisibility(field.ResolvedField));
         sb.Append(' ');
       }
+      if ((formattingOptions & NameFormattingOptions.DocumentationIdMemberKind) != 0)
+        sb.Append("F:");
+      else if ((formattingOptions & NameFormattingOptions.MemberKind) != 0)
+        sb.Append("field ");
       if ((formattingOptions & NameFormattingOptions.Modifiers) != 0) {
         if (field.IsStatic) sb.Append("static ");
         if (field.IsModified && (formattingOptions & NameFormattingOptions.OmitCustomModifiers) == 0) {
@@ -950,10 +1024,10 @@ namespace Microsoft.Cci {
           sb.Append(' ');
         }
       }
-      if ((formattingOptions & NameFormattingOptions.DocumentationIdMemberKind) != 0)
-        sb.Append("F:");
-      else if ((formattingOptions & NameFormattingOptions.MemberKind) != 0)
-        sb.Append("field ");
+      if ((formattingOptions & NameFormattingOptions.Signature) != 0 && (formattingOptions & NameFormattingOptions.DocumentationIdMemberKind) == 0) {
+        sb.Append(this.typeNameFormatter.GetTypeName(field.Type, formattingOptions));
+        sb.Append(' ');
+      }
       if ((formattingOptions & NameFormattingOptions.OmitContainingType) == 0) {
         sb.Append(this.typeNameFormatter.GetTypeName(field.ContainingType, formattingOptions & ~(NameFormattingOptions.MemberKind|NameFormattingOptions.DocumentationIdMemberKind)));
         sb.Append(".");

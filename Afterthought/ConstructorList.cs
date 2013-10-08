@@ -47,13 +47,9 @@ namespace Afterthought
 
 			public delegate void BeforeConstructor(TAmended instance, string constructor, object[] parameters);
 
-			public delegate void AfterConstructorAction(TAmended instance, string constructor, object[] parameters);
+			public delegate void AfterConstructor(TAmended instance, string constructor, object[] parameters);
 			
-			public delegate object AfterConstructorFunc(TAmended instance, string constructor, object[] parameters, object result);
-			
-			public delegate void CatchConstructorAction(TAmended instance, string constructor, object[] parameters);
-			
-			public delegate object CatchConstructorFunc(TAmended instance, string constructor, object[] parameters, object result);
+			public delegate void CatchConstructor(TAmended instance, string constructor, object[] parameters);
 
 			#endregion
 
@@ -76,28 +72,21 @@ namespace Afterthought
 				return this;
 			}
 
-			public ConstructorEnumeration After(AfterConstructorAction after)
+			public Constructor.Context<TContext>.Enumeration Before<TContext>(Constructor.Context<TContext>.BeforeConstructor before)
+			{
+				foreach (Amendment.Constructor constructor in this)
+					constructor.BeforeMethod = before.Method;
+				return new Constructor.Context<TContext>.Enumeration(constructors.Select(c => new Constructor.Context<TContext>(c)));
+			}
+
+			public ConstructorEnumeration After(AfterConstructor after)
 			{
 				foreach (Amendment.Constructor constructor in this)
 					constructor.AfterMethod = after.Method;
 				return this;
 			}
 
-			public ConstructorEnumeration After(AfterConstructorFunc after)
-			{
-				foreach (Amendment.Constructor constructor in this)
-					constructor.AfterMethod = after.Method;
-				return this;
-			}
-
-			public ConstructorEnumeration Catch(CatchConstructorAction @catch)
-			{
-				foreach (Amendment.Constructor constructor in this)
-					constructor.CatchMethod = @catch.Method;
-				return this;
-			}
-
-			public ConstructorEnumeration Catch(CatchConstructorFunc @catch)
+			public ConstructorEnumeration Catch(CatchConstructor @catch)
 			{
 				foreach (Amendment.Constructor constructor in this)
 					constructor.CatchMethod = @catch.Method;

@@ -16,25 +16,43 @@ using Microsoft.Cci.MetadataReader;
 
 namespace Microsoft.Cci {
   using Microsoft.Cci.Pdb;
+  using System.Diagnostics.Contracts;
 
   /// <summary>
   /// An object that can map offsets in an IL stream to source locations and block scopes.
   /// </summary>
   public sealed class PdbReader : ISourceLocationProvider, ILocalScopeProvider, IDisposable {
 
+    Stream pdbStream;
     IMetadataHost host;
     Dictionary<uint, PdbFunction> pdbFunctionMap = new Dictionary<uint, PdbFunction>();
     List<StreamReader> sourceFilesOpenedByReader = new List<StreamReader>();
+    Dictionary<uint, PdbTokenLine> tokenToSourceMapping;
+    string sourceServerData;
 
     /// <summary>
     /// Allocates an object that can map some kinds of ILocation objects to IPrimarySourceLocation objects. 
     /// For example, a PDB reader that maps offsets in an IL stream to source locations.
     /// </summary>
     public PdbReader(Stream pdbStream, IMetadataHost host) {
+      Contract.Requires(pdbStream != null);
+      Contract.Requires(host != null);
+
+      this.pdbStream = pdbStream;
       this.host = host;
-      foreach (PdbFunction pdbFunction in PdbFile.LoadFunctions(pdbStream, true))
+      foreach (PdbFunction pdbFunction in PdbFile.LoadFunctions(pdbStream, out this.tokenToSourceMapping, out this.sourceServerData))
         this.pdbFunctionMap[pdbFunction.token] = pdbFunction;
     }
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.pdbStream != null);
+      Contract.Invariant(this.host != null);
+      Contract.Invariant(this.pdbFunctionMap != null);
+      Contract.Invariant(this.sourceFilesOpenedByReader != null);
+      Contract.Invariant(this.sourceServerData != null);
+    }
+
 
     /// <summary>
     /// Closes all of the source files that have been opened to provide the contents source locations corresponding to IL offsets.
@@ -68,6 +86,14 @@ namespace Microsoft.Cci {
         if (mbLocation != null) {
           psloc = this.MapMethodBodyLocationToSourceLocation(mbLocation, true);
           if (psloc != null) yield return psloc;
+        } else {
+          var mdLocation = location as IMetadataLocation;
+          if (mdLocation != null) {
+            PdbTokenLine lineInfo;
+            if (!this.tokenToSourceMapping.TryGetValue(mdLocation.Definition.TokenValue, out lineInfo)) yield break;
+            PdbSourceDocument psDoc = this.GetPrimarySourceDocumentFor(lineInfo.sourceFile);
+            yield return new PdbSourceLineLocation(psDoc, (int)lineInfo.line, (int)lineInfo.column, (int)lineInfo.endLine, (int)lineInfo.endColumn);
+          }
         }
       }
     }
@@ -76,7 +102,7 @@ namespace Microsoft.Cci {
     /// Return zero or more locations in primary source documents that are the closest to corresponding to one or more of the given derived (non primary) document locations.
     /// </summary>
     /// <param name="locations">Zero or more locations in documents that have been derived from one or more source documents.</param>
-    public IEnumerable<IPrimarySourceLocation> GetClosestPrimarySourceLocationsFor(IEnumerable<ILocation> locations){
+    public IEnumerable<IPrimarySourceLocation> GetClosestPrimarySourceLocationsFor(IEnumerable<ILocation> locations) {
       foreach (ILocation location in locations) {
         IPrimarySourceLocation/*?*/ psloc = location as IPrimarySourceLocation;
         if (psloc != null) yield return psloc;
@@ -98,10 +124,21 @@ namespace Microsoft.Cci {
       if (psloc != null)
         yield return psloc;
       else {
-        IILLocation/*?*/ mbLocation = location as IILLocation;
+        var mbLocation = location as IILLocation;
         if (mbLocation != null) {
           psloc = this.MapMethodBodyLocationToSourceLocation(mbLocation, true);
           if (psloc != null) yield return psloc;
+        } else {
+          var mdLocation = location as IMetadataLocation;
+          if (mdLocation != null) {
+            PdbTokenLine lineInfo;
+            if (!this.tokenToSourceMapping.TryGetValue(mdLocation.Definition.TokenValue, out lineInfo)) yield break;
+            do {
+              PdbSourceDocument psDoc = this.GetPrimarySourceDocumentFor(lineInfo.sourceFile);
+              yield return new PdbSourceLineLocation(psDoc, (int)lineInfo.line, (int)lineInfo.column, (int)lineInfo.endLine, (int)lineInfo.endColumn);
+              lineInfo = lineInfo.nextLine;
+            } while (lineInfo != null);
+          }
         }
       }
     }
@@ -123,6 +160,17 @@ namespace Microsoft.Cci {
       }
     }
 
+    /// <summary>
+    /// Returns zero or more locations in primary source documents that correspond to the definition with the given token.
+    /// </summary>
+    /// <param name="token"></param>
+    /// <returns></returns>
+    public IEnumerable<IPrimarySourceLocation> GetPrimarySourceLocationsForToken(uint token) {
+      PdbTokenLine lineInfo;
+      if (!this.tokenToSourceMapping.TryGetValue(token, out lineInfo)) yield break;
+      PdbSourceDocument psDoc = this.GetPrimarySourceDocumentFor(lineInfo.sourceFile);
+      yield return new PdbSourceLineLocation(psDoc, (int)lineInfo.line, (int)lineInfo.column, (int)lineInfo.endLine, (int)lineInfo.endColumn);
+    }
 
     /// <summary>
     /// Return zero or more locations in primary source documents that correspond to the definition of the given local.
@@ -233,6 +281,18 @@ namespace Microsoft.Cci {
       return 0;
     }
 
+    private static ITokenDecoder/*?*/ GetTokenDecoderFor(IMethodBody methodBody, out uint methodToken) {
+      foreach (ILocation location in methodBody.MethodDefinition.Locations) {
+        IILLocation/*?*/ mbLocation = location as IILLocation;
+        if (mbLocation != null) {
+          var doc = mbLocation.Document as MethodBodyDocument;
+          if (doc != null) { methodToken = doc.MethodToken; return doc.TokenDecoder; }
+        }
+      }
+      methodToken = 0;
+      return null;
+    }
+
     private PdbFunction GetPdbFunctionFor(ILocalDefinition localDefinition) {
       PdbFunction/*?*/ result = null;
       foreach (ILocation location in localDefinition.Locations) {
@@ -294,10 +354,22 @@ namespace Microsoft.Cci {
     /// </summary>
     public IEnumerable<INamespaceScope> GetNamespaceScopes(IMethodBody methodBody) {
       PdbFunction/*?*/ pdbFunction = this.GetPdbFunctionFor(methodBody);
-      if (pdbFunction != null && pdbFunction.usingCounts != null) {
-        if (pdbFunction.namespaceScopes != null) return pdbFunction.namespaceScopes;
-        foreach (PdbScope pdbScope in pdbFunction.scopes) {
-          return pdbFunction.namespaceScopes = this.GetNamespaceScopes(pdbFunction.usingCounts, pdbScope).AsReadOnly();
+      if (pdbFunction != null) {
+        if (pdbFunction.usingCounts != null) {
+          if (pdbFunction.namespaceScopes != null) return pdbFunction.namespaceScopes;
+          foreach (PdbScope pdbScope in pdbFunction.scopes) {
+            return pdbFunction.namespaceScopes = this.GetNamespaceScopes(pdbFunction.usingCounts, pdbScope).AsReadOnly();
+          }
+        } else if (pdbFunction.tokenOfMethodWhoseUsingInfoAppliesToThisMethod > 0) {
+          PdbFunction func = null;
+          if (this.pdbFunctionMap.TryGetValue(pdbFunction.tokenOfMethodWhoseUsingInfoAppliesToThisMethod, out func)) {
+            if (func.usingCounts != null) {
+              if (func.namespaceScopes != null) return func.namespaceScopes;
+              foreach (PdbScope pdbScope in func.scopes) {
+                return func.namespaceScopes = this.GetNamespaceScopes(func.usingCounts, pdbScope).AsReadOnly();
+              }
+            }
+          }
         }
       }
       return Enumerable<INamespaceScope>.Empty;
@@ -343,6 +415,29 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// If the given method body is the "MoveNext" method of the state class of an asynchronous method, the returned
+    /// object describes where synchronization points occur in the IL operations of the "MoveNext" method. Otherwise
+    /// the result is null.
+    /// </summary>
+    public ISynchronizationInformation/*?*/ GetSynchronizationInformation(IMethodBody methodBody) {
+      PdbFunction/*?*/ pdbFunction = this.GetPdbFunctionFor(methodBody);
+      if (pdbFunction == null) return null;
+      var info = pdbFunction.synchronizationInformation;
+      if (info == null) return null;
+      uint moveNextToken;
+      var decoder = GetTokenDecoderFor(methodBody, out moveNextToken);
+      if (decoder != null) {
+        info.asyncMethod = (decoder.GetObjectForToken(info.kickoffMethodToken) as IMethodDefinition)??Dummy.MethodDefinition;
+        info.moveNextMethod = (decoder.GetObjectForToken(moveNextToken) as IMethodDefinition)??Dummy.MethodDefinition;
+        if (info.synchronizationPoints != null) {
+          foreach (var synchPoint in info.synchronizationPoints)
+            synchPoint.continuationMethod = (decoder.GetObjectForToken(synchPoint.continuationMethodToken) as IMethodDefinition)??Dummy.MethodDefinition;
+        }
+      }
+      return info;
+    }
+
+    /// <summary>
     /// Returns the location that has the smaller IL offset. If only one of the two locations
     /// is a PdbReader supplied location that one is returned. If neither is a PdbReader supplied location, the first
     /// location is returned.
@@ -377,7 +472,7 @@ namespace Microsoft.Cci {
           PdbLine mid = array[midPointIndex];
           if (midPointIndex == maxIndex ||
             (mid.offset <= desiredOffset && desiredOffset < array[midPointIndex + 1].offset)) {
-            if (exact && desiredOffset != mid.offset) return null;
+            if (exact && desiredOffset != mid.offset) break;
             PdbLine line = mid;
             PdbSourceDocument psDoc = this.GetPrimarySourceDocumentFor(pdbSourceFile);
             return new PdbSourceLineLocation(psDoc, (int)line.lineBegin, line.colBegin, (int)line.lineEnd, line.colEnd);
@@ -406,6 +501,17 @@ namespace Microsoft.Cci {
     }
 
     Dictionary<PdbSource, PdbSourceDocument> documentCache = new Dictionary<PdbSource, PdbSourceDocument>();
+
+    ///<summary>
+    /// Retrieves the Source Server Data block, if present.
+    /// Otherwise the empty string is returned.
+    ///</summary>
+    public string SourceServerData {
+      get {
+        Contract.Ensures(Contract.Result<string>() != null);
+        return this.sourceServerData;
+      }
+    }
 
   }
 
@@ -724,7 +830,7 @@ namespace Microsoft.Cci.Pdb {
           var doc = mbLocation.Document as MethodBodyDocument;
           if (doc != null) {
             ITypeReference result = doc.GetTypeFromToken(this.pdbConstant.token);
-            if (result == Dummy.TypeReference) {
+            if (result is Dummy) {
               //TODO: error
               continue;
             }

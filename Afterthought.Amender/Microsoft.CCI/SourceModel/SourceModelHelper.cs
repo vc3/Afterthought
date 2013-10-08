@@ -14,8 +14,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Globalization;
 
-//^ using Microsoft.Contracts;
-
 namespace Microsoft.Cci {
   /// <summary>
   /// A provider that aggregates a set of providers in order to
@@ -28,10 +26,17 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Copies the contents of the table
     /// </summary>
-    public AggregatingSourceLocationProvider(Dictionary<IUnit, ISourceLocationProvider> unit2ProviderMap) {
+    public AggregatingSourceLocationProvider(IDictionary<IUnit, ISourceLocationProvider> unit2ProviderMap) {
       foreach (var keyValuePair in unit2ProviderMap) {
         this.unit2Provider.Add(keyValuePair.Key, keyValuePair.Value);
       }
+    }
+
+    /// <summary>
+    /// Uses the given dictionary to find the appropriate provider for a query.
+    /// </summary>
+    public AggregatingSourceLocationProvider(Dictionary<IUnit, ISourceLocationProvider> unit2ProviderMap) {
+      this.unit2Provider = unit2ProviderMap;
     }
 
     #region ISourceLocationProvider Members
@@ -116,7 +121,7 @@ namespace Microsoft.Cci {
 
     #region Helper methods
 
-    private IMethodDefinition lastUsedMethod = Dummy.Method;
+    private IMethodDefinition lastUsedMethod = Dummy.MethodDefinition;
     private ISourceLocationProvider lastUsedProvider = default(ISourceLocationProvider);
     private ISourceLocationProvider/*?*/ GetProvider(IMethodDefinition methodDefinition) {
       if (methodDefinition == lastUsedMethod) return lastUsedProvider;
@@ -162,10 +167,18 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Copies the contents of the table
     /// </summary>
-    public AggregatingLocalScopeProvider(Dictionary<IUnit, ILocalScopeProvider> unit2ProviderMap) {
+    public AggregatingLocalScopeProvider(IDictionary<IUnit, ILocalScopeProvider> unit2ProviderMap) {
       foreach (var keyValuePair in unit2ProviderMap) {
         this.unit2Provider.Add(keyValuePair.Key, keyValuePair.Value);
       }
+    }
+
+    /// <summary>
+    /// Uses the given dictionary to find the appropriate provider for a query.
+    /// </summary>
+    /// <param name="unit2ProviderMap"></param>
+    public AggregatingLocalScopeProvider(Dictionary<IUnit, ILocalScopeProvider> unit2ProviderMap) {
+      this.unit2Provider = unit2ProviderMap;
     }
 
     #region ILocalScopeProvider Members
@@ -246,6 +259,17 @@ namespace Microsoft.Cci {
       return provider.IsIterator(methodBody);
     }
 
+    /// <summary>
+    /// If the given method body is the "MoveNext" method of the state class of an asynchronous method, the returned
+    /// object describes where synchronization points occur in the IL operations of the "MoveNext" method. Otherwise
+    /// the result is null.
+    /// </summary>
+    public ISynchronizationInformation/*?*/ GetSynchronizationInformation(IMethodBody methodBody) {
+      var provider = this.GetProvider(methodBody.MethodDefinition);
+      if (provider == null) return null;
+      return provider.GetSynchronizationInformation(methodBody);
+    }
+
     #endregion
 
     #region IDisposable Members
@@ -278,7 +302,7 @@ namespace Microsoft.Cci {
 
     #region Helper methods
 
-    private IMethodDefinition lastUsedMethod = Dummy.Method;
+    private IMethodDefinition lastUsedMethod = Dummy.MethodDefinition;
     private ILocalScopeProvider lastUsedProvider = null;
     private ILocalScopeProvider/*?*/ GetProvider(IMethodDefinition methodDefinition) {
       if (methodDefinition == lastUsedMethod) return lastUsedProvider;

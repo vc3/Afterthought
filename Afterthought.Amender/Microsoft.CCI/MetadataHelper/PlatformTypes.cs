@@ -176,7 +176,7 @@ namespace Microsoft.Cci.Immutable {
     /// </summary>
     public IModule ResolvedModule {
       get {
-        if (this.ResolvedAssembly == Dummy.Assembly) return Dummy.Module;
+        if (this.ResolvedAssembly is Dummy) return Dummy.Module;
         return this.ResolvedAssembly;
       }
     }
@@ -186,7 +186,7 @@ namespace Microsoft.Cci.Immutable {
     /// </summary>
     public IUnit ResolvedUnit {
       get {
-        if (this.ResolvedModule == Dummy.Module) return Dummy.Unit;
+        if (this.ResolvedModule is Dummy) return Dummy.Unit;
         return this.ResolvedModule;
       }
     }
@@ -426,7 +426,7 @@ namespace Microsoft.Cci.Immutable {
     /// </summary>
     public IUnit ResolvedUnit {
       get {
-        if (this.ResolvedModule == Dummy.Module) return Dummy.Unit;
+        if (this.ResolvedModule is Dummy) return Dummy.Unit;
         return this.ResolvedModule;
       }
     }
@@ -574,7 +574,7 @@ namespace Microsoft.Cci.Immutable {
       //^^ ensures (this is ITypeDefinition) ==> result == this;
     {
       var rt = this.ResolvedType;
-      if (rt == Dummy.NamespaceTypeDefinition) return Dummy.Type;
+      if (rt is Dummy) return Dummy.Type;
       return rt;
     }
 
@@ -1340,6 +1340,19 @@ namespace Microsoft.Cci.Immutable {
       }
     }
     INamespaceTypeReference/*?*/ systemObject;
+
+    /// <summary>
+    /// System.Reflection.AssemblySignatureKeyAttribute
+    /// </summary>
+    public INamespaceTypeReference SystemReflectionAssemblySignatureKeyAttribute {
+      get {
+        if (this.systemReflectionAssemblySignatureKeyAttribute == null) {
+          this.systemReflectionAssemblySignatureKeyAttribute = this.CreateReference(this.CoreAssemblyRef, true, "System", "Reflection", "AssemblySignatureKeyAttribute");
+        }
+        return this.systemReflectionAssemblySignatureKeyAttribute;
+      }
+    }
+    INamespaceTypeReference/*?*/ systemReflectionAssemblySignatureKeyAttribute;
 
     /// <summary>
     /// System.RuntimeArgumentHandle

@@ -139,6 +139,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// An expression that can be represented directly in metadata.
   /// </summary>
+  [ContractClass(typeof(IMetadataExpressionContract))]
   public interface IMetadataExpression : IObjectWithLocations {
 
     /// <summary>
@@ -153,6 +154,30 @@ namespace Microsoft.Cci {
     /// </summary>
     ITypeReference Type { get; }
   }
+
+  #region IMetadataExpression contract binding
+  [ContractClassFor(typeof(IMetadataExpression))]
+  abstract class IMetadataExpressionContract : IMetadataExpression {
+    public void Dispatch(IMetadataVisitor visitor) {
+      Contract.Requires(visitor != null);
+      throw new NotImplementedException();
+    }
+
+    public ITypeReference Type {
+      get {
+        Contract.Ensures(Contract.Result<ITypeReference>() != null);
+        throw new NotImplementedException(); 
+      }
+    }
+
+    public IEnumerable<ILocation> Locations {
+      get {
+        throw new NotImplementedException(); 
+      }
+    }
+  }
+  #endregion
+
 
   /// <summary>
   /// An expression that represents a (name, value) pair and that is typically used in method calls, custom attributes and object initializers.

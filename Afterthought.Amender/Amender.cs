@@ -14,6 +14,7 @@ using Microsoft.Build.Framework;
 using System;
 using System.Linq;
 using Microsoft.Build.Utilities;
+using System.Reflection;
 
 namespace Afterthought.Amender
 {
@@ -23,7 +24,21 @@ namespace Afterthought.Amender
 		{
 			DateTime start = DateTime.Now;
 			Log.LogMessage(MessageImportance.High, "Amending {0}", TargetAssembly.Select(a => a.ItemSpec).ToArray());
-			Program.Amend(TargetAssembly.First().ItemSpec, AmendmentAssemblies.Select(a => a.ItemSpec).ToArray(), ReferenceAssemblies.Select(a => a.ItemSpec).ToArray());
+			try
+			{
+				Program.Amend(TargetAssembly.First().ItemSpec, AmendmentAssemblies.Select(a => a.ItemSpec).ToArray(), ReferenceAssemblies.Select(a => a.ItemSpec).ToArray());
+			}
+			catch (ReflectionTypeLoadException rtle)
+			{
+				Log.LogErrorFromException(rtle);
+				foreach (var le in rtle.LoaderExceptions)
+					Log.LogErrorFromException(le);
+			}
+			catch (Exception e)
+			{
+				Log.LogErrorFromException(e);
+				throw;
+			}
 			Log.LogMessage(MessageImportance.High, "Amending Complete ({0:0.000} seconds)", DateTime.Now.Subtract(start).TotalSeconds);
 			return true;
 		}

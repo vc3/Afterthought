@@ -217,7 +217,7 @@ namespace Microsoft.Cci {
         else {
           if (!TypeHelper.TypesAreEquivalent(customAttribute.Constructor.ContainingType, customAttribute.Type))
             this.ReportError(MetadataError.CustomAttributeTypeIsNotConstructorContainer, customAttribute);
-          if (customAttribute.Constructor.ResolvedMethod != Dummy.Method) {
+          if (!(customAttribute.Constructor.ResolvedMethod is Dummy)) {
             if (!customAttribute.Constructor.ResolvedMethod.IsConstructor)
               this.ReportError(MetadataError.CustomAttributeConstructorIsBadReference, customAttribute);
             if (!IteratorHelper.EnumerableHasLength(customAttribute.Arguments, customAttribute.Constructor.ResolvedMethod.ParameterCount)) {
@@ -261,7 +261,7 @@ namespace Microsoft.Cci {
             this.ReportError(MetadataError.IncompleteNode, eventDefinition, "Type");
           else {
             var etype = eventDefinition.Type.ResolvedType;
-            if (etype != Dummy.Type && (etype.IsInterface || etype.IsValueType))
+            if (!(etype is Dummy) && (etype.IsInterface || etype.IsValueType))
               this.ReportError(MetadataError.EventTypeMustBeClass, eventDefinition.Type, eventDefinition);
           }
         }
@@ -282,7 +282,7 @@ namespace Microsoft.Cci {
           if (!fieldDefinition.IsStatic)
             this.ReportError(MetadataError.ConstantFieldMustBeStatic, fieldDefinition);
           var fieldType = fieldDefinition.Type;
-          if (fieldType.IsEnum && fieldType.ResolvedType != Dummy.Type) fieldType = fieldType.ResolvedType.UnderlyingType;
+          if (fieldType.IsEnum && !(fieldType.ResolvedType is Dummy)) fieldType = fieldType.ResolvedType.UnderlyingType;
           if (!TypeHelper.TypesAreEquivalent(fieldDefinition.CompileTimeValue.Type, fieldType))
             this.ReportError(MetadataError.MetadataConstantTypeMismatch, fieldDefinition.CompileTimeValue, fieldDefinition);
         }
@@ -501,7 +501,7 @@ namespace Microsoft.Cci {
         this.Visit((IMetadataExpression)constant);
         ITypeReference ctype = constant.Type;
         var rctype = constant.Type.ResolvedType;
-        if (rctype != Dummy.Type) {
+        if (!(rctype is Dummy)) {
           if (rctype.IsEnum)
             ctype = rctype.UnderlyingType;
           else
@@ -536,7 +536,7 @@ namespace Microsoft.Cci {
           case PrimitiveTypeCode.String:
             validValue = constant.Value is string || constant.Value == null; break;
           case PrimitiveTypeCode.NotPrimitive:
-            validValue = constant.Value == null || rctype == Dummy.Type; break; //TODO: check that value can be enum val
+            validValue = constant.Value == null || rctype is Dummy; break; //TODO: check that value can be enum val
         }
         if (!validValue)
           this.ReportError(MetadataError.InvalidMetadataConstant, constant);
@@ -690,7 +690,7 @@ namespace Microsoft.Cci {
         if (methodImplementation.ImplementingMethod is Dummy)
           this.ReportError(MetadataError.IncompleteNode, methodImplementation, "ImplementingMethod");
         var resolvedImplementedMethod = methodImplementation.ImplementedMethod.ResolvedMethod;
-        if (resolvedImplementedMethod != Dummy.Method) {
+        if (!(resolvedImplementedMethod is Dummy)) {
           if (!resolvedImplementedMethod.IsVirtual || resolvedImplementedMethod.IsSealed || resolvedImplementedMethod.ContainingTypeDefinition.IsSealed)
             this.ReportError(MetadataError.MethodCannotBeAnOverride, resolvedImplementedMethod, methodImplementation);
           if (resolvedImplementedMethod.IsAccessCheckedOnOverride) {
@@ -719,7 +719,7 @@ namespace Microsoft.Cci {
         //check that implemented method is inherited from a base class or interface
         //check for local or inherited implementer
         var resolvedImplementingMethod = methodImplementation.ImplementingMethod.ResolvedMethod;
-        if (resolvedImplementedMethod != Dummy.Method) {
+        if (!(resolvedImplementedMethod is Dummy)) {
           if (!(resolvedImplementedMethod.IsVirtual || resolvedImplementedMethod.IsAbstract || resolvedImplementedMethod.IsExternal))
             this.ReportError(MetadataError.MethodCannotBeAnOverride, resolvedImplementedMethod, methodImplementation);
         }
@@ -901,7 +901,7 @@ namespace Microsoft.Cci {
       public void Visit(IParameterDefinition parameterDefinition) {
         if (parameterDefinition.HasDefaultValue) {
           var parameterType = parameterDefinition.Type;
-          if (parameterType.IsEnum && parameterType.ResolvedType != Dummy.Type) parameterType = parameterType.ResolvedType.UnderlyingType;
+          if (parameterType.IsEnum && !(parameterType.ResolvedType is Dummy)) parameterType = parameterType.ResolvedType.UnderlyingType;
           if (!TypeHelper.TypesAreEquivalent(parameterDefinition.DefaultValue.Type, parameterType))
             this.ReportError(MetadataError.MetadataConstantTypeMismatch, parameterDefinition.DefaultValue, parameterDefinition);
         }
@@ -946,7 +946,7 @@ namespace Microsoft.Cci {
           this.ReportError(MetadataError.RuntimeSpecialMustAlsoBeSpecialName, propertyDefinition);
         if (propertyDefinition.HasDefaultValue) {
           var propertyType = propertyDefinition.Type;
-          if (propertyType.IsEnum && propertyType.ResolvedType != Dummy.Type) propertyType = propertyType.ResolvedType.UnderlyingType;
+          if (propertyType.IsEnum && !(propertyType.ResolvedType is Dummy)) propertyType = propertyType.ResolvedType.UnderlyingType;
           if (!TypeHelper.TypesAreEquivalent(propertyDefinition.DefaultValue.Type, propertyDefinition.Type))
             this.ReportError(MetadataError.MetadataConstantTypeMismatch, propertyDefinition.DefaultValue, propertyDefinition);
         }
@@ -1290,8 +1290,17 @@ namespace Microsoft.Cci {
         if (typeReference.InternedKey == 0)
           this.ReportError(MetadataError.IncompleteNode, typeReference, "InternedKey");
         var resolvedType = typeReference.ResolvedType;
-        if (resolvedType != Dummy.Type && typeReference.InternedKey != resolvedType.InternedKey) {
-          //then the type had better be an alias
+        if (resolvedType is Dummy) {
+          if (!(resolvedType is Dummy)) {
+            //TODO: report error
+          }
+        } else if (typeReference.InternedKey != resolvedType.InternedKey) {
+          var assemRef = TypeHelper.GetDefiningUnitReference(typeReference) as IAssemblyReference;
+          if (assemRef != null && assemRef.UnifiedAssemblyIdentity != assemRef.AssemblyIdentity) {
+            //The intern keys will differ because of unification. Let's be happy if the names match.
+            if (TypeHelper.GetTypeName(typeReference) == TypeHelper.GetTypeName(resolvedType)) return;
+          }
+          //If we get here the type had better be an alias
           if (!(typeReference is IGenericTypeInstanceReference)) {
             if (!typeReference.IsAlias)
               this.ReportError(MetadataError.TypeReferenceResolvesToDifferentType, typeReference);
