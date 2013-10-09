@@ -12,13 +12,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.Cci.MutableCodeModel;
 using Microsoft.Cci;
 using Microsoft.Cci.Immutable;
-using System.Runtime.Serialization;
-using System.IO;
-using Afterthought;
 using System.Collections;
 
 namespace Afterthought.Amender
@@ -40,22 +36,18 @@ namespace Afterthought.Amender
 		Dictionary<Type, ITypeDefinition> resolvedTypes = new Dictionary<Type, ITypeDefinition>();
 		Dictionary<ITypeDefinition, Type> resolvedTypeDefs = new Dictionary<ITypeDefinition, Type>();
 
-		internal AssemblyAmender(IMetadataHost host, PdbReader pdbReader, IEnumerable<ITypeAmendment> typeAmendments, IEnumerable<System.Reflection.Assembly> assemblies, bool preCacheAssemblies)
+		internal AssemblyAmender(IMetadataHost host, PdbReader pdbReader, IEnumerable<ITypeAmendment> typeAmendments, IEnumerable<System.Reflection.Assembly> assemblies)
 			: base(host, true)
 		{
 			// Preload assemblies
-			this.PreCacheAssemblies = preCacheAssemblies;
-			if (PreCacheAssemblies)
+			foreach (var assembly in assemblies)
 			{
-				foreach (var assembly in assemblies)
+				var assemblyDef = ResolveAssembly(assembly);
+				foreach (var reference in assemblyDef.AssemblyReferences.Select(a => a.ResolvedAssembly).Where(a => a.Name.Value != "" && !a.Name.Value.StartsWith("mscorlib")))
 				{
-					var assemblyDef = ResolveAssembly(assembly);
-					foreach (var reference in assemblyDef.AssemblyReferences.Select(a => a.ResolvedAssembly).Where(a => a.Name.Value != "" && !a.Name.Value.StartsWith("mscorlib")))
-					{
-						var assemblyRef = System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value);
-						if (assemblyRef != null)
-							CacheAssembly(assemblyRef, reference);
-					}
+					var assemblyRef = System.Reflection.Assembly.LoadWithPartialName(reference.Name.Value);
+					if (assemblyRef != null)
+						CacheAssembly(assemblyRef, reference);
 				}
 			}
 
@@ -66,11 +58,7 @@ namespace Afterthought.Amender
 
 		bool IsAmending { get; set; }
 
-		bool PreCacheAssemblies { get; set; }
-
 		internal string TargetRuntimeVersion { get; set; }
-
-		ITypeAmendment CurrentAmendment { get; set; }
 
 		Dictionary<IFieldDefinition, IFieldAmendment> Fields { get; set; }
 
@@ -163,7 +151,6 @@ namespace Afterthought.Amender
 			}
 
 			IsAmending = true;
-			CurrentAmendment = typeAmendment;
 
 			// Attributes
 			type = AddAttributes(type, typeAmendment);
@@ -2092,8 +2079,7 @@ namespace Afterthought.Amender
 				assemblyDef = (IAssembly)host.LoadUnitFrom(assembly.Location);
 
 			// Cache the assembly
-			if (PreCacheAssemblies)
-				CacheAssembly(assembly, assemblyDef);
+			CacheAssembly(assembly, assemblyDef);
 
 			return assemblyDef;
 		}
@@ -2369,7 +2355,6 @@ namespace Afterthought.Amender
 				delegateType |= MethodDelegateType.ExplicitSyntax;
 
 			// Ensure the instance parameter is compatible
-			var instanceParameterType = targetMethodDef.Parameters.First().Type.ResolvedType;
 			if (!IsAssignable(targetMethodDef.Parameters.First().Type.ResolvedType, methodDef.ContainingType.ResolvedType))
 				throw new ArgumentException("The specified method delegate does not have the correct instance parameter type.");
 

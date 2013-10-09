@@ -138,10 +138,8 @@ namespace Afterthought.Amender
 				// Amend and persist the target assembly
 				using (pdbReader)
 				{
-	
-
 					// Create and execute a new assembly amender
-					AssemblyAmender amender = new AssemblyAmender(host, pdbReader, amendments, assemblies, module.TargetRuntimeVersion.StartsWith("v2"));
+					AssemblyAmender amender = new AssemblyAmender(host, pdbReader, amendments, assemblies);
 					amender.TargetRuntimeVersion = module.TargetRuntimeVersion;
 					module = amender.Visit(module);
 
