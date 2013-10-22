@@ -2255,7 +2255,7 @@ namespace Afterthought.Amender
 				methodDef.ParameterCount == method.GetParameters().Length &&
 
 				// Ensure parameter types match
-				method.GetParameters().Select(p => ResolveType(p.ParameterType)).Cast<ITypeDefinition>().SequenceEqual(methodDef.Parameters.Select(p => p.Type.ResolvedType)) &&
+				method.GetParameters().All(p => AreEquivalent(methodDef.Parameters.ElementAt(p.Position).Type, p.ParameterType)) &&
 
 				(
 					// Method specific tests
@@ -2419,7 +2419,8 @@ namespace Afterthought.Amender
 					if (amendment.Interfaces.Any(i => TypeHelper.TypesAreAssignmentCompatible(target, ResolveType(i))))
 						return true;
 				}
-				candidate = candidate.BaseClasses.FirstOrDefault().ResolvedType;
+				var baseType = candidate.BaseClasses.FirstOrDefault();
+				candidate = baseType == null ? null : baseType.ResolvedType;
 			}
 			return false;
 		}

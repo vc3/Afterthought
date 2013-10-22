@@ -113,6 +113,9 @@ namespace Afterthought.Amender
 
 			using (var host = new PeReader.DefaultHost())
 			{
+				foreach (var referencePath in referencePaths.Select(p => Path.GetDirectoryName(p.Value)).Distinct())
+					host.AddLibPath(referencePath);
+
 				// Load the target assembly
 				IModule module = host.LoadUnitFrom(backupTargetAssembly) as IModule;
 				if (module == null || module == Dummy.Module || module == Dummy.Assembly)
