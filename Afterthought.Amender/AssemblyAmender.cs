@@ -427,28 +427,28 @@ namespace Afterthought.Amender
 			{
 				// Create the setter method
 				var setter = new MethodDefinition
-					{
-						ContainingTypeDefinition = type,
-						Type = host.PlatformType.SystemVoid,
-						Name = host.NameTable.GetNameFor((isInterface ? property.Implements.DeclaringType.FullName + "." : "") +
-								"set_" + (isInterface ? property.Implements.Name : property.Name)),
-						IsSpecialName = true,
-						IsHiddenBySignature = true,
-						IsCil = true,
-						IsNewSlot = isInterface,
-						IsVirtual = isInterface,
-						IsSealed = isInterface,
-						Visibility = isInterface ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
-						CallingConvention = CallingConvention.HasThis,
-						InternFactory = host.InternFactory,
-						Body = new MethodBody(),
-						Parameters = new List<IParameterDefinition>() { new ParameterDefinition() 
+				{
+					ContainingTypeDefinition = type,
+					Type = host.PlatformType.SystemVoid,
+					Name = host.NameTable.GetNameFor((isInterface ? property.Implements.DeclaringType.FullName + "." : "") +
+							"set_" + (isInterface ? property.Implements.Name : property.Name)),
+					IsSpecialName = true,
+					IsHiddenBySignature = true,
+					IsCil = true,
+					IsNewSlot = isInterface,
+					IsVirtual = isInterface,
+					IsSealed = isInterface,
+					Visibility = isInterface ? TypeMemberVisibility.Private : TypeMemberVisibility.Public,
+					CallingConvention = CallingConvention.HasThis,
+					InternFactory = host.InternFactory,
+					Body = new MethodBody(),
+					Parameters = new List<IParameterDefinition>() { new ParameterDefinition() 
 						{
 							Index = 0,
 							Name = host.NameTable.value,
 							Type = propertyType
 						}}
-					};
+				};
 
 				// Association the setter with the property definition
 				propertyDef.Setter = setter;
@@ -1518,8 +1518,14 @@ namespace Afterthought.Amender
 				// Catch
 				if (methodAmendment.Catch != null)
 				{
+					// Determine the type of delegate
+					var delegateType = MethodDelegateType.Catch;
+					if (context != null)
+						delegateType |= MethodDelegateType.WithContext;
+					ResolveMethodDelegate(methodBody.MethodDefinition.ContainingType, methodAmendment.Catch, methodBody.MethodDefinition, ref delegateType);
+
 					// Determine the type of exception being caught
-					var exceptionType = ResolveType(methodAmendment.Catch.GetParameters()[context != null ? 2 : 1].ParameterType);
+					var exceptionType = ResolveType(methodAmendment.Catch.GetParameters()[(delegateType.HasFlag(MethodDelegateType.ArraySyntax) ? 1 : 0) + (context != null ? 2 : 1)].ParameterType);
 
 					// Start the catch block
 					il.BeginCatchBlock(exceptionType);
@@ -1541,7 +1547,7 @@ namespace Afterthought.Amender
 
 					// End nested try block if necessary
 					if (methodAmendment.Finally != null)
-						il.EndTryBody(); 
+						il.EndTryBody();
 				}
 
 				// Finally
@@ -1559,7 +1565,7 @@ namespace Afterthought.Amender
 
 				// End the try clause
 				il.MarkLabel(exit);
-				il.EndTryBody(); 
+				il.EndTryBody();
 
 				// Load the result
 				if (hasReturnValue)
@@ -1869,25 +1875,11 @@ namespace Afterthought.Amender
 			// Get the method definition to emit a call to
 			var targetMethodDef = ResolveMethodDelegate(methodBody.MethodDefinition.ContainingType, method, methodDef, ref delegateType);
 
-			// Load this pointer onto stack
-			il.Emit(OperationCode.Ldarg_0);
-
-			// Array syntax (T instance, string methodName[, TContext context], object[] parameters[, object result])
+			// Array syntax (T instance, string methodName[, TContext context][, TException exception], object[] parameters[, object result])
 			if (delegateType.HasFlag(MethodDelegateType.ArraySyntax))
 			{
-				// Load method name onto stack
-				il.Emit(OperationCode.Ldstr, methodBody.MethodDefinition.Name.Value);
-
-				// Optionally load the method context
-				if (context != null)
-					il.Emit(OperationCode.Ldloc, context);
-
-				// Optionally load exception
-				if (exception != null)
-					il.Emit(OperationCode.Ldloc, exception);
-
 				// Add local variable to store the return value before delegate
-				ITypeDefinition argTypeDef = targetMethodDef.Parameters.Skip(context != null ? 3 : 2).First().Type.ResolvedType;
+				ITypeDefinition argTypeDef = targetMethodDef.Parameters.Skip(2 + (context != null ? 1 : 0) + (exception != null ? 1 : 0)).First().Type.ResolvedType;
 				var args = new LocalDefinition() { Name = host.NameTable.GetNameFor("_args_"), Type = argTypeDef };
 				if (methodBody.LocalVariables == null)
 					methodBody.LocalVariables = new List<ILocalDefinition>();
@@ -1922,6 +1914,20 @@ namespace Afterthought.Amender
 					il.Emit(OperationCode.Stelem_Ref);
 				}
 
+				// Load this pointer onto stack
+				il.Emit(OperationCode.Ldarg_0);
+
+				// Load method name onto stack
+				il.Emit(OperationCode.Ldstr, methodBody.MethodDefinition.Name.Value);
+
+				// Optionally load the method context
+				if (context != null)
+					il.Emit(OperationCode.Ldloc, context);
+
+				// Optionally load exception
+				if (exception != null)
+					il.Emit(OperationCode.Ldloc, exception);
+
 				// Load the argument array
 				il.Emit(OperationCode.Ldloc, args);
 
@@ -1937,7 +1943,7 @@ namespace Afterthought.Amender
 				il.Emit(OperationCode.Call, targetMethodDef);
 
 				// Unbox result values if necessary
-				if (delegateType.HasFlag(MethodDelegateType.HasResultParameter) && methodDef.Type.IsValueType)
+				if (delegateType.HasFlag(MethodDelegateType.Function) && (delegateType.HasFlag(MethodDelegateType.After) || delegateType.HasFlag(MethodDelegateType.Catch)) && methodDef.Type.IsValueType)
 					il.Emit(OperationCode.Unbox_Any, methodDef.Type);
 
 				// Handle method delegates that potentially return updated arguments
@@ -1968,6 +1974,9 @@ namespace Afterthought.Amender
 			// Explicit syntax
 			else
 			{
+				// Load this pointer onto stack
+				il.Emit(OperationCode.Ldarg_0);
+
 				// Optionally load the method context
 				if (context != null)
 					il.Emit(OperationCode.Ldloc, context);
@@ -2109,7 +2118,7 @@ namespace Afterthought.Amender
 				}
 			}
 		}
-	
+
 		/// <summary>
 		/// Gets the <see cref="IFieldDefinition"/> that corresponds to the specified <see cref="FieldInfo"/>.
 		/// </summary>
@@ -2258,10 +2267,10 @@ namespace Afterthought.Amender
 				method.GetParameters().All(p => AreEquivalent(methodDef.Parameters.ElementAt(p.Position).Type, p.ParameterType)) &&
 
 				(
-					// Method specific tests
+				// Method specific tests
 					!(method is System.Reflection.MethodInfo) ||
 					(
-						// Ensure return types match
+				// Ensure return types match
 						AreEquivalent(methodDef.Type, ((System.Reflection.MethodInfo)method).ReturnType) &&
 
 						// Ensure generic parameter types match
@@ -2339,6 +2348,12 @@ namespace Afterthought.Amender
 			var paramDefs = targetMethodDef.Parameters.ToArray();
 			var parameters = method.GetParameters();
 
+			// Determine if the delegate should have a context parameter
+			int contextParam = delegateType.HasFlag(MethodDelegateType.WithContext) && !delegateType.HasFlag(MethodDelegateType.Before) ? 1 : 0;
+
+			// Determine if the delegate should have an exception parameter
+			int exceptionParam = delegateType.HasFlag(MethodDelegateType.Catch) ? 1 : 0;
+
 			// Determine if the target method is an action (void) or function (non-void)
 			delegateType = delegateType | (TypeHelper.TypesAreEquivalent(targetMethodDef.Type, host.PlatformType.SystemVoid) ? MethodDelegateType.Action : MethodDelegateType.Function);
 
@@ -2348,7 +2363,7 @@ namespace Afterthought.Amender
 
 			// Determine if the target method uses the object array or explicit parameter syntax
 			if (parameters.Exists<string>(1) && // Method Name
-				parameters.Exists<object[]>(delegateType.HasFlag(MethodDelegateType.WithContext) && !delegateType.HasFlag(MethodDelegateType.Before) ? 3 : 2) && // Method Parameters
+				parameters.Exists<object[]>(2 + contextParam + exceptionParam) && // Method Parameters
 				(!delegateType.HasFlag(MethodDelegateType.HasResultParameter) || (parameters.Exists<object>(parameters.Length - 1) && method.ReturnType == typeof(object)))) // Method Result
 				delegateType |= MethodDelegateType.ArraySyntax;
 			else
@@ -2360,8 +2375,6 @@ namespace Afterthought.Amender
 
 			// Determine if there are name, context, and/or exception parameters
 			int nameParam = delegateType.HasFlag(MethodDelegateType.ArraySyntax) ? 1 : 0;
-			int contextParam = delegateType.HasFlag(MethodDelegateType.WithContext) && !delegateType.HasFlag(MethodDelegateType.Before) ? 1 : 0;
-			int exceptionParam = delegateType.HasFlag(MethodDelegateType.Catch) ? 1 : 0;
 
 			// Verify that the exception type is compatible
 			if (delegateType.HasFlag(MethodDelegateType.Catch) && !TypeHelper.Type1DerivesFromOrIsTheSameAsType2(paramDefs[1 + nameParam + contextParam].Type.ResolvedType, ResolveType(typeof(Exception))))
@@ -2373,8 +2386,8 @@ namespace Afterthought.Amender
 				// Return false if the target method does not have the correct number of parameters
 				// It should always have one more than the method being amended to support the instance parameter
 				// and will have one more parameter if the delegate has a return value
-				if (methodDef.ParameterCount != 
-					targetMethodDef.ParameterCount - 
+				if (methodDef.ParameterCount !=
+					targetMethodDef.ParameterCount -
 					1 - // Instance
 					contextParam - // Context
 					exceptionParam - // Exception

@@ -65,6 +65,16 @@ namespace Afterthought.UnitTest.Target
 				.Finally((instance, stopwatch, values)
 					=> instance.Result = (int)stopwatch.ElapsedMilliseconds);
 
+			// Modify SlowSum to measure the method execution time
+			Methods
+				.Named("SlowSum3")
+				.Before((T instance, string method, object[] parameters)
+					=> { var s = new Stopwatch(); s.Start(); return s; })
+				.Catch<OverflowException>((instance, method, stopwatch, exception, parameters)
+					=> { instance.Result = (int)stopwatch.ElapsedMilliseconds; return Int32.MaxValue; })
+				.Finally((instance, method, stopwatch, parameters)
+					=> instance.Result = (int)stopwatch.ElapsedMilliseconds);
+
 			// Modify Sum5 to swallow overflow errors
 			Methods
 				.Named("Sum5")
@@ -340,12 +350,29 @@ namespace Afterthought.UnitTest.Target
 			return stopwatch;
 		}
 
-		internal static int CatchSlowSum2(T instance, Stopwatch stopwatch, OverflowException e, int[] values)
+		internal static object CatchSlowSum2(T instance, Stopwatch stopwatch, OverflowException e, int[] values)
 		{
 			return Int32.MaxValue;
 		}
 
 		internal static void FinallySlowSum2(T instance, Stopwatch stopwatch, int[] values)
+		{
+			instance.Result = (int)stopwatch.ElapsedMilliseconds;
+		}
+
+		internal static Stopwatch BeforeSlowSum3(T instance, string method, object[] parameters)
+		{
+			var stopwatch = new Stopwatch();
+			stopwatch.Start();
+			return stopwatch;
+		}
+
+		internal static int CatchSlowSum3(T instance, string method, object[] parameters, Stopwatch stopwatch, OverflowException e)
+		{
+			return Int32.MaxValue;
+		}
+
+		internal static void FinallySlowSum3(T instance, string method, object[] parameters, Stopwatch stopwatch)
 		{
 			instance.Result = (int)stopwatch.ElapsedMilliseconds;
 		}

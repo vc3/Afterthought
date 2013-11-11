@@ -304,12 +304,23 @@ namespace Afterthought.UnitTest.Target
 			}
 			catch (OverflowException e)
 			{
-				return TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, e, values);
+				return (int)TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, e, values);
 			}
 			finally
 			{
 				TestAmendment<Calculator>.FinallySlowSum2(this, stopwatch, values);
 			}
+		}
+
+		/// <summary>
+		/// Takes over 100 milliseconds to sum the input values.  Will be amended to time this via a context.
+		/// </summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
+		public int SlowSum3(int[] values)
+		{
+			Thread.Sleep(110);
+			return values.Sum();
 		}
 
 		public event EventHandler Calculate;

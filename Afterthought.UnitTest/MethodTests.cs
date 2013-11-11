@@ -238,6 +238,30 @@ namespace Afterthought.UnitTest
 		}
 
 		/// <summary>
+		/// Determines whether a method can be successfully wrapped in a try-catch-finally block with
+		/// contextual state passed from start to finish.
+		/// </summary>
+		[TestMethod]
+		public void BeforeAndCatchOrFinallyWithContextArraySyntax()
+		{
+			// Perform a slow calculation
+			Calculator.Result = 0;
+			int sum = Calculator.SlowSum3(new int[] { 1, 2, 3, 4, 5 });
+
+			// Verify that the execution time was measured and saved to result
+			Assert.AreEqual(15, sum);
+			Assert.IsTrue(Calculator.Result >= 100);
+
+			// Perform a slow calculation that caused an overflow exception
+			Calculator.Result = 0;
+			sum = Calculator.SlowSum3(new int[] { 1000000000, 2000000000 });
+
+			// Verify that the execution time was measured and saved to result
+			Assert.AreEqual(Int32.MaxValue, sum);
+			Assert.IsTrue(Calculator.Result >= 100);
+		}
+
+		/// <summary>
 		/// Whether an exception can be caught without contextual state.
 		/// </summary>
 		[TestMethod]
