@@ -69,6 +69,8 @@ namespace Afterthought
 
 			public delegate void FinallyMethod(TAmended instance, string method, object[] parameters);
 
+			public delegate void WrapMethod(TAmended instance, string method, object[] parameters);
+
 			#endregion
 
 			#region Methods
@@ -147,6 +149,13 @@ namespace Afterthought
 			{
 				foreach (Amendment.Method method in this)
 					method.FinallyMethod = @finally.Method;
+				return this;
+			}
+
+			public MethodEnumeration Wrap(WrapMethod before)
+			{
+				foreach (Amendment.Method method in this)
+					method.BeforeMethod = before.Method;
 				return this;
 			}
 

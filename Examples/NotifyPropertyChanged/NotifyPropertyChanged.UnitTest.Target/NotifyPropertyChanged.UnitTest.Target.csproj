@@ -56,7 +56,7 @@
     </ProjectReference>
     <ProjectReference Include="..\NotifyPropertyChanged\NotifyPropertyChanged.csproj">
       <Project>{91D3E48E-0CFC-4F86-8B1C-456428095B1C}</Project>
-      <Name>NotifyPropertyChanged %28Examples\NotifyPropertyChanged\NotifyPropertyChanged%29</Name>
+      <Name>NotifyPropertyChanged</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

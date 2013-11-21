@@ -14,6 +14,10 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -55,7 +59,7 @@
     </ProjectReference>
     <ProjectReference Include="..\NotifyPropertyChanged\NotifyPropertyChanged.csproj">
       <Project>{91D3E48E-0CFC-4F86-8B1C-456428095B1C}</Project>
-      <Name>NotifyPropertyChanged %28Examples\NotifyPropertyChanged\NotifyPropertyChanged%29</Name>
+      <Name>NotifyPropertyChanged</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

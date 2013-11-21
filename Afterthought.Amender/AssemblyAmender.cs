@@ -1914,6 +1914,24 @@ namespace Afterthought.Amender
 					il.Emit(OperationCode.Stelem_Ref);
 				}
 
+				// Emit the method implementation here if specified
+				if (implement != null)
+					implement();
+
+				// Add local variable to store the return value before delegate
+				LocalDefinition result = null;
+				if (delegateType.HasFlag(MethodDelegateType.HasResultParameter))
+				{
+					// Create the result local variable
+					result = new LocalDefinition() { Name = host.NameTable.GetNameFor("_result_"), Type = methodBody.MethodDefinition.Type };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>();
+					methodBody.LocalVariables.Add(result);
+
+					// Store the result
+					il.Emit(OperationCode.Stloc, result);
+				}
+
 				// Load this pointer onto stack
 				il.Emit(OperationCode.Ldarg_0);
 
@@ -1931,13 +1949,16 @@ namespace Afterthought.Amender
 				// Load the argument array
 				il.Emit(OperationCode.Ldloc, args);
 
-				// Emit the method implementation here if specified
-				if (implement != null)
-					implement();
+				// Load the result variable is required for the delegate being invoked
+				if (delegateType.HasFlag(MethodDelegateType.HasResultParameter))
+				{
+					// Load the result
+					il.Emit(OperationCode.Ldloc, result);
 
-				// Box result values if necessary
-				if (delegateType.HasFlag(MethodDelegateType.HasResultParameter) && methodDef.Type.IsValueType)
-					il.Emit(OperationCode.Box, methodDef.Type);
+					// Box result values if necessary
+					if (delegateType.HasFlag(MethodDelegateType.HasResultParameter) && methodDef.Type.IsValueType)
+						il.Emit(OperationCode.Box, methodDef.Type);
+				}
 
 				// Call the target method
 				il.Emit(OperationCode.Call, targetMethodDef);

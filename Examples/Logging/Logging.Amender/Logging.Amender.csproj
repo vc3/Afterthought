@@ -12,6 +12,10 @@
     <AssemblyName>Logging.Amender</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -46,7 +50,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Logging\Logging.csproj">
       <Project>{DCF621B2-47A4-490A-897D-C3593E2FB9C1}</Project>
-      <Name>Logging %28Examples\Logging\Logging%29</Name>
+      <Name>Logging</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
