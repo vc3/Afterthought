@@ -138,8 +138,49 @@ namespace Afterthought.Amender
 
 			// Mark operation if it is a label for a branch
 			offset2Label.TryGetValue(op.Offset, out label);
-			return label;
 
+			// Mark operation if it is pointed to by an exception handler
+			bool ignore;
+			uint offset = op.Offset;
+			if (offsetsUsedInExceptionInformation.TryGetValue(offset, out ignore))
+			{
+				foreach (var exceptionInfo in methodBody.OperationExceptionInformation)
+				{
+					if (offset == exceptionInfo.TryStartOffset)
+						BeginTryBody();
+
+					// Never need to do anthing when offset == exceptionInfo.TryEndOffset because
+					// we pick up an EndTryBody from the HandlerEndOffset below
+					//  EndTryBody();
+
+					if (offset == exceptionInfo.HandlerStartOffset)
+					{
+						switch (exceptionInfo.HandlerKind)
+						{
+							case HandlerKind.Catch:
+								BeginCatchBlock(exceptionInfo.ExceptionType);
+								break;
+							case HandlerKind.Fault:
+								BeginFaultBlock();
+								break;
+							case HandlerKind.Filter:
+								BeginFilterBody();
+								break;
+							case HandlerKind.Finally:
+								BeginFinallyBlock();
+								break;
+						}
+					}
+
+					if (exceptionInfo.HandlerKind == HandlerKind.Filter && offset == exceptionInfo.FilterDecisionStartOffset)
+						BeginFilterBlock();
+
+					if (offset == exceptionInfo.HandlerEndOffset)
+						EndTryBody();
+				}
+			}
+
+			return label;
 		}
 
 		internal void GoToEndOfOperations()

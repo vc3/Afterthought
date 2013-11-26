@@ -323,6 +323,27 @@ namespace Afterthought.UnitTest.Target
 			return values.Sum();
 		}
 
+		public void SlowSum4(int[] values)
+		{
+			Stopwatch stopwatch = TestAmendment<Calculator>.BeforeSlowSum2(this, ref values);
+			var bob = true;
+			if (bob)
+			{
+				try
+				{
+					Thread.Sleep(110);
+				}
+				catch (OverflowException e)
+				{
+					TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, e, values);
+				}
+				finally
+				{
+					TestAmendment<Calculator>.FinallySlowSum2(this, stopwatch, values);
+				}
+			}
+		}
+
 		public event EventHandler Calculate;
 	}
 }

@@ -82,6 +82,11 @@ namespace Afterthought.UnitTest.Target
 				.Catch<OverflowException, int>((instance, exception, values)
 					=> Int32.MaxValue);
 
+			// Modify Sum5 to swallow overflow errors
+			Methods
+				.Named("SlowSum4")
+				.After((instance, method, parameters) => { });
+
 			// Amend a generic method
 			//Methods
 			//    .Named("Sum")
@@ -375,6 +380,11 @@ namespace Afterthought.UnitTest.Target
 		internal static void FinallySlowSum3(T instance, string method, object[] parameters, Stopwatch stopwatch)
 		{
 			instance.Result = (int)stopwatch.ElapsedMilliseconds;
+		}
+
+		internal static void AfterSlowSum3(T instance, string method, object[] parameters)
+		{
+			
 		}
 	}
 

@@ -967,6 +967,8 @@ namespace Afterthought.Amender
 					if (constructorAmendment.Before.ReturnType != typeof(void))
 					{
 						context = new LocalDefinition() { Name = host.NameTable.GetNameFor("_ctx_"), Type = ResolveType(constructorAmendment.Before.ReturnType) };
+						if (methodBody.LocalVariables == null)
+							methodBody.LocalVariables = new List<ILocalDefinition>();
 						methodBody.LocalVariables.Add(context);
 						il.Emit(OperationCode.Stloc, context);
 					}
@@ -986,11 +988,11 @@ namespace Afterthought.Amender
 
 				// After 
 				if (constructorAmendment.After != null)
-					CallMethodDelegate(methodBody, constructorAmendment.After, false, il, null, MethodDelegateType.After, context, null);
+				{
+					il.GoToEndOfOperations();
 
-				// Or emit a return for new/overriden methods
-				if (constructorAmendment.Implementation != null)
-					il.Emit(OperationCode.Ret);
+					CallMethodDelegate(methodBody, constructorAmendment.After, false, il, null, MethodDelegateType.After, context, null);
+				}
 			}
 			else
 				il.EmitUntilReturn();
@@ -1018,6 +1020,10 @@ namespace Afterthought.Amender
 					il.Emit(initializer.Key.Setter.ResolvedMethod.IsVirtual ? OperationCode.Callvirt : OperationCode.Call, initializer.Key.Setter);
 				}
 			}
+
+			// Emit a return statement is no more operations are present
+			if (il.Operations.Count == 0)
+				il.Emit(OperationCode.Ret);
 
 			// Update the method body
 			il.UpdateMethodBody(6);
@@ -1382,6 +1388,8 @@ namespace Afterthought.Amender
 				if (methodAmendment.Before.ReturnType != typeof(void))
 				{
 					context = new LocalDefinition() { Name = host.NameTable.GetNameFor("_ctx_"), Type = ResolveType(methodAmendment.Before.ReturnType) };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>(); 
 					methodBody.LocalVariables.Add(context);
 					il.Emit(OperationCode.Stloc, context);
 				}
@@ -1507,6 +1515,8 @@ namespace Afterthought.Amender
 				if (hasReturnValue)
 				{
 					result = new LocalDefinition() { Name = host.NameTable.GetNameFor("_result_"), Type = methodBody.MethodDefinition.Type };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>(); 
 					methodBody.LocalVariables.Add(result);
 					il.Emit(OperationCode.Stloc, result);
 				}
@@ -1532,6 +1542,8 @@ namespace Afterthought.Amender
 
 					// Store exception in local variable
 					var exception = new LocalDefinition() { Name = host.NameTable.GetNameFor("_exception_"), Type = exceptionType };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>(); 
 					methodBody.LocalVariables.Add(exception);
 					il.Emit(OperationCode.Stloc, exception);
 
