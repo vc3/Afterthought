@@ -185,13 +185,16 @@ namespace Afterthought.Amender
 
 		internal void GoToEndOfOperations()
 		{
-			var op = Operations.First();
-			var label = GetLabel(op);
-
-			if (label != null)
+			if (Operations.Any())
 			{
-				Operations.Clear();
-				MarkLabel(label);
+				var op = Operations.First();
+				var label = GetLabel(op);
+
+				if (label != null)
+				{
+					Operations.Clear();
+					MarkLabel(label);
+				}
 			}
 		}
 
