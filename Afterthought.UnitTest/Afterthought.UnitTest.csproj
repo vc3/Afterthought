@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="AttributeTests.cs" />
     <Compile Include="ConstructorTests.cs" />
+    <Compile Include="GenericTypeAmendmentTests.cs" />
     <Compile Include="MethodTests.cs" />
     <Compile Include="InterfaceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
