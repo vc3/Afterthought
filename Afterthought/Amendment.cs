@@ -48,11 +48,14 @@ namespace Afterthought
 	public partial class Amendment<TAmended> : Amendment, ITypeAmendment
 	{
 		List<Type> interfaces = new List<Type>();
+	    private readonly Type ammendingType;
 
 		#region Constructors
 
-		public Amendment()
+		public Amendment(Type ammendingType)
 		{
+		    this.ammendingType = ammendingType;
+
 			// Get the type of the current amendment
 			Type amendmentType = typeof(Amendment<>).MakeGenericType(AmendedType);
 
@@ -90,7 +93,7 @@ namespace Afterthought
 			}
 
 			// Methods
-			this.Methods = new MethodList();
+			this.Methods = new MethodList(Type);
 			foreach (MethodInfo method in Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
 				.Where(m => !m.IsConstructor && !(m.IsSpecialName && m.IsHideBySig && (m.Name.StartsWith("get_") || m.Name.StartsWith("set_")))))
 			{
@@ -118,10 +121,10 @@ namespace Afterthought
 
 		public override Type Type
 		{
-			get
-			{
-				return typeof(TType);
-			}
+		    get
+		    {
+		        return ammendingType;
+		    }
 		}
 
 		public override Type AmendedType

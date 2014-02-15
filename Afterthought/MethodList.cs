@@ -14,15 +14,17 @@ namespace Afterthought
 
 		public partial class MethodList : MethodEnumeration
 		{
-			IList<Amendment.Method> methods;
+		    private readonly Type type;
+		    IList<Amendment.Method> methods;
 
-			internal MethodList()
+			internal MethodList(Type type)
 				: base(new List<Amendment.Method>())
 			{
-				this.methods = (IList<Amendment.Method>)base.methods;
+			    this.type = type;
+			    this.methods = (IList<Amendment.Method>)base.methods;
 			}
 
-			internal TMethod Add<TMethod>(TMethod method)
+		    internal TMethod Add<TMethod>(TMethod method)
 				where TMethod : Amendment.Method
 			{
 				methods.Add(method);
