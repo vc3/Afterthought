@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace Afterthought
 {
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		#region MethodList
 
@@ -29,9 +29,9 @@ namespace Afterthought
 				return method;
 			}
 
-			static MethodInfo GetOverrideMethod(string name, params Type[] parameterTypes)
+			static MethodInfo GetOverrideMethod(Type type, string name, params Type[] parameterTypes)
 			{
-				return typeof(TType).GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parameterTypes, null);
+				return type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parameterTypes, null);
 			}
 
 			public Method Raise(Event @event, string name)
