@@ -48,13 +48,13 @@ namespace Afterthought
 	public partial class Amendment<TAmended> : Amendment, ITypeAmendment
 	{
 		List<Type> interfaces = new List<Type>();
-	    private readonly Type ammendingType;
+	    private readonly Type amendingType;
 
 		#region Constructors
 
-		public Amendment(Type ammendingType)
+		public Amendment(Type amendingType)
 		{
-		    this.ammendingType = ammendingType;
+		    this.amendingType = amendingType;
 
 			// Get the type of the current amendment
 			Type amendmentType = typeof(Amendment<>).MakeGenericType(AmendedType);
@@ -123,7 +123,7 @@ namespace Afterthought
 		{
 		    get
 		    {
-		        return ammendingType;
+		        return amendingType;
 		    }
 		}
 
