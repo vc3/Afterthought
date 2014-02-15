@@ -296,5 +296,12 @@ namespace Afterthought
 
     #region Amendment<TType, TAmended>
 
+    public class Amendment<TType, TAmended>: Amendment<TAmended>
+    {
+        public Amendment(): base(typeof (TType))
+        {
+        }
+    }
+
     #endregion
 }
