@@ -14,6 +14,7 @@ namespace Afterthought.UnitTest
             Calculator = new GenericCalculator<int>();
         }
 
+        [TestMethod]
         public void AddAfter()
         {
             Assert.IsFalse(Calculator.MethodExecuted);
