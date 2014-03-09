@@ -38,5 +38,13 @@ namespace Afterthought.UnitTest
             Calculator.ValueProperty = 3;
             Assert.IsTrue(Calculator.MethodExecuted);
         }
+
+        [TestMethod]
+        public void AddBeforeToMethodWithParameter()
+        {
+            Assert.IsFalse(Calculator.MethodExecuted);
+            Calculator.SetResult(12);
+            Assert.IsTrue(Calculator.MethodExecuted);
+        }
     }
 }

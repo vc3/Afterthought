@@ -7,11 +7,20 @@
 
         public T Value;
 
-        public T ValueProperty { get; set; }
+        public T ValueProperty
+        {
+            get { return Value; }
+            set { Value = value; }
+        }
 
         public T GetResult()
         {
             return default(T);
+        }
+
+        public void SetResult(T result)
+        {
+            Value = result;
         }
     }
 }
