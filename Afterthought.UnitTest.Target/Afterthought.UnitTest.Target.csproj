@@ -67,7 +67,7 @@
   <PropertyGroup>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/release/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
+    <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/$(ConfigurationName)/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>del /f /q "$(ProjectDir)\$(OutDir)"</PreBuildEvent>
