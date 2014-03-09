@@ -5,6 +5,8 @@
     {
         public bool MethodExecuted { get; set; }
 
+        public T Value;
+
         public T GetResult()
         {
             return default(T);

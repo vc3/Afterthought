@@ -1,4 +1,5 @@
-﻿using Afterthought.UnitTest.Target;
+﻿using System;
+using Afterthought.UnitTest.Target;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Afterthought.UnitTest
@@ -15,11 +16,19 @@ namespace Afterthought.UnitTest
         }
 
         [TestMethod]
-        public void AddAfter()
+        public void AddAfterToMethod()
         {
             Assert.IsFalse(Calculator.MethodExecuted);
             Calculator.GetResult();
             Assert.IsTrue(Calculator.MethodExecuted);
+        }
+
+        [TestMethod]
+        public void AddAttributeToField()
+        {
+            var attribute = Calculator.GetType().GetField("Value")
+                .GetCustomAttributes(typeof(ObsoleteAttribute), true);
+            Assert.IsNotNull(attribute);
         }
     }
 }

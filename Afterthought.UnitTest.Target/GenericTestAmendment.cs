@@ -9,6 +9,10 @@ namespace Afterthought.UnitTest.Target
             Methods
                 .Named("GetResult")
                 .After((instance, method, parameters) => instance.MethodExecuted = true);
+
+            Fields
+                .Named("Value")
+                .AddAttribute<ObsoleteAttribute, string>("Don't use value directly");
         }
     }
 }
