@@ -30,5 +30,13 @@ namespace Afterthought.UnitTest
                 .GetCustomAttributes(typeof(ObsoleteAttribute), true);
             Assert.IsNotNull(attribute);
         }
+
+        [TestMethod]
+        public void AddAfterSetToProperty()
+        {
+            Assert.IsFalse(Calculator.MethodExecuted);
+            Calculator.ValueProperty = 3;
+            Assert.IsTrue(Calculator.MethodExecuted);
+        }
     }
 }

@@ -7,6 +7,8 @@
 
         public T Value;
 
+        public T ValueProperty { get; set; }
+
         public T GetResult()
         {
             return default(T);

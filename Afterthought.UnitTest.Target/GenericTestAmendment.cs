@@ -13,6 +13,10 @@ namespace Afterthought.UnitTest.Target
             Fields
                 .Named("Value")
                 .AddAttribute<ObsoleteAttribute, string>("Don't use value directly");
+
+            Properties
+                .Named("ValueProperty")
+                .AfterSet((instance, name, value, o, newValue) => instance.MethodExecuted = true);
         }
     }
 }
