@@ -882,7 +882,9 @@ namespace Afterthought.Amender
 			}
 
 			// Properties
-			else if (methodDef.IsHiddenBySignature && methodDef.IsSpecialName && (methodName.StartsWith("get_") || methodName.StartsWith("set_")))
+            //commented methodDef.IsHiddenBySignature for Visual Basic comaptibility
+            //More information: http://msdn.microsoft.com/en-us/library/system.reflection.methodbase.ishidebysig%28v=vs.110%29.aspx
+			else if (/*methodDef.IsHiddenBySignature &&*/ methodDef.IsSpecialName && (methodName.StartsWith("get_") || methodName.StartsWith("set_")))
 			{
 				// Determine which property is being mutated
 				IPropertyDefinition propertyDef = typeDef.Properties == null ? null : typeDef.Properties
@@ -905,7 +907,9 @@ namespace Afterthought.Amender
 			}
 
 			// Events
-			else if (methodDef.IsHiddenBySignature && methodDef.IsSpecialName && (methodName.StartsWith("add_") || methodName.StartsWith("remove_")))
+            //commented methodDef.IsHiddenBySignature for Visual Basic comaptibility
+            //More information: http://msdn.microsoft.com/en-us/library/system.reflection.methodbase.ishidebysig%28v=vs.110%29.aspx
+			else if (/*methodDef.IsHiddenBySignature &&*/ methodDef.IsSpecialName && (methodName.StartsWith("add_") || methodName.StartsWith("remove_")))
 			{
 				// Determine which event is being mutated
 				IEventDefinition eventDef = typeDef.Events == null ? null : typeDef.Events
