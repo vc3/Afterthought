@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Microsoft.Cci.UnitIdentity">
+    <Position X="0.5" Y="1" Width="1.5" />
+    <Members>
+      <Method Name="Equals" Hidden="true" />
+      <Method Name="GetHashCode" Hidden="true" />
+      <Field Name="location" Hidden="true" />
+      <Field Name="name" Hidden="true" />
+      <Method Name="ToString" Hidden="true" />
+      <Method Name="UnitIdentity" Hidden="true" />
+    </Members>
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEgAIAAAQCAAAEAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Microsoft.Cci.ModuleIdentity">
+    <Position X="0.5" Y="3.5" Width="1.5" />
+    <Members>
+      <Field Name="containingAssembly" Hidden="true" />
+      <Method Name="Equals" Hidden="true" />
+      <Method Name="GetHashCode" Hidden="true" />
+      <Method Name="ModuleIdentity" Hidden="true" />
+      <Method Name="ToString" Hidden="true" />
+    </Members>
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <InheritanceLine Type="Microsoft.Cci.UnitIdentity" FixedToPoint="true">
+      <Path>
+        <Point X="1.25" Y="2.145" />
+        <Point X="1.25" Y="3.5" />
+      </Path>
+    </InheritanceLine>
+    <AssociationLine Name="ContainingAssembly" Type="Microsoft.Cci.AssemblyIdentity" FixedFromPoint="true">
+      <Path>
+        <Point X="1.688" Y="4.408" />
+        <Point X="1.688" Y="10" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-1.452" Y="0.164" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEgAAAAAAAAAAAAIAAEAAAABAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ContainingAssembly" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Microsoft.Cci.AssemblyIdentity">
+    <Position X="0.5" Y="10" Width="1.75" />
+    <Members>
+      <Method Name="AssemblyIdentity" Hidden="true" />
+      <Property Name="ContainingAssembly" Hidden="true" />
+      <Field Name="culture" Hidden="true" />
+      <Method Name="Equals" Hidden="true" />
+      <Method Name="GetHashCode" Hidden="true" />
+      <Field Name="hashCode" Hidden="true" />
+      <Field Name="publicKeyToken" Hidden="true" />
+      <Method Name="ToString" Hidden="true" />
+      <Field Name="version" Hidden="true" />
+    </Members>
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <InheritanceLine Type="Microsoft.Cci.ModuleIdentity" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="1.188" Y="4.408" />
+        <Point X="1.188" Y="10" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>IBgAACAAAAAAAAAEgAABAAAAAQAAAIAAAAAAABAQAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Microsoft.Cci.UnitSetIdentity">
+    <Position X="13.25" Y="0.5" Width="1.5" />
+    <Members>
+      <Field Name="units" Hidden="true" />
+      <Method Name="UnitSetIdentity" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="Microsoft.Cci.IUnitSetNamespace">
+    <Position X="10" Y="3" Width="2" />
+    <AssociationLine Name="UnitSet" Type="Microsoft.Cci.IUnitSet">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.112" Y="0.203" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="UnitSet" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitNamespace">
+    <Position X="10" Y="4.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IResourceReference">
+    <Position X="10" Y="10" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAIAAAAAAAAAAAAAQQACAAAAAAAAAAAIAAAAA=</HashCode>
+      <FileName>Miscellaneous.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitSet">
+    <Position X="10" Y="0.5" Width="2" />
+    <AssociationLine Name="UnitSetNamespaceRoot" Type="Microsoft.Cci.IUnitSetNamespace">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-1.523" Y="0.152" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAEAAAAAAQAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="UnitSetNamespaceRoot" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnit">
+    <Position X="6.5" Y="0.5" Width="2.25" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitReference" FixedToPoint="true">
+      <Path>
+        <Point X="4" Y="1" />
+        <Point X="4" Y="0.26" />
+        <Point X="7.438" Y="0.26" />
+        <Point X="7.438" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAABAAAAEAJAAAAAAAAAAAAAgABAAAAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IAssembly">
+    <Position X="6.75" Y="10" Width="2.25" />
+    <InheritanceLine Type="Microsoft.Cci.IModule" FixedFromPoint="true">
+      <Path>
+        <Point X="7.875" Y="9.541" />
+        <Point X="7.875" Y="10" />
+      </Path>
+    </InheritanceLine>
+    <InheritanceLine Type="Microsoft.Cci.IAssemblyReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="5.062" Y="10" />
+        <Point X="5.062" Y="9.76" />
+        <Point X="7.188" Y="9.76" />
+        <Point X="7.188" Y="10" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAABAAAIAAAAAAAAAAAgAQAAAIAAEAAAAAAAAAAAII=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsCollectionAssociation>
+      <Property Name="Resources" />
+    </ShowAsCollectionAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IAssemblyReference">
+    <Position X="3.5" Y="10" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.IModuleReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="3.938" Y="4.408" />
+        <Point X="3.938" Y="10" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>IAQAgAAAAAAAAAAAAAEAAAAAAQAAAIAAAAAAAAAQAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ResolvedAssembly" />
+      <Property Name="AssemblyIdentity" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IModule">
+    <Position X="6.5" Y="3.5" Width="2.75" />
+    <InheritanceLine Type="Microsoft.Cci.IUnit" FixedToPoint="true">
+      <Path>
+        <Point X="7.625" Y="2.543" />
+        <Point X="7.625" Y="3.5" />
+      </Path>
+    </InheritanceLine>
+    <InheritanceLine Type="Microsoft.Cci.IModuleReference" FixedToPoint="true">
+      <Path>
+        <Point X="4.406" Y="3.5" />
+        <Point X="4.406" Y="3.125" />
+        <Point X="7.312" Y="3.125" />
+        <Point X="7.312" Y="3.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>ABAAAAAEAEFAhARCAAAAQAAiAwAAAAgGAKgJCBAACYA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IModuleReference">
+    <Position X="3.25" Y="3.5" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="3.75" Y="2.028" />
+        <Point X="3.75" Y="3.5" />
+      </Path>
+    </InheritanceLine>
+    <AssociationLine Name="ContainingAssembly" Type="Microsoft.Cci.IAssemblyReference">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-1.473" Y="0.487" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAACAAAAAAAIAAAAAAAAAAAAABAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ResolvedModule" />
+      <Property Name="ContainingAssembly" />
+      <Property Name="ModuleIdentity" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IRootUnitNamespace">
+    <Position X="10" Y="6.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitReference">
+    <Position X="3.25" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ResolvedUnit" />
+      <Property Name="UnitIdentity" />
+    </ShowAsAssociation>
+  </Interface>
+  <Enum Name="Microsoft.Cci.ModuleKind">
+    <Position X="10" Y="8.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>QAAAAQAAAAAAAAAAAoBAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>

@@ -19,7 +19,7 @@ namespace Microsoft.Cci.MutableCodeModel {
   /// An event is a member that enables an object or class to provide notifications. Clients can attach executable code for events by supplying event handlers.
   /// This interface models the metadata representation of an event.
   /// </summary>
-  public sealed class EventDefinition : TypeDefinitionMember, IEventDefinition, ICopyFrom<IEventDefinition> {
+  public class EventDefinition : TypeDefinitionMember, IEventDefinition, ICopyFrom<IEventDefinition> {
 
     /// <summary>
     /// An event is a member that enables an object or class to provide notifications. Clients can attach executable code for events by supplying event handlers.
@@ -520,6 +520,7 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.customModifiers = new List<ICustomModifier>(fieldReference.CustomModifiers);
       else
         this.customModifiers = null;
+      this.isStatic = fieldReference.IsStatic;
       this.internFactory = internFactory;
       if (IteratorHelper.EnumerableIsNotEmpty(fieldReference.Locations))
         this.locations = new List<ILocation>(fieldReference.Locations);
@@ -1053,6 +1054,15 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.methodDefinition = localVariableDefinition.MethodDefinition;
       this.name = localVariableDefinition.Name;
       this.type = localVariableDefinition.Type;
+    }
+
+    /// <summary>
+    /// Returns a shallow copy of this LocalDeclarationStatement.
+    /// </summary>
+    public virtual LocalDefinition Clone() {
+      var newLocal = new LocalDefinition();
+      newLocal.Copy(this, Dummy.InternFactory);
+      return newLocal;
     }
 
     /// <summary>
@@ -2389,7 +2399,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// Resolves the reference to find the method being referred to.
     /// </summary>
     protected virtual IMethodDefinition Resolve() {
-      return TypeHelper.GetMethod(this.ContainingType.ResolvedType, this, true);
+      return MemberHelper.ResolveMethod(this);
     }
 
     /// <summary>
@@ -2930,7 +2940,7 @@ namespace Microsoft.Cci.MutableCodeModel {
   /// <summary>
   /// 
   /// </summary>
-  public sealed class PropertyDefinition : TypeDefinitionMember, IPropertyDefinition, ICopyFrom<IPropertyDefinition> {
+  public class PropertyDefinition : TypeDefinitionMember, IPropertyDefinition, ICopyFrom<IPropertyDefinition> {
 
     /// <summary>
     /// 
@@ -3304,6 +3314,97 @@ namespace Microsoft.Cci.MutableCodeModel {
   }
 
   /// <summary>
+  /// An event defined inside a generic type instance or inside a specialized nested type.
+  /// An event is a member that enables an object or class to provide notifications. Clients can attach executable code for events by supplying event handlers.
+  /// </summary>
+  public sealed class SpecializedEventDefinition : EventDefinition, ISpecializedEventDefinition, ICopyFrom<ISpecializedEventDefinition> {
+
+    /// <summary>
+    /// An event defined inside a generic type instance or inside a specialized nested type.
+    /// An event is a member that enables an object or class to provide notifications. Clients can attach executable code for events by supplying event handlers.
+    /// </summary>
+    public SpecializedEventDefinition() {
+      this.unspecializedVersion = Dummy.EventDefinition;
+    }
+
+    /// <summary>
+    /// Makes a shallow copy of a specialized event. An event is a member that enables an object or class to provide notifications.
+    /// Clients can attach executable code for events by supplying event handlers.
+    /// This interface models the metadata representation of an event.
+    /// </summary>
+    public void Copy(ISpecializedEventDefinition specializedEventDefinition, IInternFactory internFactory) {
+      ((ICopyFrom<IEventDefinition>)this).Copy(specializedEventDefinition, internFactory);
+      this.unspecializedVersion = specializedEventDefinition.UnspecializedVersion;
+    }
+
+    #region ISpecializedEventDefinition Members
+
+    /// <summary>
+    /// The event that has been specialized to obtain this event. When the containing type is an instance of type which is itself a specialized member (i.e. it is a nested
+    /// type of a generic type instance), then the unspecialized member refers to a member from the unspecialized containing type. (I.e. the unspecialized member always
+    /// corresponds to a definition that is not obtained via specialization.)
+    /// </summary>
+    public IEventDefinition UnspecializedVersion {
+      get { return this.unspecializedVersion; }
+      set { this.unspecializedVersion = value; }
+    }
+    IEventDefinition unspecializedVersion;
+
+    #endregion
+
+  }
+
+  /// <summary>
+  /// A field defined inside a generic type instance or inside a specialized nested type.
+  /// A field is a member that represents a variable associated with an object or class.
+  /// </summary>
+  public sealed class SpecializedFieldDefinition : FieldDefinition, ISpecializedFieldDefinition, ICopyFrom<ISpecializedFieldDefinition> {
+
+    /// <summary>
+    /// A field is a member that represents a variable associated with an object or class.
+    /// This interface models the metadata representation of a field.
+    /// </summary>
+    public SpecializedFieldDefinition() {
+      this.unspecializedVersion = Dummy.FieldDefinition;
+    }
+
+    /// <summary>
+    /// Makes a shallow copy of a specialized field.
+    /// A field is a member that represents a variable associated with an object or class.
+    /// This interface models the metadata representation of a field.
+    /// </summary>
+    /// <param name="specializedFieldDefinition"></param>
+    /// <param name="internFactory"></param>
+    public void Copy(ISpecializedFieldDefinition specializedFieldDefinition, IInternFactory internFactory) {
+      ((ICopyFrom<IFieldDefinition>)this).Copy(specializedFieldDefinition, internFactory);
+      this.unspecializedVersion = specializedFieldDefinition.UnspecializedVersion;
+    }
+
+    #region ISpecializedFieldDefinition Members
+
+    /// <summary>
+    /// The field that has been specialized to obtain this field. When the containing type is an instance of type which is itself a specialized member (i.e. it is a nested
+    /// type of a generic type instance), then the unspecialized member refers to a member from the unspecialized containing type. (I.e. the unspecialized member always
+    /// corresponds to a definition that is not obtained via specialization.)
+    /// </summary>
+    public IFieldDefinition UnspecializedVersion {
+      get { return this.unspecializedVersion; }
+      set { this.unspecializedVersion = value; }
+    }
+    IFieldDefinition unspecializedVersion;
+
+    #endregion
+
+    #region ISpecializedFieldReference Members
+
+    IFieldReference ISpecializedFieldReference.UnspecializedVersion {
+      get { return this.UnspecializedVersion; }
+    }
+
+    #endregion
+  }
+
+  /// <summary>
   /// 
   /// </summary>
   public sealed class SpecializedFieldReference : FieldReference, ISpecializedFieldReference, ICopyFrom<ISpecializedFieldReference> {
@@ -3344,6 +3445,50 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.unspecializedVersion = value; }
     }
     IFieldReference unspecializedVersion;
+  }
+
+  /// <summary>
+  /// A method defined inside a generic type instance or inside a specialized nested type.
+  /// </summary>
+  public sealed class SpecializedMethodDefinition : MethodDefinition, ISpecializedMethodDefinition, ICopyFrom<ISpecializedMethodDefinition> {
+
+    /// <summary>
+    /// A method defined inside a generic type instance or inside a specialized nested type.
+    /// </summary>
+    public SpecializedMethodDefinition() {
+      this.unspecializedVersion = Dummy.MethodDefinition;
+    }
+
+    /// <summary>
+    /// Makes a shallow copy of a specialized method.
+    /// </summary>
+    public void Copy(ISpecializedMethodDefinition specializedMethodDefinition, IInternFactory internFactory) {
+      ((ICopyFrom<IMethodDefinition>)this).Copy(specializedMethodDefinition, internFactory);
+      this.unspecializedVersion = specializedMethodDefinition.UnspecializedVersion;
+    }
+
+    #region ISpecializedMethodDefinition Members
+
+    /// <summary>
+    /// The method that has been specialized to obtain this method. When the containing type is an instance of type which is itself a specialized member (i.e. it is a nested
+    /// type of a generic type instance), then the unspecialized member refers to a member from the unspecialized containing type. (I.e. the unspecialized member always
+    /// corresponds to a definition that is not obtained via specialization.)
+    /// </summary>
+    public IMethodDefinition UnspecializedVersion {
+      get { return this.unspecializedVersion; }
+      set { this.unspecializedVersion = value; }
+    }
+    IMethodDefinition unspecializedVersion;
+
+    #endregion
+
+    #region ISpecializedMethodReference Members
+
+    IMethodReference ISpecializedMethodReference.UnspecializedVersion {
+      get { return this.UnspecializedVersion; }
+    }
+
+    #endregion
   }
 
   /// <summary>
@@ -3388,6 +3533,43 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.unspecializedVersion = value; }
     }
     IMethodReference unspecializedVersion;
+
+  }
+
+  /// <summary>
+  /// A property defined inside a generic type instance or inside a specialized nested type.
+  /// </summary>
+  public sealed class SpecializedPropertyDefinition : PropertyDefinition, ISpecializedPropertyDefinition, ICopyFrom<ISpecializedPropertyDefinition> {
+
+    /// <summary>
+    /// A property defined inside a generic type instance or inside a specialized nested type.
+    /// </summary>
+    public SpecializedPropertyDefinition() {
+      this.unspecializedVersion = Dummy.PropertyDefinition;
+    }
+
+    /// <summary>
+    /// Makes a shallow copy of a specialized property definition.
+    /// </summary>
+    public void Copy(ISpecializedPropertyDefinition specializedPropertyDefinition, IInternFactory internFactory) {
+      ((ICopyFrom<IPropertyDefinition>)this).Copy(specializedPropertyDefinition, internFactory);
+      this.unspecializedVersion = specializedPropertyDefinition.UnspecializedVersion;
+    }
+
+    #region ISpecializedPropertyDefinition Members
+
+    /// <summary>
+    /// The property that has been specialized to obtain this property. When the containing type is an instance of type which is itself a specialized member (i.e. it is a nested
+    /// type of a generic type instance), then the unspecialized member refers to a member from the unspecialized containing type. (I.e. the unspecialized member always
+    /// corresponds to a definition that is not obtained via specialization.)
+    /// </summary>
+    public IPropertyDefinition UnspecializedVersion {
+      get { return this.unspecializedVersion; }
+      set { this.unspecializedVersion = value; }
+    }
+    IPropertyDefinition unspecializedVersion;
+
+    #endregion
 
   }
 

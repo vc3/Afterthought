@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Interface Name="Microsoft.Cci.INamespaceRootOwner">
+    <Position X="7.5" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitNamespace">
+    <Position X="3.5" Y="2" Width="2" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <InheritanceLine Type="Microsoft.Cci.IUnitNamespaceReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="4.25" Y="12" />
+        <Point X="4.25" Y="3.028" />
+      </Path>
+    </InheritanceLine>
+    <AssociationLine Name="Unit" Type="Microsoft.Cci.IUnit">
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="-0.662" Y="0.091" Height="0.16" Width="0.545" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Unit" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitSetNamespace">
+    <Position X="10.5" Y="2" Width="1.75" />
+    <AssociationLine Name="UnitSet" Type="Microsoft.Cci.IUnitSet">
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="-0.859" Y="0.132" Height="0.16" Width="0.691" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="UnitSet" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamespaceMember">
+    <Position X="7.5" Y="5.5" Width="3" />
+    <AssociationLine Name="ContainingNamespace" Type="Microsoft.Cci.INamespaceDefinition" FixedFromPoint="true">
+      <Path>
+        <Point X="8.188" Y="5.5" />
+        <Point X="8.188" Y="3.269" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.068" Y="0.109" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ContainingNamespace" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamespaceTypeDefinition" Collapsed="true">
+    <Position X="12.5" Y="9.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAACAABAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INestedUnitSetNamespace">
+    <Position X="11.25" Y="7.75" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitSetNamespace" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="11.938" Y="2.908" />
+        <Point X="11.938" Y="6.073" />
+        <Point X="11.938" Y="6.073" />
+        <Point X="11.938" Y="7.75" />
+      </Path>
+    </InheritanceLine>
+    <InheritanceLine Type="Microsoft.Cci.INamespaceMember" FixedToPoint="true">
+      <Path>
+        <Point X="9" Y="6.648" />
+        <Point X="9" Y="7.375" />
+        <Point X="11.625" Y="7.375" />
+        <Point X="11.625" Y="7.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitSet" Collapsed="true">
+    <Position X="10.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAEAAAAAAQAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnit" Collapsed="true">
+    <Position X="3.75" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAABAAAAEAJAAAAAAAAAAAAAgABAAAAAAAA=</HashCode>
+      <FileName>Units.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INestedUnitNamespace">
+    <Position X="5.25" Y="7.75" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitNamespace" ManuallyRouted="true" FixedToPoint="true">
+      <Path>
+        <Point X="4.5" Y="3.028" />
+        <Point X="4.5" Y="7.341" />
+        <Point X="5.875" Y="7.341" />
+        <Point X="5.875" Y="7.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamespaceDefinition">
+    <Position X="7.5" Y="2" Width="2.5" />
+    <AssociationLine Name="RootOwner" Type="Microsoft.Cci.INamespaceRootOwner">
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="0.141" Y="0.071" Height="0.16" Width="0.879" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="RootOwner" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="Members" />
+    </ShowAsCollectionAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INestedUnitNamespaceReference">
+    <Position X="5" Y="9.75" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitNamespaceReference" FixedFromPoint="true">
+      <Path>
+        <Point X="4.25" Y="12" />
+        <Point X="4.25" Y="11.502" />
+        <Point X="6.25" Y="11.502" />
+        <Point X="6.25" Y="11.136" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAEAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IRootUnitNamespace">
+    <Position X="0.75" Y="7.75" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitNamespace" ManuallyRouted="true">
+      <Path>
+        <Point X="4.5" Y="3.028" />
+        <Point X="4.5" Y="7.354" />
+        <Point X="4.333" Y="7.354" Type="JumpStart" />
+        <Point X="4.167" Y="7.354" Type="JumpEnd" />
+        <Point X="2" Y="7.354" />
+        <Point X="2" Y="7.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IRootUnitNamespaceReference">
+    <Position X="0.75" Y="9.75" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitNamespaceReference" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="4.25" Y="12" />
+        <Point X="4.25" Y="11.502" />
+        <Point X="2" Y="11.502" />
+        <Point X="2" Y="10.658" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IUnitNamespaceReference">
+    <Position X="3.25" Y="12" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAACAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IRootUnitSetNamespace">
+    <Position X="13.5" Y="7.75" Width="2.25" />
+    <InheritanceLine Type="Microsoft.Cci.IUnitSetNamespace" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="11.938" Y="2.908" />
+        <Point X="11.938" Y="6.062" />
+        <Point X="14.625" Y="6.062" />
+        <Point X="14.625" Y="7.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Namespaces.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGlobalFieldDefinition" Collapsed="true">
+    <Position X="7.75" Y="9.75" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.INamespaceMember" ManuallyRouted="true">
+      <Path>
+        <Point X="9" Y="6.648" />
+        <Point X="9" Y="9.125" />
+        <Point X="8.75" Y="9.125" />
+        <Point X="8.75" Y="9.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Members.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGlobalMethodDefinition" Collapsed="true">
+    <Position X="10" Y="9.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Members.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>

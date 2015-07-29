@@ -1,0 +1,487 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Interface Name="Microsoft.Cci.ITypeDefinition">
+    <Position X="7.5" Y="5.5" Width="2.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="2.752" />
+        <Point X="8" Y="4.126" />
+        <Point X="8" Y="4.126" />
+        <Point X="8" Y="5.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>CQIgACAAABQAAAQhACgAAggIAwAABECIAwiEIUACgEA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamespaceTypeDefinition">
+    <Position X="11" Y="9.25" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.INamedTypeDefinition" FixedToPoint="true">
+      <Path>
+        <Point X="11.875" Y="8.25" />
+        <Point X="11.875" Y="9.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAACAABAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INestedTypeDefinition">
+    <Position X="11.5" Y="14.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.ITypeDefinitionMember">
+    <Position X="7.5" Y="14" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Members.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.ITypeReference">
+    <Position X="6.75" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAAAgAQAEIAAAAAAAAAACAAAAAAAABAAACA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericTypeParameter">
+    <Position X="0.5" Y="13.75" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.IGenericParameter" FixedFromPoint="true">
+      <Path>
+        <Point X="3.25" Y="16" />
+        <Point X="3.25" Y="15.326" />
+        <Point X="1.75" Y="15.326" />
+        <Point X="1.75" Y="14.972" />
+      </Path>
+    </InheritanceLine>
+    <InheritanceLine Type="Microsoft.Cci.IGenericTypeParameterReference" FixedToPoint="true">
+      <Path>
+        <Point X="1.75" Y="6.386" />
+        <Point X="1.75" Y="8" />
+        <Point X="0.5" Y="8" />
+        <Point X="0.5" Y="13.375" />
+        <Point X="1" Y="13.375" />
+        <Point X="1" Y="13.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IArrayType">
+    <Position X="10.25" Y="3.25" Width="1.5" />
+    <InheritanceLine Type="Microsoft.Cci.IArrayTypeReference" FixedToPoint="true">
+      <Path>
+        <Point X="10.875" Y="2.259" />
+        <Point X="10.875" Y="3.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IArrayTypeReference">
+    <Position X="10" Y="0.5" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="0.5" />
+        <Point X="8" Y="0.26" />
+        <Point X="10.75" Y="0.26" />
+        <Point X="10.75" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAABBAAAAAAAAAQAAAAAAAAAgAAAAAAAAAAAAAgAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.ICustomModifier">
+    <Position X="18.75" Y="3.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IParameterTypeInformation">
+    <Position X="1.75" Y="2.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAABAAAAAAAAAACCAAAAAQAAAAAAAEA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IFunctionPointer">
+    <Position X="4.25" Y="3.25" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.IFunctionPointerTypeReference" FixedToPoint="true">
+      <Path>
+        <Point X="5" Y="1.722" />
+        <Point X="5" Y="3.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IFunctionPointerTypeReference">
+    <Position X="3.75" Y="0.5" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="0.5" />
+        <Point X="8" Y="0.26" />
+        <Point X="4.812" Y="0.26" />
+        <Point X="4.812" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericParameter">
+    <Position X="2.5" Y="16" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.INamedTypeDefinition" FixedToPoint="true">
+      <Path>
+        <Point X="11.875" Y="8.25" />
+        <Point X="11.875" Y="9" />
+        <Point X="10.75" Y="9" />
+        <Point X="10.75" Y="16.5" />
+        <Point X="4.5" Y="16.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAABBIQgAAAAAAAAIA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericParameterReference">
+    <Position X="0.5" Y="0.5" Width="2.25" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="0.5" />
+        <Point X="8" Y="0.26" />
+        <Point X="1.5" Y="0.26" />
+        <Point X="1.5" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericMethodParameter">
+    <Position X="4" Y="13.75" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.IGenericParameter" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="3.25" Y="16" />
+        <Point X="3.25" Y="15.326" />
+        <Point X="4.5" Y="15.326" />
+        <Point X="4.5" Y="14.972" />
+      </Path>
+    </InheritanceLine>
+    <InheritanceLine Type="Microsoft.Cci.IGenericMethodParameterReference" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="3.312" Y="6.386" />
+        <Point X="3.312" Y="13.51" />
+        <Point X="5.25" Y="13.51" />
+        <Point X="5.25" Y="13.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericMethodParameterReference">
+    <Position X="3.25" Y="5" Width="3.25" />
+    <InheritanceLine Type="Microsoft.Cci.IGenericParameterReference" FixedFromPoint="true">
+      <Path>
+        <Point X="1.188" Y="1.528" />
+        <Point X="1.188" Y="4.625" />
+        <Point X="4.875" Y="4.625" />
+        <Point X="4.875" Y="5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAABAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericTypeInstance">
+    <Position X="4.5" Y="12.25" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeDefinition" FixedFromPoint="true">
+      <Path>
+        <Point X="7.5" Y="11.932" />
+        <Point X="5.75" Y="11.932" />
+        <Point X="5.75" Y="12.25" />
+      </Path>
+    </InheritanceLine>
+    <InheritanceLine Type="Microsoft.Cci.IGenericTypeInstanceReference" FixedFromPoint="true">
+      <Path>
+        <Point X="5.75" Y="11.516" />
+        <Point X="5.75" Y="12.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericTypeInstanceReference">
+    <Position X="4.5" Y="10.25" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" ManuallyRouted="true">
+      <Path>
+        <Point X="8" Y="2.752" />
+        <Point X="8" Y="4.876" />
+        <Point X="6.75" Y="4.876" />
+        <Point X="6.75" Y="10.125" />
+        <Point X="5.75" Y="10.125" />
+        <Point X="5.75" Y="10.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAgAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IGenericTypeParameterReference">
+    <Position X="0.5" Y="5" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.IGenericParameterReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="1.188" Y="1.528" />
+        <Point X="1.188" Y="5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamedTypeReference">
+    <Position X="10.75" Y="5.25" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" ManuallyRouted="true">
+      <Path>
+        <Point X="8" Y="2.752" />
+        <Point X="8" Y="4.886" />
+        <Point X="8.667" Y="4.886" Type="JumpStart" />
+        <Point X="8.833" Y="4.886" Type="JumpEnd" />
+        <Point X="11.75" Y="4.886" />
+        <Point X="11.75" Y="5.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AIAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAABAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamespaceTypeReference">
+    <Position X="13.75" Y="9.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAAAAABAAAAAAAABAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamespaceAliasForType">
+    <Position X="1" Y="11.5" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.IAliasForType" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="4.75" Y="9.583" />
+        <Point X="3.914" Y="9.583" />
+        <Point X="3.914" Y="12.111" />
+        <Point X="3.396" Y="12.111" Type="JumpStart" />
+        <Point X="3.229" Y="12.111" Type="JumpEnd" />
+        <Point X="3" Y="12.111" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INestedTypeReference">
+    <Position X="14.25" Y="14.25" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAABAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IMethodImplementation">
+    <Position X="3.5" Y="6.5" Width="2" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAwAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IModifiedTypeReference">
+    <Position X="17.75" Y="0.5" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="0.5" />
+        <Point X="8" Y="0.26" />
+        <Point X="18.812" Y="0.26" />
+        <Point X="18.812" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AQAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IPlatformType">
+    <Position X="18.75" Y="8.75" Width="4" />
+    <TypeIdentifier>
+      <HashCode>HLRWFcACQ5AgAQAgAwEAHBJCEAOAAAOEKDAABBBhZgA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IManagedPointerType">
+    <Position X="15.25" Y="3.25" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.IManagedPointerTypeReference" FixedToPoint="true">
+      <Path>
+        <Point X="16" Y="1.601" />
+        <Point X="16" Y="3.25" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IManagedPointerTypeReference">
+    <Position X="14.75" Y="0.5" Width="2.5" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="0.5" />
+        <Point X="8" Y="0.26" />
+        <Point X="15.938" Y="0.26" />
+        <Point X="15.938" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IAliasForType">
+    <Position X="4.75" Y="8.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAEAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IAliasMember">
+    <Position X="0.75" Y="8.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Members.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INestedAliasForType">
+    <Position X="1" Y="10.25" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.IAliasForType" ManuallyRouted="true" FixedFromPoint="true">
+      <Path>
+        <Point X="4.75" Y="9.583" />
+        <Point X="3.907" Y="9.583" />
+        <Point X="3.907" Y="10.764" />
+        <Point X="3.396" Y="10.764" Type="JumpStart" />
+        <Point X="3.229" Y="10.764" Type="JumpEnd" />
+        <Point X="2.75" Y="10.764" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.INamedTypeDefinition" Collapsed="true">
+    <Position X="11" Y="7.5" Width="1.75" />
+    <InheritanceLine Type="Microsoft.Cci.INamedTypeReference" FixedToPoint="true">
+      <Path>
+        <Point X="11.75" Y="6.8" />
+        <Point X="11.75" Y="7.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IPointerTypeReference">
+    <Position X="12.25" Y="0.5" Width="2" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeReference" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="8" Y="0.5" />
+        <Point X="8" Y="0.26" />
+        <Point X="13.125" Y="0.26" />
+        <Point X="13.125" Y="0.5" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IPointerType">
+    <Position X="12.5" Y="3.25" Width="1.5" />
+    <InheritanceLine Type="Microsoft.Cci.ITypeDefinition" FixedFromPoint="true">
+      <Path>
+        <Point X="8.75" Y="5.5" />
+        <Point X="8.75" Y="4.653" />
+        <Point X="13.25" Y="4.653" />
+        <Point X="13.25" Y="4.278" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Enum Name="Microsoft.Cci.TypeMemberVisibility">
+    <Position X="18.75" Y="4.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAIAAAAAAAAAIAABEAAAAIAAAACAAAAARAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="Microsoft.Cci.PrimitiveTypeCode">
+    <Position X="16.75" Y="7.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>QgAAAAaAMUAAAAABQAAAAAAAIAAAAKCCEEAAAAACAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="Microsoft.Cci.TypeParameterVariance">
+    <Position X="18.75" Y="7" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAABAAAAAAAAAAQAAAAAAAAAAAAAACAAAAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="Microsoft.Cci.LayoutKind">
+    <Position X="16.75" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAIAAAACAAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="Microsoft.Cci.StringFormatKind">
+    <Position X="16.75" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAABAAAAAAAAAAAAAAAAQAAAAAAAAAAAEACAAAA=</HashCode>
+      <FileName>Types.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>

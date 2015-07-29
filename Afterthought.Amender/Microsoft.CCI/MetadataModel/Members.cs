@@ -149,7 +149,7 @@ namespace Microsoft.Cci {
     bool IsBitField { get; }
 
     /// <summary>
-    /// This field is a compile-time constant. The field has no runtime location and cannot be directly addressed from IL.
+    /// This (static) field is a compile-time constant. The field has no runtime location and cannot be directly addressed from IL.
     /// </summary>
     bool IsCompileTimeConstant { get; }
 
@@ -243,8 +243,9 @@ namespace Microsoft.Cci {
     }
 
     public bool IsCompileTimeConstant {
-      get { 
-        throw new NotImplementedException(); 
+      get {
+        Contract.Ensures(!Contract.Result<bool>() || this.IsStatic);
+        throw new NotImplementedException();
       }
     }
 
@@ -382,7 +383,7 @@ namespace Microsoft.Cci {
   /// A reference to a field.
   /// </summary>
   [ContractClass(typeof(IFieldReferenceContract))]
-  public interface IFieldReference : ITypeMemberReference {
+  public interface IFieldReference : ITypeMemberReference, IInternedKey {
 
     /// <summary>
     /// Custom modifiers associated with the referenced field.
@@ -391,12 +392,6 @@ namespace Microsoft.Cci {
       get;
       //^ requires this.IsModified;
     }
-
-    /// <summary>
-    /// Returns a key that is computed from the information in this reference and that distinguishes
-    /// this.ResolvedField from all other fields obtained from the same metadata host.
-    /// </summary>
-    uint InternedKey { get; }
 
     /// <summary>
     /// The referenced field has custom modifiers.
@@ -738,7 +733,7 @@ namespace Microsoft.Cci {
     void Dispatch(IMetadataVisitor visitor);
 
     /// <summary>
-    /// A list exception data within the method body IL.
+    /// A list of exception data within the method body IL.
     /// </summary>
     IEnumerable<IOperationExceptionInformation> OperationExceptionInformation { get; }
 
@@ -1875,6 +1870,7 @@ namespace Microsoft.Cci {
     public IFieldReference UnspecializedVersion {
       get {
         Contract.Ensures(Contract.Result<IFieldReference>() != null);
+        Contract.Ensures(!(Contract.Result<IFieldReference>() is ISpecializedFieldReference));
         throw new NotImplementedException(); 
       }
     }
@@ -2281,6 +2277,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// Represents reference specialized method.
   /// </summary>
+  [ContractClass(typeof(ISpecializedMethodReferenceContract))]
   public interface ISpecializedMethodReference : IMethodReference {
 
     /// <summary>
@@ -2292,6 +2289,131 @@ namespace Microsoft.Cci {
     IMethodReference UnspecializedVersion { get; }
 
   }
+
+  #region ISpecializedMethodReference contract binding
+  [ContractClassFor(typeof(ISpecializedMethodReference))]
+  abstract class ISpecializedMethodReferenceContract : ISpecializedMethodReference {
+    #region ISpecializedMethodReference Members
+
+    public IMethodReference UnspecializedVersion {
+      get {
+        Contract.Ensures(Contract.Result<IMethodReference>() != null);
+        Contract.Ensures(!(Contract.Result<IMethodReference>() is ISpecializedMethodReference));
+        throw new NotImplementedException(); 
+      }
+    }
+
+    #endregion
+
+    #region IMethodReference Members
+
+    public bool AcceptsExtraArguments {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ushort GenericParameterCount {
+      get { throw new NotImplementedException(); }
+    }
+
+    public uint InternedKey {
+      get { throw new NotImplementedException(); }
+    }
+
+    public bool IsGeneric {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ushort ParameterCount {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IMethodDefinition ResolvedMethod {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IEnumerable<IParameterTypeInformation> ExtraParameters {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region ISignature Members
+
+    public CallingConvention CallingConvention {
+      get { throw new NotImplementedException(); }
+    }
+
+    public bool IsStatic {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IEnumerable<IParameterTypeInformation> Parameters {
+      get { throw new NotImplementedException(); }
+    }
+
+    public IEnumerable<ICustomModifier> ReturnValueCustomModifiers {
+      get { throw new NotImplementedException(); }
+    }
+
+    public bool ReturnValueIsByRef {
+      get { throw new NotImplementedException(); }
+    }
+
+    public bool ReturnValueIsModified {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ITypeReference Type {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region ITypeMemberReference Members
+
+    public ITypeReference ContainingType {
+      get { throw new NotImplementedException(); }
+    }
+
+    public ITypeDefinitionMember ResolvedTypeDefinitionMember {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region IReference Members
+
+    public IEnumerable<ICustomAttribute> Attributes {
+      get { throw new NotImplementedException(); }
+    }
+
+    public void Dispatch(IMetadataVisitor visitor) {
+      throw new NotImplementedException();
+    }
+
+    public void DispatchAsReference(IMetadataVisitor visitor) {
+      throw new NotImplementedException();
+    }
+
+    #endregion
+
+    #region IObjectWithLocations Members
+
+    public IEnumerable<ILocation> Locations {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+
+    #region INamedEntity Members
+
+    public IName Name {
+      get { throw new NotImplementedException(); }
+    }
+
+    #endregion
+  }
+  #endregion
 
   /// <summary>
   /// Represents the specialized property definition.
@@ -2313,7 +2435,7 @@ namespace Microsoft.Cci {
   /// A reference to a method.
   /// </summary>
   [ContractClass(typeof(IMethodReferenceContract))]
-  public interface IMethodReference : ISignature, ITypeMemberReference {
+  public interface IMethodReference : ISignature, ITypeMemberReference, IInternedKey {
 
     /// <summary>
     /// True if the call sites that references the method with this object supply extra arguments.
@@ -2328,12 +2450,6 @@ namespace Microsoft.Cci {
       //^ ensures !this.IsGeneric ==> result == 0;
       //^ ensures this.IsGeneric ==> result > 0;
     }
-
-    /// <summary>
-    /// Returns a key that is computed from the information in this reference and that distinguishes
-    /// this.ResolvedMethod from all other methods obtained from the same metadata host.
-    /// </summary>
-    uint InternedKey { get; }
 
     /// <summary>
     /// True if the method has generic parameters;

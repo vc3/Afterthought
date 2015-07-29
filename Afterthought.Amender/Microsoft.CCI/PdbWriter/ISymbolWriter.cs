@@ -60,14 +60,43 @@ namespace Microsoft.Cci {
     void DefineConstant2(string name, object value, uint sigToken);
   }
 
-  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("12F1E02C-1E05-4B0E-9468-EBC9D1BB040F")]
-  internal interface ISymUnmanagedWriter3 : ISymUnmanagedWriter2 {
+  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("DCF7780D-BDE9-45DF-ACFE-21731A32000C")]
+  interface ISymUnmanagedWriter5  {
+    ISymUnmanagedDocumentWriter DefineDocument(string url, ref Guid language, ref Guid languageVendor, ref Guid documentType);
+    void SetUserEntryPoint(uint entryMethod);
+    void OpenMethod(uint method);
+    void CloseMethod();
+    uint OpenScope(uint startOffset);
+    void CloseScope(uint endOffset);
+    void SetScopeRange(uint scopeID, uint startOffset, uint endOffset);
+    void DefineLocalVariable(string name, uint attributes, uint cSig, IntPtr signature, uint addrKind, uint addr1, uint addr2, uint startOffset, uint endOffset);
+    void DefineParameter(string name, uint attributes, uint sequence, uint addrKind, uint addr1, uint addr2, uint addr3);
+    void DefineField(uint parent, string name, uint attributes, uint cSig, IntPtr signature, uint addrKind, uint addr1, uint addr2, uint addr3);
+    void DefineGlobalVariable(string name, uint attributes, uint cSig, IntPtr signature, uint addrKind, uint addr1, uint addr2, uint addr3);
+    void Close();
+    void SetSymAttribute(uint parent, string name, uint cData, IntPtr signature);
+    void OpenNamespace(string name);
+    void CloseNamespace();
+    void UsingNamespace(string fullName);
+    void SetMethodSourceRange(ISymUnmanagedDocumentWriter startDoc, uint startLine, uint startColumn, object endDoc, uint endLine, uint endColumn);
+    void Initialize([MarshalAs(UnmanagedType.IUnknown)]object emitter, string filename, [MarshalAs(UnmanagedType.IUnknown)]object pIStream, bool fFullBuild);
+    void GetDebugInfo(ref ImageDebugDirectory pIDD, uint cData, out uint pcData, IntPtr data);
+    void DefineSequencePoints(ISymUnmanagedDocumentWriter document, uint spCount,
+      [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] uint[] offsets,
+      [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] uint[] lines,
+      [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] uint[] columns,
+      [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] uint[] endLines,
+      [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] uint[] endColumns);
+    void RemapToken(uint oldToken, uint newToken);
+    void Initialize2([MarshalAs(UnmanagedType.IUnknown)]object emitter, string tempfilename, [MarshalAs(UnmanagedType.IUnknown)]object pIStream, bool fFullBuild, string finalfilename);
+    void DefineConstant(string name, object value, uint cSig, IntPtr signature);
+    void Abort();
+    void DefineLocalVariable2(string name, uint attributes, uint sigToken, uint addrKind, uint addr1, uint addr2, uint addr3, uint startOffset, uint endOffset);
+    void DefineGlobalVariable2(string name, uint attributes, uint sigToken, uint addrKind, uint addr1, uint addr2, uint addr3);
+    void DefineConstant2(string name, object value, uint sigToken);
+
     void OpenMethod2(uint method, uint isect, uint offset);
     void Commit();
-  }
-
-  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("BC7E3F53-F458-4C23-9DBD-A189E6E96594")]
-  internal interface ISymUnmanagedWriter4 : ISymUnmanagedWriter3 {
     /*
      * Functions the same as ISymUnmanagedWriter::GetDebugInfo with the exception
      * that the path string is padded with zeros following the terminating null
@@ -77,14 +106,9 @@ namespace Microsoft.Cci {
      * This makes writing tools that difference PE files easier.
      */
     void GetDebugInfoWithPadding(ref ImageDebugDirectory pIDD, uint cData, out uint pcData, IntPtr data);
-  }
-
-  [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("DCF7780D-BDE9-45DF-ACFE-21731A32000C")]
-  interface ISymUnmanagedWriter5 : ISymUnmanagedWriter4 {
+    
     void OpenMapTokensToSourceSpans();
-
     void CloseMapTokensToSourceSpans();
-
     /// <summary>
     /// Maps the given metadata token to the given source line span in the specified source file. 
     /// Must be called between calls to OpenMapTokensToSourceSpans() and CloseMapTokensToSourceSpans().

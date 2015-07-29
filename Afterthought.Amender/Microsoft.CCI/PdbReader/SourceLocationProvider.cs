@@ -214,6 +214,8 @@ namespace Microsoft.Cci {
         PdbSlot/*?*/ slot = this.GetSlotFor(pdbFunction.scopes, index);
         if (slot != null) {
           isCompilerGenerated = (slot.flags & 0x4) != 0;
+          if (!isCompilerGenerated)
+            isCompilerGenerated = slot.name.StartsWith("<");
           return slot.name;
         }
       }
@@ -332,17 +334,19 @@ namespace Microsoft.Cci {
     public IEnumerable<ILocalDefinition> GetVariablesInScope(ILocalScope scope) {
       PdbLocalScope/*?*/ pdbLocalScope = scope as PdbLocalScope;
       if (pdbLocalScope == null) yield break;
-      uint index = 0;
-      foreach (ILocalDefinition localDefinition in pdbLocalScope.methodBody.LocalVariables) {
-        if (localDefinition.IsConstant) continue;
-        foreach (PdbSlot slot in pdbLocalScope.pdbScope.slots) {
-          if ((slot.flags & 1) != 0) continue;
+      foreach (PdbSlot slot in pdbLocalScope.pdbScope.slots) {
+        if ((slot.flags & 1) != 0) continue;
+        if (slot.slot == 0 && slot.name.StartsWith("$VB")) 
+          yield return new PdbLocalVariable(slot, this.host, pdbLocalScope.methodBody.MethodDefinition);
+        uint index = 0;
+        foreach (ILocalDefinition localDefinition in pdbLocalScope.methodBody.LocalVariables) {
+          if (localDefinition.IsConstant) continue;
           if (slot.slot == index) {
             yield return localDefinition;
             break;
           }
+          index++;
         }
-        index++;
       }
     }
 
@@ -431,7 +435,7 @@ namespace Microsoft.Cci {
         info.moveNextMethod = (decoder.GetObjectForToken(moveNextToken) as IMethodDefinition)??Dummy.MethodDefinition;
         if (info.synchronizationPoints != null) {
           foreach (var synchPoint in info.synchronizationPoints)
-            synchPoint.continuationMethod = (decoder.GetObjectForToken(synchPoint.continuationMethodToken) as IMethodDefinition)??Dummy.MethodDefinition;
+            synchPoint.continuationMethod = decoder.GetObjectForToken(synchPoint.continuationMethodToken) as IMethodDefinition;
         }
       }
       return info;
@@ -773,6 +777,7 @@ namespace Microsoft.Cci.Pdb {
 
     public string Source {
       get {
+        if (this.Length == 0) return string.Empty;
         return this.primarySourceDocument.GetSourceLocation(this.StartIndex, this.Length).Source;
       }
     }
@@ -792,6 +797,89 @@ namespace Microsoft.Cci.Pdb {
 
     IDocument ILocation.Document {
       get { return this.PrimarySourceDocument; }
+    }
+
+    #endregion
+  }
+
+  internal sealed class PdbLocalVariable : ILocalDefinition {
+    PdbSlot pdbSlot;
+    IMetadataHost host;
+    IMethodDefinition methodDefinition;
+
+    internal PdbLocalVariable(PdbSlot pdbSlot, IMetadataHost host, IMethodDefinition methodDefinition) {
+      this.pdbSlot = pdbSlot;
+      this.host = host;
+      this.methodDefinition = methodDefinition;
+    }
+
+    #region ILocalDefinition Members
+
+    public IMetadataConstant CompileTimeValue {
+      get { return Dummy.Constant; }
+    }
+
+    public IEnumerable<ICustomModifier> CustomModifiers {
+      get { return Enumerable<ICustomModifier>.Empty; }
+    }
+
+    private ITypeReference GetTypeForVariable() {
+      foreach (ILocation location in this.methodDefinition.Locations) {
+        IILLocation/*?*/ mbLocation = location as IILLocation;
+        if (mbLocation != null) {
+          var doc = mbLocation.Document as MethodBodyDocument;
+          if (doc != null) {
+            ITypeReference result = doc.GetTypeFromToken(this.pdbSlot.typeToken);
+            if (result is Dummy) {
+              //TODO: error
+              continue;
+            }
+            return result;
+          }
+        }
+      }
+      return this.host.PlatformType.SystemBoolean;
+    }
+
+    public bool IsConstant {
+      get { return false; }
+    }
+
+    public bool IsModified {
+      get { return false; }
+    }
+
+    public bool IsPinned {
+      get { return false; }
+    }
+
+    public bool IsReference {
+      get { return false; } //TODO: figure out how to determine this
+    }
+
+    public IEnumerable<ILocation> Locations {
+      get { return Enumerable<ILocation>.Empty; }
+    }
+
+    public IMethodDefinition MethodDefinition {
+      get { return this.methodDefinition; }
+    }
+
+    public ITypeReference Type {
+      get {
+        if (this.type == null)
+          this.type = this.GetTypeForVariable();
+        return this.type;
+      }
+    }
+    ITypeReference/*?*/ type;
+
+    #endregion
+
+    #region INamedEntity Members
+
+    public IName Name {
+      get { return this.host.NameTable.GetNameFor(this.pdbSlot.name); }
     }
 
     #endregion

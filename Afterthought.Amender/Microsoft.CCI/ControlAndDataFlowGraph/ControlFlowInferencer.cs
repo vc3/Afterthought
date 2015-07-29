@@ -140,6 +140,7 @@ namespace Microsoft.Cci.Analysis {
             break;
           case OperationCode.Ret:
           case OperationCode.Throw:
+          case OperationCode.Jmp:
             //The code following these instructions will be dead unless its a branch target, but we may as well end the basic block with the transfer.
             lastInstructionWasBranch = true;
             break;
@@ -173,7 +174,7 @@ namespace Microsoft.Cci.Analysis {
     private BasicBlock CreateBlock(uint targetAddress) {
       var result = this.cdfg.BlockFor[targetAddress];
       if (result == null) {
-        result = new BasicBlock();
+        result = new BasicBlock() { Offset = targetAddress };
         this.cdfg.BlockFor[targetAddress] = result;
       }
       return result;
@@ -187,7 +188,7 @@ namespace Microsoft.Cci.Analysis {
       int startingInstruction = 0;
       bool lastInstructionWasUnconditionalTransfer = false;
       foreach (var ilOperation in this.methodBody.Operations) {
-        Contract.Assume(ilOperation != null); //This is formally specified in the Metadata model, but the checker does not yet understand it well enough to prove this.
+        Contract.Assert(ilOperation != null); //This is formally specified in the Metadata model, but the checker does not yet understand it well enough to prove this.
         Contract.Assume(startingInstruction <= instructions.Count); //due to the limitations of the contract language and checker
         Contract.Assume(startingEdge <= successorEdges.Count); //due to the limitations of the contract language and checker
         var newBlock = this.cdfg.BlockFor.Find(ilOperation.Offset);

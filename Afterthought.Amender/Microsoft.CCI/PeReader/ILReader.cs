@@ -558,16 +558,36 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
             value = this.GetLocal(memReader.ReadByte());
             break;
           case OperationCode.Ldnull:
+            break;
           case OperationCode.Ldc_I4_M1:
+            value = -1;
+            break;
           case OperationCode.Ldc_I4_0:
+            value = 0;
+            break;
           case OperationCode.Ldc_I4_1:
+            value = 1;
+            break;
           case OperationCode.Ldc_I4_2:
+            value = 2;
+            break;
           case OperationCode.Ldc_I4_3:
+            value = 3;
+            break;
           case OperationCode.Ldc_I4_4:
+            value = 4;
+            break;
           case OperationCode.Ldc_I4_5:
+            value = 5;
+            break;
           case OperationCode.Ldc_I4_6:
+            value = 6;
+            break;
           case OperationCode.Ldc_I4_7:
+            value = 7;
+            break;
           case OperationCode.Ldc_I4_8:
+            value = 8;
             break;
           case OperationCode.Ldc_I4_S:
             value = (int)memReader.ReadSByte();
@@ -595,7 +615,7 @@ namespace Microsoft.Cci.MetadataReader.MethodBody {
               IArrayTypeReference/*?*/ arrayType = methodReference.ContainingType as IArrayTypeReference;
               if (arrayType != null) {
                 // For Get(), Set() and Address() on arrays, the runtime provides method implementations.
-                // Hence, CCI2 replaces these with pseudo instrcutions Array_Set, Array_Get and Array_Addr.
+                // Hence, CCI2 replaces these with pseudo instructions Array_Set, Array_Get and Array_Addr.
                 // All other methods on arrays will not use pseudo instruction and will have methodReference as their operand. 
                 if (methodReference.Name.UniqueKey == this.PEFileToObjectModel.NameTable.Set.UniqueKey) {
                   cilOpCode = OperationCode.Array_Set;

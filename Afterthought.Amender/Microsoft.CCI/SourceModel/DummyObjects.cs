@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Diagnostics.Contracts;
 //^ using Microsoft.Contracts;
 
 namespace Microsoft.Cci {
@@ -22,21 +23,19 @@ namespace Microsoft.Cci {
 
     public static ICompilation Compilation {
       get {
-        if (SourceDummy.compilation == null)
-          Interlocked.CompareExchange(ref SourceDummy.compilation, new DummyCompilation(), null);
+        Contract.Ensures(Contract.Result<ICompilation>() != null);
         return SourceDummy.compilation;
       }
     }
-    private static ICompilation/*?*/ compilation;
+    private static readonly ICompilation compilation = new DummyCompilation();
 
     public static IPrimarySourceDocument PrimarySourceDocument {
       get {
-        if (SourceDummy.primarySourceDocument == null)
-          Interlocked.CompareExchange(ref SourceDummy.primarySourceDocument, new DummyPrimarySourceDocument(), null);
+        Contract.Ensures(Contract.Result<IPrimarySourceDocument>() != null);
         return SourceDummy.primarySourceDocument;
       }
     }
-    private static IPrimarySourceDocument/*?*/ primarySourceDocument;
+    private static readonly IPrimarySourceDocument primarySourceDocument = new DummyPrimarySourceDocument();
 
     /// <summary>
     /// This source location behaves as the notorious FeeFee: a source
@@ -48,39 +47,35 @@ namespace Microsoft.Cci {
     /// </summary>
     public static IPrimarySourceLocation PrimarySourceLocation {
       get {
-        if (SourceDummy.primarySourceLocation == null)
-          Interlocked.CompareExchange(ref SourceDummy.primarySourceLocation, new DummyPrimarySourceLocation(), null);
+        Contract.Ensures(Contract.Result<IPrimarySourceLocation>() != null);
         return SourceDummy.primarySourceLocation;
       }
     }
-    private static IPrimarySourceLocation/*?*/ primarySourceLocation;
+    private static readonly IPrimarySourceLocation primarySourceLocation = new DummyPrimarySourceLocation();
 
     public static ISourceDocument SourceDocument {
       get {
-        if (SourceDummy.sourceDocument == null)
-          Interlocked.CompareExchange(ref SourceDummy.sourceDocument, new DummySourceDocument(), null);
+        Contract.Ensures(Contract.Result<ISourceDocument>() != null);
         return SourceDummy.sourceDocument;
       }
     }
-    private static ISourceDocument/*?*/ sourceDocument;
+    private static readonly ISourceDocument sourceDocument = new DummySourceDocument();
 
     public static ISourceDocumentEdit SourceDocumentEdit {
       get {
-        if (SourceDummy.sourceDocumentEdit == null)
-          Interlocked.CompareExchange(ref SourceDummy.sourceDocumentEdit, new DummySourceDocumentEdit(), null);
+        Contract.Ensures(Contract.Result<ISourceDocumentEdit>() != null);
         return SourceDummy.sourceDocumentEdit;
       }
     }
-    private static ISourceDocumentEdit/*?*/ sourceDocumentEdit;
+    private static readonly ISourceDocumentEdit sourceDocumentEdit = new DummySourceDocumentEdit();
 
     public static ISourceLocation SourceLocation {
       get {
-        if (SourceDummy.sourceLocation == null)
-          Interlocked.CompareExchange(ref SourceDummy.sourceLocation, new DummySourceLocation(), null);
+        Contract.Ensures(Contract.Result<ISourceLocation>() != null);
         return SourceDummy.sourceLocation;
       }
     }
-    private static ISourceLocation/*?*/ sourceLocation;
+    private static readonly ISourceLocation sourceLocation = new DummySourceLocation();
 
   }
 
@@ -131,13 +126,15 @@ namespace Microsoft.Cci {
       get { return SourceDummy.PrimarySourceLocation; }
     }
 
-    IPrimarySourceLocation IPrimarySourceDocument.GetPrimarySourceLocation(int position, int length) {
+    [ContractVerification(false)] // Crash in Clousot
+    IPrimarySourceLocation IPrimarySourceDocument.GetPrimarySourceLocation(int position, int length)
+    {
       return SourceDummy.PrimarySourceLocation;
     }
 
     void IPrimarySourceDocument.ToLineColumn(int position, out int line, out int column) {
-      line = 0;
-      column = 0;
+      line = 1;
+      column = 1;
     }
 
     #endregion
@@ -153,6 +150,7 @@ namespace Microsoft.Cci {
     }
 
     //^ [Pure]
+   [ContractVerification(false)] // Crash in Clousot
     ISourceLocation ISourceDocument.GetSourceLocation(int position, int length) {
       return SourceDummy.PrimarySourceLocation;
     }
@@ -283,6 +281,7 @@ namespace Microsoft.Cci {
     }
 
     //^ [Pure]
+    [ContractVerification(false)] // Crash in Clousot
     public ISourceLocation GetSourceLocation(int position, int length) {
       //^ assume false;
       return SourceDummy.SourceLocation;
@@ -326,6 +325,7 @@ namespace Microsoft.Cci {
 
   }
 
+  [ContractVerification(false)]
   internal sealed class DummySourceDocumentEdit : ISourceDocumentEdit {
 
     #region ISourceDocumentEdit Members

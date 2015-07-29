@@ -112,10 +112,10 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AliasedTypeDoesNotBelongToAModule" xml:space="preserve">
     <value>The type referenced by this alias does not come from a module of this assembly.</value>
@@ -392,5 +392,23 @@
   </data>
   <data name="NumberOfElementsSpecifiedExplicitlyAsWellAsByAParameter" xml:space="preserve">
     <value>The size of the array passed in this parameter is specified explicitly as well as via another (size) parameter. This is probably a mistake.</value>
+  </data>
+  <data name="InvalidMetadataFormatVersionForGenerics" xml:space="preserve">
+    <value>Bad module metadata format version. Found '{0}', should be at least 2.</value>
+  </data>
+  <data name="StructSizeMustBeNonZero" xml:space="preserve">
+    <value>A struct must have a non-zero size.</value>
+  </data>
+  <data name="ContainingNamespaceDefinitionNotVisited" xml:space="preserve">
+    <value>This namespace member is being visited before its parent is being visited, which can only happen if its ContainingNamespace value is not valid.</value>
+  </data>
+  <data name="AccessorListInconsistent" xml:space="preserve">
+    <value>No method found in the accessor list that is a {0}.</value>
+  </data>
+  <data name="InitLocalsMustBeTrueIfLocalVariables" xml:space="preserve">
+    <value>The method has local variables, but LocalsAreZeroed is not true.</value>
+  </data>
+  <data name="EventPropertyNamingPatternWarning" xml:space="preserve">
+    <value>An accessor method does not follow the naming conventions.</value>
   </data>
 </root>

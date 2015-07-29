@@ -127,6 +127,7 @@ namespace Microsoft.Cci {
     /// 
     /// </summary>
     /// <param name="methodBody"></param>
+    [ContractVerification(false)]
     protected virtual void EmitMethodBody(IMethodBody methodBody) {
       Contract.Requires(methodBody != null);
 
@@ -268,8 +269,11 @@ namespace Microsoft.Cci {
           foreach (var local in this.localScopeProvider.GetVariablesInScope(currentScope)) {
             Contract.Assume(local != null);
             Contract.Assume(local.MethodDefinition == this.generator.Method);
-            if (this.localIndex.ContainsKey(local))
-              this.Generator.AddVariableToCurrentScope(local);
+            if (!this.localIndex.ContainsKey(local)) {
+              this.localIndex.Add(local, (uint)this.localVariables.Count);
+              this.localVariables.Add(local);
+            }
+            this.Generator.AddVariableToCurrentScope(local);
           }
           foreach (var constant in this.localScopeProvider.GetConstantsInScope(currentScope)) {
             Contract.Assume(constant != null);

@@ -159,7 +159,7 @@ namespace Microsoft.Cci.MetadataReader.PEFileFlags {
     Bit32Required = 0x00000002,
     ILLibrary = 0x00000004,
     StrongNameSigned = 0x00000008,
-    NativeEntryPoint = 0x00000010,
+    Prefers32bits = 0x00000010,
     TrackDebugData = 0x00010000,
   }
 
@@ -478,21 +478,21 @@ namespace Microsoft.Cci.MetadataReader.PEFileFlags {
     AbstractSemantics = 0x00000080,
     SealedSemantics = 0x00000100,
     SpecialNameSemantics = 0x00000400,
+    RTSpecialNameReserved = 0x00000800,
 
     ImportImplementation = 0x00001000,
     SerializableImplementation = 0x00002000,
     IsForeign = 0x00004000,
-    BeforeFieldInitImplementation = 0x00100000,
-    ForwarderImplementation = 0x00200000,
 
     AnsiString = 0x00000000,
     UnicodeString = 0x00010000,
     AutoCharString = 0x00020000,
-    CustomFormatString = 0x00020000,
     StringMask = 0x00030000,
-
-    RTSpecialNameReserved = 0x00000800,
     HasSecurityReserved = 0x00040000,
+
+    BeforeFieldInitImplementation = 0x00100000,
+    ForwarderImplementation = 0x00200000,
+    DoesNotInheritTypeParameters = 0x10000000
   }
 
   internal enum FieldFlags : ushort {
@@ -1199,11 +1199,13 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     internal const uint ExportedType = 0x00000011;
     internal const uint ManifestResource = 0x00000012;
     internal const uint GenericParameter = 0x00000013;
+    internal const uint GenericParameterConstraint = 0x00000014;
+    internal const uint MethodSpec = 0x00000015;
     internal const uint TagMask = 0x0000001F;
     internal static uint[] TagToTokenTypeArray = { TokenTypeIds.MethodDef, TokenTypeIds.FieldDef, TokenTypeIds.TypeRef, TokenTypeIds.TypeDef, TokenTypeIds.ParamDef,
           TokenTypeIds.InterfaceImpl, TokenTypeIds.MemberRef, TokenTypeIds.Module, TokenTypeIds.Permission, TokenTypeIds.Property, TokenTypeIds.Event,
           TokenTypeIds.Signature, TokenTypeIds.ModuleRef, TokenTypeIds.TypeSpec, TokenTypeIds.Assembly, TokenTypeIds.AssemblyRef, TokenTypeIds.File, TokenTypeIds.ExportedType,
-          TokenTypeIds.ManifestResource, TokenTypeIds.GenericParam };
+          TokenTypeIds.ManifestResource, TokenTypeIds.GenericParam, TokenTypeIds.GenericParamConstraint, TokenTypeIds.MethodSpec };
     internal const TableMask TablesReferenced =
       TableMask.Method
       | TableMask.Field
@@ -1224,7 +1226,9 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
       | TableMask.File
       | TableMask.ExportedType
       | TableMask.ManifestResource
-      | TableMask.GenericParam;
+      | TableMask.GenericParam
+      | TableMask.GenericParamConstraint
+      | TableMask.MethodSpec;
     internal static uint ConvertToToken(
       uint hasCustomAttribute
     ) {
@@ -1276,6 +1280,10 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
           return rowId << HasCustomAttributeTag.NumberOfBits | HasCustomAttributeTag.ManifestResource;
         case TokenTypeIds.GenericParam:
           return rowId << HasCustomAttributeTag.NumberOfBits | HasCustomAttributeTag.GenericParameter;
+        case TokenTypeIds.GenericParamConstraint:
+          return rowId << HasCustomAttributeTag.NumberOfBits | HasCustomAttributeTag.GenericParameterConstraint;
+        case TokenTypeIds.MethodSpec:
+          return rowId << HasCustomAttributeTag.NumberOfBits | HasCustomAttributeTag.MethodSpec;
       }
       return 0;
     }

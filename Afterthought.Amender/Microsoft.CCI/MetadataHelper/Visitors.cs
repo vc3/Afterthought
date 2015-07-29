@@ -2714,42 +2714,49 @@ namespace Microsoft.Cci {
     /// Visits the specified type definition.
     /// </summary>
     public virtual void Visit(ITypeDefinition typeDefinition) {
+      Contract.Requires(typeDefinition != null);
     }
 
     /// <summary>
     /// Visits the specified type member.
     /// </summary>
     public virtual void Visit(ITypeDefinitionMember typeMember) {
+      Contract.Requires(typeMember != null);
     }
 
     /// <summary>
     /// Visits the specified type member reference.
     /// </summary>
     public virtual void Visit(ITypeMemberReference typeMember) {
+      Contract.Requires(typeMember != null);
     }
 
     /// <summary>
     /// Visits the specified type reference.
     /// </summary>
     public virtual void Visit(ITypeReference typeReference) {
+      Contract.Requires(typeReference != null);
     }
 
     /// <summary>
     /// Visits the specified unit.
     /// </summary>
     public virtual void Visit(IUnit unit) {
+      Contract.Requires(unit != null);
     }
 
     /// <summary>
     /// Visits the specified unit reference.
     /// </summary>
     public virtual void Visit(IUnitReference unitReference) {
+      Contract.Requires(unitReference != null);
     }
 
     /// <summary>
     /// Visits the specified unit namespace.
     /// </summary>
     public virtual void Visit(IUnitNamespace unitNamespace) {
+      Contract.Requires(unitNamespace != null);
       this.Visit((INamespaceDefinition)unitNamespace);
     }
 
@@ -2757,6 +2764,7 @@ namespace Microsoft.Cci {
     /// Visits the specified unit namespace reference.
     /// </summary>
     public virtual void Visit(IUnitNamespaceReference unitNamespaceReference) {
+      Contract.Requires(unitNamespaceReference != null);
     }
 
     /// <summary>
@@ -2769,6 +2777,7 @@ namespace Microsoft.Cci {
     /// Visits the specified unit set namespace.
     /// </summary>
     public virtual void Visit(IUnitSetNamespace unitSetNamespace) {
+      Contract.Requires(unitSetNamespace != null);
     }
 
     /// <summary>
@@ -3931,6 +3940,11 @@ namespace Microsoft.Cci {
       typeMember.Dispatch(this.dispatchingVisitor);
     }
 
+    private void Traverse(ITypeMemberReference typeMemberReference) {
+      Contract.Requires(typeMemberReference != null);
+      typeMemberReference.DispatchAsReference(this.dispatchingVisitor);
+    }
+
     /// <summary>
     /// Traverses the specified type reference.
     /// </summary>
@@ -4290,6 +4304,18 @@ namespace Microsoft.Cci {
       Contract.Requires(securityAttributes != null);
       foreach (ISecurityAttribute securityAttribute in securityAttributes) {
         this.Traverse(securityAttribute);
+        if (this.stopTraversal) break;
+      }
+    }
+
+    /// <summary>
+    /// Traverses the specified type member references.
+    /// </summary>
+    /// <remarks>Not used by the traverser itself.</remarks>
+    public void Traverse(IEnumerable<ITypeMemberReference> typeMemberReferences) {
+      Contract.Requires(typeMemberReferences != null);
+      foreach (ITypeMemberReference typeMemberReference in typeMemberReferences) {
+        this.Traverse(typeMemberReference);
         if (this.stopTraversal) break;
       }
     }

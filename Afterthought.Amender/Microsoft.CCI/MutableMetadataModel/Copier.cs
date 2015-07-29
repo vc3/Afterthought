@@ -197,8 +197,20 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.result = this.copier.Copy(rootUnitNamespaceReference);
       }
 
+      public override void Visit(ISpecializedEventDefinition specializedEventDefinition) {
+        this.result = this.copier.Copy(specializedEventDefinition);
+      }
+
+      public override void Visit(ISpecializedFieldDefinition specializedFieldDefinition) {
+        this.result = this.copier.Copy(specializedFieldDefinition);
+      }
+
       public override void Visit(ISpecializedFieldReference specializedFieldReference) {
         this.result = this.copier.Copy(specializedFieldReference);
+      }
+
+      public override void Visit(ISpecializedMethodDefinition specializedMethodDefinition) {
+        this.result = this.copier.Copy(specializedMethodDefinition);
       }
 
       public override void Visit(ISpecializedMethodReference specializedMethodReference) {
@@ -211,6 +223,10 @@ namespace Microsoft.Cci.MutableCodeModel {
 
       public override void Visit(ISpecializedNestedTypeReference specializedNestedTypeReference) {
         this.result = this.copier.Copy(specializedNestedTypeReference);
+      }
+
+      public override void Visit(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+        this.result = this.copier.Copy(specializedPropertyDefinition);
       }
 
     }
@@ -489,6 +505,9 @@ namespace Microsoft.Cci.MutableCodeModel {
       Contract.Requires(localDefinition != null);
       Contract.Ensures(Contract.Result<LocalDefinition>() != null);
 
+      var mutable = localDefinition as LocalDefinition;
+      if (mutable != null)
+        return mutable.Clone();
       var copy = new LocalDefinition();
       copy.Copy(localDefinition, this.internFactory);
       return copy;
@@ -659,7 +678,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// Returns a shallow copy of the given module.
     /// </summary>
-    public Module Copy(Module module) {
+    public Module Copy(IModule module) {
       Contract.Requires(module != null);
       Contract.Ensures(Contract.Result<Module>() != null);
 
@@ -994,6 +1013,32 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Returns a shallow copy of the given specialized event definition.
+    /// </summary>
+    /// <param name="specializedEventDefinition">The specialized event definition.</param>
+    public SpecializedEventDefinition Copy(ISpecializedEventDefinition specializedEventDefinition) {
+      Contract.Requires(specializedEventDefinition != null);
+      Contract.Ensures(Contract.Result<SpecializedEventDefinition>() != null);
+
+      var copy = new SpecializedEventDefinition();
+      copy.Copy(specializedEventDefinition, this.internFactory);
+      return copy;
+    }
+
+    /// <summary>
+    /// Returns a shallow copy of the given specialized field definition.
+    /// </summary>
+    /// <param name="specializedFieldDefinition">The specialized field definition.</param>
+    public SpecializedFieldDefinition Copy(ISpecializedFieldDefinition specializedFieldDefinition) {
+      Contract.Requires(specializedFieldDefinition != null);
+      Contract.Ensures(Contract.Result<SpecializedFieldDefinition>() != null);
+
+      var copy = new SpecializedFieldDefinition();
+      copy.Copy(specializedFieldDefinition, this.internFactory);
+      return copy;
+    }
+
+    /// <summary>
     /// Returns a shallow copy of the given specialized field reference.
     /// </summary>
     public SpecializedFieldReference Copy(ISpecializedFieldReference fieldReference) {
@@ -1002,6 +1047,19 @@ namespace Microsoft.Cci.MutableCodeModel {
 
       var copy = new SpecializedFieldReference();
       copy.Copy(fieldReference, this.internFactory);
+      return copy;
+    }
+
+    /// <summary>
+    /// Returns a shallow copy of the given specialized method definition.
+    /// </summary>
+    /// <param name="specializedMethodDefinition">The specialized method definition.</param>
+    public SpecializedMethodDefinition Copy(ISpecializedMethodDefinition specializedMethodDefinition) {
+      Contract.Requires(specializedMethodDefinition != null);
+      Contract.Ensures(Contract.Result<SpecializedMethodDefinition>() != null);
+
+      var copy = new SpecializedMethodDefinition();
+      copy.Copy(specializedMethodDefinition, this.internFactory);
       return copy;
     }
 
@@ -1038,6 +1096,19 @@ namespace Microsoft.Cci.MutableCodeModel {
 
       var copy = new SpecializedNestedTypeReference();
       copy.Copy(specializedNestedTypeReference, this.internFactory);
+      return copy;
+    }
+
+    /// <summary>
+    /// Returns a shallow copy of the given specialized property definition.
+    /// </summary>
+    /// <param name="specializedPropertyDefinition">The specialized property definition.</param>
+    public SpecializedPropertyDefinition Copy(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+      Contract.Requires(specializedPropertyDefinition != null);
+      Contract.Ensures(Contract.Result<SpecializedPropertyDefinition>() != null);
+
+      var copy = new SpecializedPropertyDefinition();
+      copy.Copy(specializedPropertyDefinition, this.internFactory);
       return copy;
     }
 
@@ -1147,6 +1218,29 @@ namespace Microsoft.Cci.MutableCodeModel {
       Contract.Invariant(this.internFactory != null);
     }
 
+    /// <summary>
+    /// Returns a map from original definition objects to the copies that were made by this copier.
+    /// </summary>
+    public Hashtable<object, object> CopyFor {
+      get { return this.SubstituteCopiesForOriginals.DefinitionCache; }
+    }
+
+    /// <summary>
+    /// Returns a map from copied definition objects to the original definitions from which the copies were constructed.
+    /// </summary>
+    public Hashtable<object, object> OriginalFor {
+      get {
+        if (this.originalFor == null) {
+          var copyFor = this.SubstituteCopiesForOriginals.DefinitionCache;
+          var originalFor = this.originalFor = new Hashtable<object, object>(copyFor.Count);
+          foreach (var keyValPair in copyFor) {
+            originalFor[keyValPair.value] = keyValPair.key;
+          }
+        }
+        return this.originalFor;
+      }
+    }
+    Hashtable<object, object> originalFor;
 
     Substitutor SubstituteCopiesForOriginals {
       get {
@@ -1190,11 +1284,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(IEventDefinition eventDefinition) {
-        this.result = this.copier.Copy(eventDefinition);
+        this.result = this.copier.CopyUnspecialized(eventDefinition);
       }
 
       public override void Visit(IFieldDefinition fieldDefinition) {
-        this.result = this.copier.Copy(fieldDefinition);
+        this.result = this.copier.CopyUnspecialized(fieldDefinition);
       }
 
       public override void Visit(IFieldReference fieldReference) {
@@ -1298,7 +1392,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(IPropertyDefinition propertyDefinition) {
-        this.result = this.copier.Copy(propertyDefinition);
+        this.result = this.copier.CopyUnspecialized(propertyDefinition);
       }
 
       public override void Visit(IRootUnitNamespace rootUnitNamespace) {
@@ -1310,11 +1404,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(ISpecializedEventDefinition specializedEventDefinition) {
-        throw new InvalidOperationException();
+        this.result = this.copier.CopySpecialized(specializedEventDefinition);
       }
 
       public override void Visit(ISpecializedFieldDefinition specializedFieldDefinition) {
-        this.result = this.copier.Copy((ISpecializedFieldReference)specializedFieldDefinition);
+        this.result = this.copier.CopySpecialized(specializedFieldDefinition);
       }
 
       public override void Visit(ISpecializedFieldReference specializedFieldReference) {
@@ -1322,7 +1416,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(ISpecializedMethodDefinition specializedMethodDefinition) {
-        this.result = this.copier.CopyUnspecialized(specializedMethodDefinition);
+        this.result = this.copier.CopySpecialized(specializedMethodDefinition);
       }
 
       public override void Visit(ISpecializedMethodReference specializedMethodReference) {
@@ -1330,11 +1424,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(ISpecializedPropertyDefinition specializedPropertyDefinition) {
-        throw new InvalidOperationException();
+        this.result = this.copier.CopySpecialized(specializedPropertyDefinition);
       }
 
       public override void Visit(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
-        this.result = this.copier.CopyUnspecialized(specializedNestedTypeDefinition);
+        this.result = this.copier.CopySpecialized(specializedNestedTypeDefinition);
       }
 
       public override void Visit(ISpecializedNestedTypeReference specializedNestedTypeReference) {
@@ -1586,21 +1680,34 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public void Visit(ISpecializedFieldDefinition specializedFieldDefinition) {
+        if (this.definitionCache.ContainsKey(specializedFieldDefinition)) return;
+        var copy = this.shallowCopier.Copy(specializedFieldDefinition);
+        this.definitionCache.Add(specializedFieldDefinition, copy);
       }
 
       public void Visit(ISpecializedFieldReference specializedFieldReference) {
       }
 
       public void Visit(ISpecializedMethodDefinition specializedMethodDefinition) {
+        if (this.definitionCache.ContainsKey(specializedMethodDefinition)) return;
+        var copy = this.shallowCopier.Copy(specializedMethodDefinition);
+        this.definitionCache.Add(specializedMethodDefinition, copy);
       }
 
       public void Visit(ISpecializedMethodReference specializedMethodReference) {
       }
 
       public void Visit(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+        //properties are referenced by the parent pointers in their parameters.
+        if (this.definitionCache.ContainsKey(specializedPropertyDefinition)) return;
+        var copy = this.shallowCopier.Copy(specializedPropertyDefinition);
+        this.definitionCache.Add(specializedPropertyDefinition, copy);
       }
 
       public void Visit(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
+        if (this.definitionCache.ContainsKey(specializedNestedTypeDefinition)) return;
+        var copy = this.shallowCopier.Copy(specializedNestedTypeDefinition);
+        this.definitionCache.Add(specializedNestedTypeDefinition, copy);
       }
 
       public void Visit(ISpecializedNestedTypeReference specializedNestedTypeReference) {
@@ -1835,11 +1942,11 @@ namespace Microsoft.Cci.MutableCodeModel {
         }
 
         public override void Visit(ISpecializedEventDefinition specializedEventDefinition) {
-          this.result = this.substitutor.Substitute((IEventDefinition)specializedEventDefinition);
+          this.result = this.substitutor.Substitute(specializedEventDefinition);
         }
 
         public override void Visit(ISpecializedFieldDefinition specializedFieldDefinition) {
-          this.result = this.substitutor.Substitute((IFieldDefinition)specializedFieldDefinition);
+          this.result = this.substitutor.Substitute(specializedFieldDefinition);
         }
 
         public override void Visit(ISpecializedFieldReference specializedFieldReference) {
@@ -1847,7 +1954,7 @@ namespace Microsoft.Cci.MutableCodeModel {
         }
 
         public override void Visit(ISpecializedMethodDefinition specializedMethodDefinition) {
-          this.result = this.substitutor.Substitute((IMethodDefinition)specializedMethodDefinition);
+          this.result = this.substitutor.Substitute(specializedMethodDefinition);
         }
 
         public override void Visit(ISpecializedMethodReference specializedMethodReference) {
@@ -1855,11 +1962,11 @@ namespace Microsoft.Cci.MutableCodeModel {
         }
 
         public override void Visit(ISpecializedPropertyDefinition specializedPropertyDefinition) {
-          this.result = this.substitutor.Substitute((IPropertyDefinition)specializedPropertyDefinition);
+          this.result = this.substitutor.Substitute(specializedPropertyDefinition);
         }
 
         public override void Visit(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
-          this.result = this.substitutor.Substitute((INestedTypeDefinition)specializedNestedTypeDefinition);
+          this.result = this.substitutor.Substitute(specializedNestedTypeDefinition);
         }
 
         public override void Visit(ISpecializedNestedTypeReference specializedNestedTypeReference) {
@@ -1893,6 +2000,8 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       internal IAssemblyReference Substitute(IAssemblyReference assemblyReference, bool keepAsDefinition = true) {
+        Contract.Requires(assemblyReference != null);
+
         if (assemblyReference is Dummy) return assemblyReference;
         object copy;
         if (keepAsDefinition && this.DefinitionCache.TryGetValue(assemblyReference, out copy)) return (IAssemblyReference)copy;
@@ -2200,7 +2309,8 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (this.ReferenceCache.TryGetValue(moduleReference, out copy)) return (ModuleReference)copy;
         var mutableCopy = this.shallowCopier.Copy(moduleReference);
         this.ReferenceCache.Add(moduleReference, mutableCopy);
-        mutableCopy.ContainingAssembly = this.Substitute(mutableCopy.ContainingAssembly);
+        if (mutableCopy.ContainingAssembly != null)
+          mutableCopy.ContainingAssembly = this.Substitute(mutableCopy.ContainingAssembly);
         return mutableCopy;
       }
 
@@ -2424,6 +2534,20 @@ namespace Microsoft.Cci.MutableCodeModel {
         return mutableCopy;
       }
 
+      internal ISpecializedEventDefinition Substitute(ISpecializedEventDefinition specializedEventDefinition) {
+        if (specializedEventDefinition is Dummy) return specializedEventDefinition;
+        var mutableCopy = this.shallowCopier.Copy(specializedEventDefinition);
+        this.Substitute(mutableCopy);
+        return mutableCopy;
+      }
+
+      internal ISpecializedFieldDefinition Substitute(ISpecializedFieldDefinition specializedFieldDefinition) {
+        if (specializedFieldDefinition is Dummy) return specializedFieldDefinition;
+        SpecializedFieldDefinition mutableCopy = (SpecializedFieldDefinition)this.DefinitionCache[specializedFieldDefinition];
+        this.Substitute(mutableCopy);
+        return mutableCopy;
+      }
+
       internal ISpecializedFieldReference Substitute(ISpecializedFieldReference fieldReference) {
         if (fieldReference is Dummy) return fieldReference;
         object copy;
@@ -2436,6 +2560,13 @@ namespace Microsoft.Cci.MutableCodeModel {
         return mutableCopy;
       }
 
+      internal ISpecializedMethodDefinition Substitute(ISpecializedMethodDefinition specializedMethodDefinition) {
+        if (specializedMethodDefinition is Dummy) return specializedMethodDefinition;
+        SpecializedMethodDefinition mutableCopy = (SpecializedMethodDefinition)this.DefinitionCache[specializedMethodDefinition];
+        this.Substitute(mutableCopy);
+        return mutableCopy;
+      }
+
       internal ISpecializedMethodReference Substitute(ISpecializedMethodReference methodReference) {
         if (methodReference is Dummy) return methodReference;
         object copy;
@@ -2445,6 +2576,20 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.ReferenceCache.Add(methodReference, mutableCopy);
         this.Substitute((MethodReference)mutableCopy);
         mutableCopy.UnspecializedVersion = this.Substitute(mutableCopy.UnspecializedVersion);
+        return mutableCopy;
+      }
+
+      internal ISpecializedPropertyDefinition Substitute(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+        if (specializedPropertyDefinition is Dummy) return specializedPropertyDefinition;
+        SpecializedPropertyDefinition mutableCopy = (SpecializedPropertyDefinition)this.DefinitionCache[specializedPropertyDefinition];
+        this.Substitute(mutableCopy);
+        return mutableCopy;
+      }
+
+      internal ISpecializedNestedTypeDefinition Substitute(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
+        if (specializedNestedTypeDefinition is Dummy) return specializedNestedTypeDefinition;
+        SpecializedNestedTypeDefinition mutableCopy = (SpecializedNestedTypeDefinition)this.DefinitionCache[specializedNestedTypeDefinition];
+        this.Substitute(mutableCopy);
         return mutableCopy;
       }
 
@@ -2482,6 +2627,11 @@ namespace Microsoft.Cci.MutableCodeModel {
         mutableCopy.Type = this.SubstituteViaDispatcher(mutableCopy.Type);
       }
 
+      private void Substitute(SpecializedEventDefinition mutableCopy) {
+        this.Substitute((EventDefinition)mutableCopy);
+        mutableCopy.UnspecializedVersion = this.SubstituteReference(mutableCopy.UnspecializedVersion);
+      }
+
       private void Substitute(FieldDefinition mutableCopy) {
         this.Substitute((TypeDefinitionMember)mutableCopy);
         if (!(mutableCopy.CompileTimeValue is Dummy))
@@ -2492,6 +2642,11 @@ namespace Microsoft.Cci.MutableCodeModel {
           mutableCopy.MarshallingInformation = this.Substitute(mutableCopy.MarshallingInformation);
         mutableCopy.InternFactory = this.host.InternFactory;
         mutableCopy.Type = this.SubstituteViaDispatcher(mutableCopy.Type);
+      }
+
+      private void Substitute(SpecializedFieldDefinition mutableCopy) {
+        this.Substitute((FieldDefinition)mutableCopy);
+        mutableCopy.UnspecializedVersion = this.SubstituteReference(mutableCopy.UnspecializedVersion);
       }
 
       private void Substitute(GlobalFieldDefinition mutableCopy) {
@@ -2543,6 +2698,11 @@ namespace Microsoft.Cci.MutableCodeModel {
           mutableCopy.ReturnValueMarshallingInformation = this.Substitute(mutableCopy.ReturnValueMarshallingInformation);
         this.SubstituteElements(mutableCopy.SecurityAttributes);
         mutableCopy.Type = this.SubstituteViaDispatcher(mutableCopy.Type);
+      }
+
+      private void Substitute(SpecializedMethodDefinition mutableCopy) {
+        this.Substitute((MethodDefinition)mutableCopy);
+        mutableCopy.UnspecializedVersion = this.SubstituteReference(mutableCopy.UnspecializedVersion);
       }
 
       private void Substitute(MethodReference mutableCopy) {
@@ -2631,6 +2791,11 @@ namespace Microsoft.Cci.MutableCodeModel {
           mutableCopy.ContainingTypeDefinition = (ITypeDefinition)copy;
       }
 
+      private void Substitute(SpecializedNestedTypeDefinition mutableCopy) {
+        this.Substitute((NestedTypeDefinition)mutableCopy);
+        mutableCopy.UnspecializedVersion = this.SubstituteReference(mutableCopy.UnspecializedVersion);
+      }
+
       private void Substitute(NestedTypeReference mutableCopy) {
         this.Substitute((TypeReference)mutableCopy);
         mutableCopy.ContainingType = this.SubstituteViaDispatcher(mutableCopy.ContainingType);
@@ -2649,6 +2814,11 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (mutableCopy.Setter != null)
           mutableCopy.Setter = this.Substitute(mutableCopy.Setter);
         mutableCopy.Type = this.SubstituteViaDispatcher(mutableCopy.Type);
+      }
+
+      private void Substitute(SpecializedPropertyDefinition mutableCopy) {
+        this.Substitute((PropertyDefinition)mutableCopy);
+        mutableCopy.UnspecializedVersion = this.SubstituteReference(mutableCopy.UnspecializedVersion);
       }
 
       private void Substitute(NamedTypeDefinition mutableCopy) {
@@ -2701,8 +2871,12 @@ namespace Microsoft.Cci.MutableCodeModel {
 
       private void SubstituteElements(List<IAliasMember>/*?*/ aliasesMembers) {
         if (aliasesMembers == null) return;
-        for (int i = 0, n = aliasesMembers.Count; i < n; i++)
-          aliasesMembers[i] = (IAliasMember)this.Substitute((INestedAliasForType)aliasesMembers[i]);
+        for (int i = 0, n = aliasesMembers.Count; i < n; i++) {
+          var member = aliasesMembers[i];
+          object copy;
+          if (this.DefinitionCache.TryGetValue(member, out copy))
+            aliasesMembers[i] = (IAliasMember)copy;
+        }
       }
 
       private void SubstituteElements(List<IAssemblyReference>/*?*/ assemblyReferences) {
@@ -2873,12 +3047,36 @@ namespace Microsoft.Cci.MutableCodeModel {
           win32Resources[i] = this.Substitute(win32Resources[i]);
       }
 
+      internal IEventDefinition SubstituteReference(IEventDefinition eventDefinition) {
+        if (eventDefinition is Dummy) return eventDefinition;
+        object copy;
+        if (this.DefinitionCache.TryGetValue(eventDefinition, out copy)) return (IEventDefinition)copy;
+        //If we get here, the event is outside of the cone and we just use it as is since events do not have independent reference objects. 
+        return eventDefinition;
+      }
+
+      internal IFieldDefinition SubstituteReference(IFieldDefinition fieldDefinition) {
+        if (fieldDefinition is Dummy) return fieldDefinition;
+        object copy;
+        if (this.DefinitionCache.TryGetValue(fieldDefinition, out copy)) return (IFieldDefinition)copy;
+        //If we get here, the field is outside of the cone and we just use it as is since we need an object of type IFieldDefinition, not IFieldReference. 
+        return fieldDefinition;
+      }
+
       private ILocalDefinition SubstituteReference(ILocalDefinition localDefinition) {
         if (localDefinition is Dummy) return localDefinition;
         object copy;
         if (this.DefinitionCache.TryGetValue(localDefinition, out copy)) return (ILocalDefinition)copy;
         //If we get here, the local is outside of the cone and we just use it as is since locals do not have independent reference objects. 
         return localDefinition;
+      }
+
+      internal IMethodDefinition SubstituteReference(IMethodDefinition methodDefinition) {
+        if (methodDefinition is Dummy) return methodDefinition;
+        object copy;
+        if (this.DefinitionCache.TryGetValue(methodDefinition, out copy)) return (IMethodDefinition)copy;
+        //If we get here, the method is outside of the cone and we just use it as is since we need an object of type IMethodDefinition, not IMethodReference. 
+        return methodDefinition;
       }
 
       private INamespaceAliasForType SubstituteReference(INamespaceAliasForType namespaceAliasForType) {
@@ -2895,6 +3093,14 @@ namespace Microsoft.Cci.MutableCodeModel {
         if (this.DefinitionCache.TryGetValue(nestedAliasForType, out copy)) return (NestedAliasForType)copy;
         //If we get here, the alias is outside of the cone and we just use it as is since aliases do not have independent reference objects. 
         return nestedAliasForType;
+      }
+
+      internal INestedTypeDefinition SubstituteReference(INestedTypeDefinition nestedTypeDefinition) {
+        if (nestedTypeDefinition is Dummy) return nestedTypeDefinition;
+        object copy;
+        if (this.DefinitionCache.TryGetValue(nestedTypeDefinition, out copy)) return (INestedTypeDefinition)copy;
+        //If we get here, the nested type is outside of the cone and we just use it as is since we need an object of type INestedTypeDefinition, not INestedTypeReference. 
+        return nestedTypeDefinition;
       }
 
       internal IParameterDefinition SubstituteReference(IParameterDefinition parameterDefinition) {
@@ -3012,9 +3218,13 @@ namespace Microsoft.Cci.MutableCodeModel {
       Contract.Requires(!(assembly is Dummy));
       Contract.Ensures(Contract.Result<Assembly>() != null);
 
-      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(assembly);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(assembly); //Does not traverse the types
       foreach (var type in assembly.GetAllTypes())
         this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(type);
+      foreach (var module in assembly.MemberModules) {
+        foreach (var mtype in module.GetAllTypes())
+          this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(mtype);
+      }
       return (Assembly)this.SubstituteCopiesForOriginals.Substitute(assembly);
     }
 
@@ -3056,11 +3266,25 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public EventDefinition Copy(IEventDefinition eventDefinition) {
       Contract.Requires(eventDefinition != null);
+      Contract.Requires(!(eventDefinition is Dummy));
+      Contract.Ensures(Contract.Result<EventDefinition>() != null);
+
+      var specializedEventDefinition = eventDefinition as ISpecializedEventDefinition;
+      if (specializedEventDefinition != null) return this.Copy(specializedEventDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(eventDefinition);
+      eventDefinition.Dispatch(this.Dispatcher);
+      return (EventDefinition)this.Dispatcher.result;
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given event definition.
+    /// </summary>
+    private EventDefinition CopyUnspecialized(IEventDefinition eventDefinition) {
+      Contract.Requires(eventDefinition != null);
       Contract.Requires(!(eventDefinition is Dummy || eventDefinition is ISpecializedEventDefinition));
       Contract.Ensures(Contract.Result<EventDefinition>() != null);
 
-      eventDefinition.Dispatch(this.Dispatcher);
-      return (EventDefinition)this.Dispatcher.result;
+      return (EventDefinition)this.SubstituteCopiesForOriginals.Substitute(eventDefinition);
     }
 
     /// <summary>
@@ -3080,10 +3304,24 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public FieldDefinition Copy(IFieldDefinition fieldDefinition) {
       Contract.Requires(fieldDefinition != null);
+      Contract.Requires(!(fieldDefinition is Dummy));
+      Contract.Ensures(Contract.Result<FieldDefinition>() != null);
+
+      var specializedFieldDefinition = fieldDefinition as ISpecializedFieldDefinition;
+      if (specializedFieldDefinition != null) return this.Copy(specializedFieldDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(fieldDefinition);
+      fieldDefinition.Dispatch(this.Dispatcher);
+      return (FieldDefinition)this.Dispatcher.result;
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given field definition.
+    /// </summary>
+    private FieldDefinition CopyUnspecialized(IFieldDefinition fieldDefinition) {
+      Contract.Requires(fieldDefinition != null);
       Contract.Requires(!(fieldDefinition is Dummy || fieldDefinition is ISpecializedFieldDefinition));
       Contract.Ensures(Contract.Result<FieldDefinition>() != null);
 
-      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(fieldDefinition);
       return (FieldDefinition)this.SubstituteCopiesForOriginals.Substitute(fieldDefinition);
     }
 
@@ -3322,10 +3560,23 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public MethodDefinition Copy(IMethodDefinition method) {
       Contract.Requires(method != null);
-      Contract.Requires(!(method is Dummy || method is ISpecializedMethodDefinition));
+      Contract.Requires(!(method is Dummy));
       Contract.Ensures(Contract.Result<MethodDefinition>() != null);
 
+      var specializedMethodDefinition = method as ISpecializedMethodDefinition;
+      if (specializedMethodDefinition != null) return this.Copy(specializedMethodDefinition);
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(method);
+      method.Dispatch(this.Dispatcher);
+      return (MethodDefinition)this.Dispatcher.result;
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given method definition.
+    /// </summary>
+    private MethodDefinition CopyUnspecialized(IMethodDefinition method) {
+      Contract.Requires(method != null);
+      Contract.Ensures(Contract.Result<MethodDefinition>() != null);
+
       return (MethodDefinition)this.SubstituteCopiesForOriginals.Substitute(method);
     }
 
@@ -3384,6 +3635,8 @@ namespace Microsoft.Cci.MutableCodeModel {
       var assembly = module as IAssembly;
       if (assembly != null) return this.Copy(assembly);
       this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(module);
+      foreach (var type in module.GetAllTypes())
+        this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(type);
       return (Module)this.SubstituteCopiesForOriginals.Substitute(module);
     }
 
@@ -3464,10 +3717,24 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public NestedTypeDefinition Copy(INestedTypeDefinition nestedTypeDefinition) {
       Contract.Requires(nestedTypeDefinition != null);
+      Contract.Requires(!(nestedTypeDefinition is Dummy));
+      Contract.Ensures(Contract.Result<NestedTypeDefinition>() != null);
+
+      var specializedNestedTypeDefinition = nestedTypeDefinition as ISpecializedNestedTypeDefinition;
+      if (specializedNestedTypeDefinition != null) return this.Copy(specializedNestedTypeDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(nestedTypeDefinition);
+      nestedTypeDefinition.Dispatch(this.Dispatcher);
+      return (NestedTypeDefinition)this.Dispatcher.result;
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given nested type definition.
+    /// </summary>
+    private NestedTypeDefinition CopyUnspecialized(INestedTypeDefinition nestedTypeDefinition) {
+      Contract.Requires(nestedTypeDefinition != null);
       Contract.Requires(!(nestedTypeDefinition is Dummy || nestedTypeDefinition is ISpecializedNestedTypeDefinition));
       Contract.Ensures(Contract.Result<NestedTypeDefinition>() != null);
 
-      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(nestedTypeDefinition);
       return (NestedTypeDefinition)this.SubstituteCopiesForOriginals.Substitute(nestedTypeDefinition);
     }
 
@@ -3599,10 +3866,24 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public PropertyDefinition Copy(IPropertyDefinition propertyDefinition) {
       Contract.Requires(propertyDefinition != null);
+      Contract.Requires(!(propertyDefinition is Dummy));
+      Contract.Ensures(Contract.Result<PropertyDefinition>() != null);
+
+      var specializedPropertyDefinition = propertyDefinition as ISpecializedPropertyDefinition;
+      if (specializedPropertyDefinition != null) return this.Copy(specializedPropertyDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(propertyDefinition);
+      propertyDefinition.Dispatch(this.Dispatcher);
+      return (PropertyDefinition)this.Dispatcher.result;
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given property definition.
+    /// </summary>
+    private PropertyDefinition CopyUnspecialized(IPropertyDefinition propertyDefinition) {
+      Contract.Requires(propertyDefinition != null);
       Contract.Requires(!(propertyDefinition is Dummy || propertyDefinition is ISpecializedPropertyDefinition));
       Contract.Ensures(Contract.Result<PropertyDefinition>() != null);
 
-      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(propertyDefinition);
       return (PropertyDefinition)this.SubstituteCopiesForOriginals.Substitute(propertyDefinition);
     }
 
@@ -3652,6 +3933,54 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Returns a deep copy of the given specialized event definition.
+    /// </summary>
+    public SpecializedEventDefinition Copy(ISpecializedEventDefinition specializedEventDefinition) {
+      Contract.Requires(specializedEventDefinition != null);
+      Contract.Requires(!(specializedEventDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedEventDefinition>() != null);
+
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse((IEventDefinition)specializedEventDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(specializedEventDefinition.UnspecializedVersion);
+      return (SpecializedEventDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedEventDefinition);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized event definition.
+    /// </summary>
+    private SpecializedEventDefinition CopySpecialized(ISpecializedEventDefinition specializedEventDefinition) {
+      Contract.Requires(specializedEventDefinition != null);
+      Contract.Requires(!(specializedEventDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedEventDefinition>() != null);
+
+      return (SpecializedEventDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedEventDefinition);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized field definition.
+    /// </summary>
+    public SpecializedFieldDefinition Copy(ISpecializedFieldDefinition specializedFieldDefinition) {
+      Contract.Requires(specializedFieldDefinition != null);
+      Contract.Requires(!(specializedFieldDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedFieldDefinition>() != null);
+
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse((IFieldDefinition)specializedFieldDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(specializedFieldDefinition.UnspecializedVersion);
+      return (SpecializedFieldDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedFieldDefinition);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized field definition.
+    /// </summary>
+    private SpecializedFieldDefinition CopySpecialized(ISpecializedFieldDefinition specializedFieldDefinition) {
+      Contract.Requires(specializedFieldDefinition != null);
+      Contract.Requires(!(specializedFieldDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedFieldDefinition>() != null);
+
+      return (SpecializedFieldDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedFieldDefinition);
+    }
+
+    /// <summary>
     /// Returns a deep copy of the given specialized field reference.
     /// </summary>
     public SpecializedFieldReference Copy(ISpecializedFieldReference specializedFieldReference) {
@@ -3660,6 +3989,30 @@ namespace Microsoft.Cci.MutableCodeModel {
       Contract.Ensures(Contract.Result<SpecializedFieldReference>() != null);
 
       return (SpecializedFieldReference)this.SubstituteCopiesForOriginals.Substitute(specializedFieldReference);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized method definition.
+    /// </summary>
+    public SpecializedMethodDefinition Copy(ISpecializedMethodDefinition specializedMethodDefinition) {
+      Contract.Requires(specializedMethodDefinition != null);
+      Contract.Requires(!(specializedMethodDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedMethodDefinition>() != null);
+
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse((IMethodDefinition)specializedMethodDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(specializedMethodDefinition.UnspecializedVersion);
+      return (SpecializedMethodDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedMethodDefinition);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized method definition.
+    /// </summary>
+    private SpecializedMethodDefinition CopySpecialized(ISpecializedMethodDefinition specializedMethodDefinition) {
+      Contract.Requires(specializedMethodDefinition != null);
+      Contract.Requires(!(specializedMethodDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedMethodDefinition>() != null);
+
+      return (SpecializedMethodDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedMethodDefinition);
     }
 
     /// <summary>
@@ -3674,6 +4027,30 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// Returns a deep copy of the given specialized nested type definition.
+    /// </summary>
+    public SpecializedNestedTypeDefinition Copy(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
+      Contract.Requires(specializedNestedTypeDefinition != null);
+      Contract.Requires(!(specializedNestedTypeDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedNestedTypeDefinition>() != null);
+
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse((INestedTypeDefinition)specializedNestedTypeDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(specializedNestedTypeDefinition.UnspecializedVersion);
+      return (SpecializedNestedTypeDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedNestedTypeDefinition);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized nested type definition.
+    /// </summary>
+    private SpecializedNestedTypeDefinition CopySpecialized(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
+      Contract.Requires(specializedNestedTypeDefinition != null);
+      Contract.Requires(!(specializedNestedTypeDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedNestedTypeDefinition>() != null);
+
+      return (SpecializedNestedTypeDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedNestedTypeDefinition);
+    }
+
+    /// <summary>
     /// Returns a deep copy of the given specialized nested type reference.
     /// </summary>
     public SpecializedNestedTypeReference Copy(ISpecializedNestedTypeReference specializedNestedTypeReference) {
@@ -3682,6 +4059,30 @@ namespace Microsoft.Cci.MutableCodeModel {
       Contract.Ensures(Contract.Result<SpecializedNestedTypeReference>() != null);
 
       return (SpecializedNestedTypeReference)this.SubstituteCopiesForOriginals.Substitute(specializedNestedTypeReference);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized property definition.
+    /// </summary>
+    public SpecializedPropertyDefinition Copy(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+      Contract.Requires(specializedPropertyDefinition != null);
+      Contract.Requires(!(specializedPropertyDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedPropertyDefinition>() != null);
+
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse((IPropertyDefinition)specializedPropertyDefinition);
+      this.TraverseAndPopulateDefinitionCacheWithCopies.Traverse(specializedPropertyDefinition.UnspecializedVersion);
+      return (SpecializedPropertyDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedPropertyDefinition);
+    }
+
+    /// <summary>
+    /// Returns a deep copy of the given specialized property definition.
+    /// </summary>
+    private SpecializedPropertyDefinition CopySpecialized(ISpecializedPropertyDefinition specializedPropertyDefinition) {
+      Contract.Requires(specializedPropertyDefinition != null);
+      Contract.Requires(!(specializedPropertyDefinition is Dummy));
+      Contract.Ensures(Contract.Result<SpecializedPropertyDefinition>() != null);
+
+      return (SpecializedPropertyDefinition)this.SubstituteCopiesForOriginals.Substitute(specializedPropertyDefinition);
     }
 
     /// <summary>

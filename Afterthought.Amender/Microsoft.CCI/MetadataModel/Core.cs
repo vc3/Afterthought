@@ -69,7 +69,7 @@ namespace Microsoft.Cci {
     public object ErrorReporter {
       get {
         Contract.Ensures(Contract.Result<object>() != null);
-        return this.errorReporter; 
+        return this.errorReporter;
       }
     }
     readonly object errorReporter;
@@ -80,7 +80,7 @@ namespace Microsoft.Cci {
     public ILocation Location {
       get {
         Contract.Ensures(Contract.Result<ILocation>() != null);
-        return this.location; 
+        return this.location;
       }
     }
     readonly ILocation location;
@@ -92,7 +92,7 @@ namespace Microsoft.Cci {
     public IEnumerable<IErrorMessage> Errors {
       get {
         Contract.Ensures(Contract.Result<IEnumerable<IErrorMessage>>() != null);
-        return this.errors; 
+        return this.errors;
       }
     }
     readonly IEnumerable<IErrorMessage> errors;
@@ -137,7 +137,7 @@ namespace Microsoft.Cci {
     public unsafe IBinaryDocument BinaryDocument {
       get {
         Contract.Ensures(Contract.Result<IBinaryDocument>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -189,7 +189,7 @@ namespace Microsoft.Cci {
     public uint Offset {
       get {
         Contract.Ensures(Contract.Result<uint>() <= this.BinaryDocument.Length);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -576,14 +576,14 @@ namespace Microsoft.Cci {
     public ContainerType Container {
       get {
         Contract.Ensures(Contract.Result<ContainerType>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
     IName IContainerMember<ContainerType>.Name {
       get {
         Contract.Ensures(Contract.Result<IName>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -640,7 +640,7 @@ namespace Microsoft.Cci {
     public IEnumerable<ICustomAttribute> Attributes {
       get {
         Contract.Ensures(Contract.Result<IEnumerable<ICustomAttribute>>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -665,6 +665,18 @@ namespace Microsoft.Cci {
     #endregion
   }
   #endregion
+
+  /// <summary>
+  /// The metadata item has a unique key that identifies it and is to be used in lookups and equality tests
+  /// </summary>
+  public interface IInternedKey
+  {
+    /// <summary>
+    /// Returns a key that is computed from the information in this reference and that distinguishes
+    /// this object from all other objects of the same kind obtained from the same metadata host.
+    /// </summary>
+    uint InternedKey { get; }
+  }
 
   /// <summary>
   /// An object that represents a document. This can be either source or binary or designer surface etc
@@ -693,14 +705,14 @@ namespace Microsoft.Cci {
     public string Location {
       get {
         Contract.Ensures(Contract.Result<string>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
     public IName Name {
       get {
         Contract.Ensures(Contract.Result<IName>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -761,47 +773,47 @@ namespace Microsoft.Cci {
     public object ErrorReporter {
       get {
         Contract.Ensures(Contract.Result<object>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
     public string ErrorReporterIdentifier {
       get {
         Contract.Ensures(Contract.Result<string>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
     public long Code {
-      get { 
-        throw new NotImplementedException(); 
+      get {
+        throw new NotImplementedException();
       }
     }
 
     public bool IsWarning {
-      get { 
-        throw new NotImplementedException(); 
+      get {
+        throw new NotImplementedException();
       }
     }
 
     public string Message {
       get {
         Contract.Ensures(Contract.Result<string>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
     public ILocation Location {
       get {
         Contract.Ensures(Contract.Result<ILocation>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
     public IEnumerable<ILocation> RelatedLocations {
       get {
         Contract.Ensures(Contract.Result<IEnumerable<ILocation>>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -823,10 +835,10 @@ namespace Microsoft.Cci {
   }
 
   /// <summary>
-  /// Implemented by methods that can turn tokens into metadata objects. For example, a method definition implemented
+  /// Implemented by objects that can turn tokens into metadata objects. For example, a method definition implemented
   /// by a metadata reader might implement this interface.
   /// </summary>
-  public interface ITokenDecoder : IMethodDefinition {
+  public interface ITokenDecoder {
     /// <summary>
     /// Returns a metadata model object that corresponds to this token value.
     /// If no such object can be found then the result is null.
@@ -837,7 +849,7 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A collection of named members, with routines to search the collection.
   /// </summary>
-  [ContractClass(typeof(ISCopeContract<>))]
+  [ContractClass(typeof(IScopeContract<>))]
   public interface IScope<MemberType>
     where MemberType : class, INamedEntity {
 
@@ -882,7 +894,7 @@ namespace Microsoft.Cci {
 
   #region IScope<MemberType> contract binding
   [ContractClassFor(typeof(IScope<>))]
-  abstract class ISCopeContract<MemberType> : IScope<MemberType>
+  abstract class IScopeContract<MemberType> : IScope<MemberType>
     where MemberType : class, INamedEntity {
 
     public bool Contains(MemberType member) {
@@ -952,7 +964,7 @@ namespace Microsoft.Cci {
     public ScopeType ContainingScope {
       get {
         Contract.Ensures(Contract.Result<ScopeType>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -1019,7 +1031,7 @@ namespace Microsoft.Cci {
     public IMethodDefinition MethodDefinition {
       get {
         Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -1060,7 +1072,7 @@ namespace Microsoft.Cci {
     public IMetadataObjectWithToken Definition {
       get {
         Contract.Ensures(Contract.Result<IMetadataObjectWithToken>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 
@@ -1097,7 +1109,7 @@ namespace Microsoft.Cci {
     public IDocument Document {
       get {
         Contract.Ensures(Contract.Result<IDocument>() != null);
-        throw new NotImplementedException(); 
+        throw new NotImplementedException();
       }
     }
 

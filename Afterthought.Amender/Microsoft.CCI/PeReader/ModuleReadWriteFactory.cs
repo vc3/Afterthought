@@ -308,6 +308,53 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// This method loads a module from a file containing only the metadata section of a PE file. (No headers and no IL.)
+    /// </summary>
+    /// <param name="binaryDocument">The binary document that needes to be opened as an module.</param>
+    /// <returns>Module that is loaded or Dummy.Module in case module could not be loaded.</returns>
+    public IModule OpenSnapshot(IBinaryDocument binaryDocument) {
+      ModuleIdentity moduleIdentity;
+      lock (GlobalLock.LockingObject) {
+        IBinaryDocumentMemoryBlock/*?*/ binaryDocumentMemoryBlock = this.metadataReaderHost.OpenBinaryDocument(binaryDocument);
+        if (binaryDocumentMemoryBlock == null) {
+          //  Error...
+          return Dummy.Module;
+        }
+        PEFileReader peFileReader = new PEFileReader(this, binaryDocumentMemoryBlock, snapshot: true);
+        if (peFileReader.ReaderState < ReaderState.Metadata) {
+          //  Error...
+          return Dummy.Module;
+        }
+        if (peFileReader.IsAssembly) {
+          AssemblyIdentity assemblyIdentity = this.GetAssemblyIdentifier(peFileReader);
+          moduleIdentity = assemblyIdentity;
+          Assembly/*?*/ lookupAssembly = this.LookupAssembly(null, assemblyIdentity);
+          if (lookupAssembly != null) {
+            return lookupAssembly;
+          }
+        } else {
+          moduleIdentity = this.GetModuleIdentifier(peFileReader);
+          Module/*?*/ lookupModule = this.LookupModule(null, moduleIdentity);
+          if (lookupModule != null) {
+            return lookupModule;
+          }
+        }
+        if (peFileReader.ReaderState < ReaderState.Metadata) {
+          //  Error...
+          return Dummy.Module;
+        }
+        try {
+          PEFileToObjectModel peFileToObjectModel = new PEFileToObjectModel(this, peFileReader, moduleIdentity, null, this.metadataReaderHost.PointerSize);
+          this.LoadedModule(peFileToObjectModel.Module);
+          return peFileToObjectModel.Module;
+        } catch (MetadataReaderException) {
+          //  Error...
+        }
+      }
+      return Dummy.Module;
+    }
+
+    /// <summary>
     /// Does a look up in the loaded assemblies if the given assembly identified by assemblyIdentifier is loaded. This also gives a chance to MetadataReaderHost to
     /// delay load the assembly if needed.
     /// </summary>
@@ -479,7 +526,10 @@ namespace Microsoft.Cci {
     /// uses PeReader as its metadata reader.
     /// </summary>
     public class DefaultHost : MetadataReaderHost {
-      PeReader peReader;
+      /// <summary>
+      /// The PeReader instance that is used to implement LoadUnitFrom.
+      /// </summary>
+      protected PeReader peReader;
 
       /// <summary>
       /// Allocates a simple host environment using default settings inherited from MetadataReaderHost and that

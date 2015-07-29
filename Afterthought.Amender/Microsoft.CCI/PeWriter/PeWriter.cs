@@ -106,6 +106,9 @@ namespace Microsoft.Cci {
     SectionHeader sdataSection = new SectionHeader();
     SectionHeader[] customSectionHeaders;
     SectionHeader[] uninterpretedSectionHeaders;
+    private uint customSectionsSizeOfRawData;
+    private uint uninterpretedSectionsSizeOfRawData;
+    private uint finalRVA;
     HashtableForUintValues<ISignature> signatureIndex = new HashtableForUintValues<ISignature>();
     Hashtable signatureStructuralIndex = new Hashtable();
     uint sizeOfImportAddressTable;
@@ -230,7 +233,15 @@ namespace Microsoft.Cci {
 #if !COMPACTFX
       IUnmanagedPdbWriter/*?*/ unmangedPdbWriter = pdbWriter as IUnmanagedPdbWriter;
       if (unmangedPdbWriter != null)
-        unmangedPdbWriter.SetMetadataEmitter(new MetadataWrapper(writer));
+      {
+        try
+        {
+          unmangedPdbWriter.SetMetadataEmitter(new MetadataWrapper(writer));
+        }
+        catch { 
+          // TODO: warn about failing pdb emit
+        }
+      }
 #endif
       writer.ntHeader.TimeDateStamp = (uint)((DateTime.Now.ToUniversalTime() - NineteenSeventy).TotalSeconds);
 
@@ -438,10 +449,15 @@ namespace Microsoft.Cci {
       this.CreateInitialFileRefIndex();
       this.CreateInitialExportedTypeIndex();
       this.CreateInitialTypeRefIndex();
-      this.CreateInitialMemberRefIndex();
       if (this.pdbWriter != null) this.pdbWriter.OpenTokenSourceLocationsScope();
       foreach (INamedTypeDefinition typeDef in this.module.GetAllTypes())
         this.CreateIndicesFor(typeDef);
+      foreach (IGenericMethodInstanceReference methodInstantiation in this.module.GetGenericMethodInstances())
+        this.GetMethodSpecIndex(methodInstantiation);
+      foreach (ITypeReference typeInstantiation in this.module.GetStructuralTypeInstances())
+        this.GetTypeSpecIndex(typeInstantiation);
+      foreach (ITypeMemberReference instantiatedTypeMethod in this.module.GetStructuralTypeInstanceMembers())
+        this.GetMemberRefIndex(instantiatedTypeMethod);
       if (this.pdbWriter != null) this.pdbWriter.CloseTokenSourceLocationsScope();
       //Only the second pass is necessary. The first helps to make type reference tokens be more like C#.
       new ReferenceIndexer(this, false).Traverse(this.module);
@@ -578,7 +594,7 @@ namespace Microsoft.Cci {
 
     private IEnumerable<IGenericTypeParameter>/*?*/ GetConsolidatedTypeParameters(ITypeDefinition typeDef) {
       INestedTypeDefinition/*?*/ nestedTypeDef = typeDef as INestedTypeDefinition;
-      if (nestedTypeDef == null) {
+      if (nestedTypeDef == null || nestedTypeDef.DoesNotInheritGenericParameters) {
         if (typeDef.IsGeneric) return typeDef.GenericParameters;
         return null;
       }
@@ -647,14 +663,8 @@ namespace Microsoft.Cci {
     private void CreateInitialTypeRefIndex() {
       Debug.Assert(!this.tableIndicesAreComplete);
       foreach (var typeRef in this.module.GetTypeReferences()) {
+        if (IsTypeSpecification(typeRef)) continue;
         this.GetTypeRefIndex(typeRef);
-      }
-    }
-
-    private void CreateInitialMemberRefIndex() {
-      Debug.Assert(!this.tableIndicesAreComplete);
-      foreach (var memberRef in this.module.GetTypeMemberReferences()) {
-        this.GetMemberRefIndex(memberRef);
       }
     }
 
@@ -692,9 +702,9 @@ namespace Microsoft.Cci {
       ntHeader.BaseOfData = this.rdataSection.RelativeVirtualAddress;
       ntHeader.PointerToSymbolTable = 0;
       ntHeader.SizeOfCode = this.textSection.SizeOfRawData;
-      ntHeader.SizeOfInitializedData = this.rdataSection.SizeOfRawData + this.coverSection.SizeOfRawData + this.extendedDataSection.SizeOfRawData + this.sdataSection.SizeOfRawData + this.tlsSection.SizeOfRawData + this.resourceSection.SizeOfRawData + this.relocSection.SizeOfRawData;
+      ntHeader.SizeOfInitializedData = this.rdataSection.SizeOfRawData + this.coverSection.SizeOfRawData + this.extendedDataSection.SizeOfRawData + this.sdataSection.SizeOfRawData + this.tlsSection.SizeOfRawData + this.resourceSection.SizeOfRawData + this.relocSection.SizeOfRawData + this.customSectionsSizeOfRawData + this.uninterpretedSectionsSizeOfRawData;
       ntHeader.SizeOfHeaders = Aligned(this.ComputeSizeOfPeHeaders(numberOfSections), this.module.FileAlignment);
-      ntHeader.SizeOfImage = Aligned(this.relocSection.RelativeVirtualAddress+this.relocSection.VirtualSize, 0x2000);
+      ntHeader.SizeOfImage = this.finalRVA;
       ntHeader.SizeOfUninitializedData = 0;
 
       ntHeader.ImportAddressTable.RelativeVirtualAddress = this.textSection.RelativeVirtualAddress;
@@ -853,16 +863,17 @@ namespace Microsoft.Cci {
       this.relocSection.PointerToRelocations = 0;
       this.relocSection.RelativeVirtualAddress = Aligned(this.resourceSection.RelativeVirtualAddress+this.resourceSection.VirtualSize, 0x2000);
       if (!this.emitRuntimeStartupStub) {
-        this.relocSection.SizeOfRawData = 0;
-        this.relocSection.VirtualSize = 0;
+          this.relocSection.SizeOfRawData = 0;
+          this.relocSection.VirtualSize = 0;
       } else {
-        this.relocSection.SizeOfRawData = this.module.FileAlignment;
-        this.relocSection.VirtualSize = this.module.Requires64bits && !this.module.RequiresAmdInstructionSet ? 14u : 12u;
+          this.relocSection.SizeOfRawData = this.module.FileAlignment;
+          this.relocSection.VirtualSize = this.module.Requires64bits && !this.module.RequiresAmdInstructionSet ? 14u : 12u;
       }
 
       uint pointerToRawData = this.relocSection.PointerToRawData+this.relocSection.SizeOfRawData;
       uint rva = Aligned(this.relocSection.RelativeVirtualAddress+this.relocSection.VirtualSize, 0x2000);
 
+      this.customSectionsSizeOfRawData = 0;
       if (customSections != null) {
         var n = customSections.Count;
         this.customSectionHeaders = new SectionHeader[n];
@@ -881,11 +892,13 @@ namespace Microsoft.Cci {
             SizeOfRawData = (uint)peSection.SizeOfRawData,
             VirtualSize = (uint)peSection.VirtualSize
           };
+          this.customSectionsSizeOfRawData += Aligned((uint)peSection.SizeOfRawData, this.module.FileAlignment);
           pointerToRawData += (uint)peSection.SizeOfRawData;
           rva = Aligned(rva+(uint)peSection.VirtualSize, 0x2000);
         }
       }
 
+      this.uninterpretedSectionsSizeOfRawData = 0;
       if (uninterpretedSections != null) {
         var n = uninterpretedSections.Count;
         this.uninterpretedSectionHeaders = new SectionHeader[n];
@@ -904,10 +917,12 @@ namespace Microsoft.Cci {
             SizeOfRawData = (uint)peSection.SizeOfRawData,
             VirtualSize = (uint)peSection.VirtualSize
           };
+          this.uninterpretedSectionsSizeOfRawData += Aligned((uint)peSection.SizeOfRawData, this.module.FileAlignment);
           pointerToRawData += (uint)peSection.SizeOfRawData;
           rva = Aligned(rva+(uint)peSection.VirtualSize, 0x2000);
         }
       }
+      this.finalRVA = rva;
     }
 
     private PEFileData GetPEFileData() {
@@ -983,7 +998,7 @@ namespace Microsoft.Cci {
       if (this.module.ILOnly) result |= 1;
       if (this.module.Requires32bits) result |= 2;
       if (this.module.StrongNameSigned) result |= 8;
-      if (this.module.NativeEntryPoint) result |= 0x10;
+      if (this.module.Prefers32bits) result |= 0x12;
       if (this.module.TrackDebugData) result |= 0x10000;
       return result;
     }
@@ -1020,7 +1035,7 @@ namespace Microsoft.Cci {
           //TODO: error
           goto case PESectionKind.Text;
       }
-      if (sectionBlock.PESectionKind != PESectionKind.Text)
+      if (sectionBlock.PESectionKind != PESectionKind.Text && sectionBlock.Offset < uint.MaxValue)
         sectionWriter.BaseStream.Position = sectionBlock.Offset;
       uint result = sectionWriter.BaseStream.Position;
       sectionWriter.WriteBytes(new List<byte>(sectionBlock.Data).ToArray());
@@ -1389,6 +1404,7 @@ namespace Microsoft.Cci {
     /// be that obtained from the PDB of the module being rewritten or merged.
     /// </summary>
     private uint GetCorrespondingMethodToken(IMethodDefinition methodDefinition) {
+      if (methodDefinition is Dummy) return 0;
       var definingUnit = PeWriter.GetDefiningUnitReference(methodDefinition.ContainingType);
       if (definingUnit == null) { Contract.Assume(false); return 0; }
       if (definingUnit == this.module || definingUnit.UnitIdentity.Equals(this.module.ModuleIdentity))
@@ -1418,40 +1434,53 @@ namespace Microsoft.Cci {
       }
       var namespaceType = typeDefinition as INamespaceTypeDefinition;
       if (namespaceType == null) { Contract.Assume(false); return Dummy.TypeDefinition; }
-      IUnitNamespace correspondingNamespace = this.GetCorrespondingNamespace(namespaceType.ContainingUnitNamespace);
-      if (correspondingNamespace is Dummy) { Contract.Assume(false); return Dummy.TypeDefinition; }
-      foreach (var nsMem in correspondingNamespace.GetMembersNamed(namespaceType.Name, false)) {
-        var correspondingType = nsMem as INamespaceTypeDefinition;
-        if (correspondingType != null) return correspondingType;
+      foreach (var typeWithSameName in this.GetNamespaceTypesNamed(namespaceType.Name)) {
+        if (typeWithSameName.GenericParameterCount != namespaceType.GenericParameterCount) continue;
+        if (NamespaceNamesAreTheSame(typeWithSameName.ContainingUnitNamespace, namespaceType.ContainingUnitNamespace))
+          return typeWithSameName;
       }
       Contract.Assume(false);
       return Dummy.TypeDefinition;
     }
 
-    private IUnitNamespace GetCorrespondingNamespace(IUnitNamespace unitNamespace) {
-      var nestedNamespace = unitNamespace as INestedUnitNamespace;
-      if (nestedNamespace != null) {
-        IUnitNamespace correspondingNamespace = this.GetCorrespondingNamespace(nestedNamespace.ContainingUnitNamespace);
-        if (correspondingNamespace is Dummy) { Contract.Assume(false); return Dummy.UnitNamespace; }
-        foreach (var nsMem in correspondingNamespace.GetMembersNamed(nestedNamespace.Name, false)) {
-          var correspondingNestedNamespace = nsMem as IUnitNamespace;
-          if (correspondingNestedNamespace != null) return correspondingNestedNamespace;
-        }
-        Contract.Assume(false);
-        return Dummy.UnitNamespace;
-      }
-      return this.module.UnitNamespaceRoot;
+    private bool NamespaceNamesAreTheSame(IUnitNamespace namespaceDefinition1, IUnitNamespace namespaceDefinition2) {
+      Contract.Requires(namespaceDefinition1 != null);
+      Contract.Requires(namespaceDefinition2 != null);
+
+      if (namespaceDefinition1.Name != namespaceDefinition2.Name) return false;
+      var nested1 = namespaceDefinition1 as INestedUnitNamespace;
+      var nested2 = namespaceDefinition2 as INestedUnitNamespace;
+      if (nested1 == null) return nested2 == null;
+      if (nested2 == null) return false;
+      return NamespaceNamesAreTheSame(nested1.ContainingUnitNamespace, nested2.ContainingUnitNamespace);
     }
+
+    private MultiHashtable<INamespaceTypeDefinition>.KeyedValuesEnumerable GetNamespaceTypesNamed(IName name) {
+      Contract.Requires(name != null);
+      if (this.namespaceTypesByName == null) {
+        var namespaceTypesByName = this.namespaceTypesByName = new MultiHashtable<INamespaceTypeDefinition>();
+        foreach (var type in this.typeDefList) {
+          var nsType = type as INamespaceTypeDefinition;
+          if (nsType == null) continue;
+          namespaceTypesByName.Add((uint)nsType.Name.UniqueKey, nsType);
+        }
+      }
+      return this.namespaceTypesByName.GetValuesFor((uint)name.UniqueKey);
+    }
+    MultiHashtable<INamespaceTypeDefinition> namespaceTypesByName;
 
     internal uint GetMethodToken(IMethodReference methodReference) {
       IGenericMethodInstanceReference/*?*/ methodSpec = methodReference as IGenericMethodInstanceReference;
       if (methodSpec != null)
         return 0x2B000000 | this.GetMethodSpecIndex(methodSpec);
-      IUnitReference/*?*/ definingUnit = PeWriter.GetDefiningUnitReference(methodReference.ContainingType);
-      if (definingUnit != null && definingUnit.UnitIdentity.Equals(this.module.ModuleIdentity) && !methodReference.AcceptsExtraArguments)
-        return 0x06000000 | this.GetMethodDefIndex(methodReference);
-      else
-        return 0x0A000000 | this.GetMemberRefIndex(methodReference);
+      if (!methodReference.AcceptsExtraArguments || methodReference is IMethodDefinition) {
+        var definingUnit = PeWriter.GetDefiningUnitReference(methodReference.ContainingType);
+        if (definingUnit != null && definingUnit.UnitIdentity.Equals(this.module.ModuleIdentity)) {
+          var methodDefIndex = this.GetMethodDefIndex(methodReference);
+          if (methodDefIndex != 0) return 0x06000000 | methodDefIndex;
+        }
+      }
+      return 0x0A000000 | this.GetMemberRefIndex(methodReference);
     }
 
     private static ushort GetParameterFlags(IParameterDefinition parDef) {
@@ -1668,7 +1697,7 @@ namespace Microsoft.Cci {
       uint result;
       if (this.typeRefIndex.TryGetValue(typeReference.InternedKey, out result)) return result;
       result = (uint)this.typeRefList.Count+1;
-      Debug.Assert(!this.tableIndicesAreComplete);
+      Contract.Assume(!this.tableIndicesAreComplete);
       this.typeRefIndex.Add(typeReference.InternedKey, result);
       this.typeRefList.Add(typeReference);
       return result;
@@ -1682,7 +1711,7 @@ namespace Microsoft.Cci {
         this.typeSpecInstanceIndex.Add(typeReference, typeSpecIndex);
         return typeSpecIndex;
       }
-      Debug.Assert(!this.tableIndicesAreComplete);
+      Contract.Assume(!this.tableIndicesAreComplete);
       this.typeSpecList.Add(typeReference);
       typeSpecIndex = (uint)this.typeSpecList.Count;
       this.typeSpecInstanceIndex.Add(typeReference, typeSpecIndex);
@@ -1935,7 +1964,8 @@ namespace Microsoft.Cci {
         this.hasConstantCodedIndexSize = 4;
       if (this.IndexDoesNotFit(16-5, TableIndices.Method, TableIndices.Field, TableIndices.TypeRef, TableIndices.TypeDef, TableIndices.Param, TableIndices.InterfaceImpl,
         TableIndices.MemberRef, TableIndices.Module, TableIndices.DeclSecurity, TableIndices.Property, TableIndices.Event, TableIndices.StandAloneSig,
-        TableIndices.ModuleRef, TableIndices.TypeSpec, TableIndices.Assembly, TableIndices.AssemblyRef, TableIndices.File, TableIndices.ExportedType, TableIndices.ManifestResource))
+        TableIndices.ModuleRef, TableIndices.TypeSpec, TableIndices.Assembly, TableIndices.AssemblyRef, TableIndices.File, TableIndices.ExportedType, TableIndices.ManifestResource, 
+        TableIndices.GenericParam, TableIndices.GenericParamConstraint, TableIndices.MethodSpec))
         this.hasCustomAttributeCodedIndexSize = 4;
       if (this.IndexDoesNotFit(16-1, TableIndices.Field, TableIndices.Param))
         this.hasFieldMarshallCodedIndexSize = 4;
@@ -2617,13 +2647,14 @@ namespace Microsoft.Cci {
         MethodSemanticsRow r = new MethodSemanticsRow();
         r.Association = (propertyIndex<<1)|1;
         foreach (IMethodReference accessorMethod in propertyDef.Accessors) {
-          if (accessorMethod == propertyDef.Setter)
+          var accessorMethodInternedKey = accessorMethod.InternedKey;
+          if (propertyDef.Setter != null && accessorMethodInternedKey == propertyDef.Setter.InternedKey)
             r.Semantic = 0x0001;
-          else if (accessorMethod == propertyDef.Getter)
+          else if (propertyDef.Getter != null && accessorMethodInternedKey == propertyDef.Getter.InternedKey)
             r.Semantic = 0x0002;
           else
             r.Semantic = 0x0004;
-          r.Method = this.methodDefIndex[accessorMethod.InternedKey];
+          r.Method = this.methodDefIndex[accessorMethodInternedKey];
           r.OriginalIndex = i++;
           this.methodSemanticsTable.Add(r);
         }
@@ -2635,14 +2666,15 @@ namespace Microsoft.Cci {
         MethodSemanticsRow r = new MethodSemanticsRow();
         r.Association = eventIndex<<1;
         foreach (IMethodReference accessorMethod in eventDef.Accessors) {
+          var accessorMethodInternedKey = accessorMethod.InternedKey;
           r.Semantic = 0x0004;
-          if (accessorMethod == eventDef.Adder)
+          if (accessorMethodInternedKey == eventDef.Adder.InternedKey)
             r.Semantic = 0x0008;
-          else if (accessorMethod == eventDef.Remover)
+          else if (accessorMethodInternedKey == eventDef.Remover.InternedKey)
             r.Semantic = 0x0010;
-          else if (accessorMethod == eventDef.Caller)
+          else if (eventDef.Caller != null && accessorMethodInternedKey == eventDef.Caller.InternedKey)
             r.Semantic = 0x0020;
-          r.Method = this.methodDefIndex[accessorMethod.InternedKey];
+          r.Method = this.methodDefIndex[accessorMethodInternedKey];
           r.OriginalIndex = i++;
           this.methodSemanticsTable.Add(r);
         }
@@ -4226,6 +4258,8 @@ namespace Microsoft.Cci {
     private static uint GetNumberOfInheritedTypeParameters(ITypeReference type) {
       INestedTypeReference/*?*/ nestedType = type as INestedTypeReference;
       if (nestedType == null) return 0;
+      INestedTypeDefinition/*?*/ nestedTypeDefinition = type.ResolvedType as INestedTypeDefinition;
+      if (nestedTypeDefinition != null && nestedTypeDefinition.DoesNotInheritGenericParameters) return 0;
       ISpecializedNestedTypeReference/*?*/ specializedNestedType = nestedType as ISpecializedNestedTypeReference;
       if (specializedNestedType != null)
         nestedType = specializedNestedType.UnspecializedVersion;

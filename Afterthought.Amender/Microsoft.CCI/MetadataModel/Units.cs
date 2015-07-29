@@ -201,6 +201,18 @@ namespace Microsoft.Cci {
       throw new NotImplementedException();
     }
 
+    public IEnumerable<IGenericMethodInstanceReference> GetGenericMethodInstances() {
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ITypeReference> GetStructuralTypeInstances() {
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ITypeMemberReference> GetStructuralTypeInstanceMembers() {
+      throw new NotImplementedException();
+    }
+
     public IEnumerable<ITypeReference> GetTypeReferences() {
       throw new NotImplementedException();
     }
@@ -217,7 +229,7 @@ namespace Microsoft.Cci {
       get { throw new NotImplementedException(); }
     }
 
-    public bool NativeEntryPoint {
+    public bool Prefers32bits {
       get { throw new NotImplementedException(); }
     }
 
@@ -802,6 +814,24 @@ namespace Microsoft.Cci {
     IEnumerable<INamedTypeDefinition> GetAllTypes();
 
     /// <summary>
+    /// Returns zero or more generic method instance references used directly or indirectly by the module.
+    /// Note that this collection is always empty when the module is produced by reading a CLR PE file.
+    /// </summary>
+    IEnumerable<IGenericMethodInstanceReference> GetGenericMethodInstances();
+
+    /// <summary>
+    /// Returns zero or more structural type instance references used in directly or indirectly by module (arrays, pointers and generic type instances are examples of structural type instances).
+    /// Note that this collection is always empty when the module is produced by reading a CLR PE file.
+    /// </summary>
+    IEnumerable<ITypeReference> GetStructuralTypeInstances();
+
+    /// <summary>
+    /// Returns zero or more type members whose containing types are structural type instances used directly or indirectly by the module.
+    /// Note that this collection is always empty when the module is produced by reading a CLR PE file.
+    /// </summary>
+    IEnumerable<ITypeMemberReference> GetStructuralTypeInstanceMembers();
+
+    /// <summary>
     /// Returns zero or more type references used in the module. If the module is produced by reading in a CLR PE file, then this will be the contents
     /// of the type reference table. If the module is produced some other way, the method may return an empty enumeration or an enumeration that is a
     /// subset of the type references actually used in the module. 
@@ -826,11 +856,6 @@ namespace Microsoft.Cci {
     bool StrongNameSigned { get; }
 
     /// <summary>
-    /// True if the module has a native entry point.
-    /// </summary>
-    bool NativeEntryPoint { get; }
-
-    /// <summary>
     /// The kind of metadata stored in this module. For example whether this module is an executable or a manifest resource file.
     /// </summary>
     ModuleKind Kind { get; }
@@ -844,6 +869,11 @@ namespace Microsoft.Cci {
     /// The first part of a two part version number indicating the version of the linker that produced this module. For example, the 0 in 8.0.
     /// </summary>
     byte LinkerMinorVersion { get; }
+
+    /// <summary>
+    /// Specifies the target CPU. 
+    /// </summary>
+    Machine Machine { get; }
 
     /// <summary>
     /// The first part of a two part version number indicating the version of the format used to persist this module. For example, the 1 in 1.0.
@@ -877,9 +907,9 @@ namespace Microsoft.Cci {
     System.Guid PersistentIdentifier { get; }
 
     /// <summary>
-    /// Specifies the target CPU. 
+    /// If set, the module is platform independent but prefers to be loaded in a 32-bit process for performance reasons.
     /// </summary>
-    Machine Machine { get; }
+    bool Prefers32bits { get; }
 
     /// <summary>
     /// If set, the module contains instructions or assumptions that are specific to the AMD 64 bit instruction set. Setting this flag to
@@ -994,10 +1024,7 @@ namespace Microsoft.Cci {
     }
 
     public IAssembly ContainingAssembly {
-      get {
-        Contract.Ensures(Contract.Result<IAssembly>() != null);
-        throw new NotImplementedException();
-      }
+      get { throw new NotImplementedException(); }
     }
 
     public string DebugInformationLocation {
@@ -1039,6 +1066,21 @@ namespace Microsoft.Cci {
       throw new NotImplementedException();
     }
 
+    public IEnumerable<IGenericMethodInstanceReference> GetGenericMethodInstances() {
+      Contract.Ensures(Contract.Result<IEnumerable<IGenericMethodInstanceReference>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ITypeReference> GetStructuralTypeInstances() {
+      Contract.Ensures(Contract.Result<IEnumerable<ITypeReference>>() != null);
+      throw new NotImplementedException();
+    }
+
+    public IEnumerable<ITypeMemberReference> GetStructuralTypeInstanceMembers() {
+      Contract.Ensures(Contract.Result<IEnumerable<ITypeMemberReference>>() != null);
+      throw new NotImplementedException();
+    }
+
     public IEnumerable<ITypeReference> GetTypeReferences() {
       Contract.Ensures(Contract.Result<IEnumerable<ITypeReference>>() != null);
       throw new NotImplementedException();
@@ -1057,7 +1099,7 @@ namespace Microsoft.Cci {
       get { throw new NotImplementedException(); }
     }
 
-    public bool NativeEntryPoint {
+    public bool Prefers32bits {
       get { throw new NotImplementedException(); }
     }
 
@@ -1956,6 +1998,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="units">An enumeration of identifiers of the units making up the identified set of units.</param>
     public UnitSetIdentity(IEnumerable<UnitIdentity> units) {
+      Contract.Requires(units != null);
+
       this.units = units;
     }
 
@@ -1963,7 +2007,10 @@ namespace Microsoft.Cci {
     /// Enumerates the identifiers of the units making up the identified set of units.
     /// </summary>
     public IEnumerable<UnitIdentity> Units {
-      get { return this.units; }
+      get {
+        Contract.Ensures(Contract.Result<IEnumerable<UnitIdentity>>() != null);
+        return this.units; 
+      }
     }
     readonly IEnumerable<UnitIdentity> units;
 

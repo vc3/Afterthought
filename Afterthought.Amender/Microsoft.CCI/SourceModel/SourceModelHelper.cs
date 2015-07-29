@@ -9,16 +9,16 @@
 //
 //-----------------------------------------------------------------------------
 using System;
-using Microsoft.Cci;
 using System.Collections.Generic;
-using System.Text;
-using System.Globalization;
+using System.Diagnostics.Contracts;
+using Microsoft.Cci.UtilityDataStructures;
 
 namespace Microsoft.Cci {
   /// <summary>
   /// A provider that aggregates a set of providers in order to
   /// map offsets in an IL stream to source locations.
   /// </summary>
+  [ContractVerification(false)]
   public sealed class AggregatingSourceLocationProvider : ISourceLocationProvider, IDisposable {
 
     Dictionary<IUnit, ISourceLocationProvider> unit2Provider = new Dictionary<IUnit, ISourceLocationProvider>();
@@ -123,16 +123,24 @@ namespace Microsoft.Cci {
 
     private IMethodDefinition lastUsedMethod = Dummy.MethodDefinition;
     private ISourceLocationProvider lastUsedProvider = default(ISourceLocationProvider);
+
     private ISourceLocationProvider/*?*/ GetProvider(IMethodDefinition methodDefinition) {
+      Contract.Requires(methodDefinition != null);
       if (methodDefinition == lastUsedMethod) return lastUsedProvider;
       ISourceLocationProvider provider = null;
-      var definingUnit = TypeHelper.GetDefiningUnit(methodDefinition.ResolvedMethod.ContainingTypeDefinition);
+      var definingUnit = TypeHelper.GetDefiningUnit(methodDefinition.ContainingTypeDefinition);
       this.unit2Provider.TryGetValue(definingUnit, out provider);
       if (provider != null) {
         this.lastUsedMethod = methodDefinition;
         this.lastUsedProvider = provider;
+        return provider;
       }
-      return provider;
+      foreach (var location in methodDefinition.Locations) {
+        var ilLocation = location as IILLocation;
+        if (ilLocation == null || ilLocation.MethodDefinition == methodDefinition) continue;
+        return this.GetProvider(ilLocation.MethodDefinition);
+      }
+      return null;
     }
 
     private ISourceLocationProvider/*?*/ GetProvider(IILLocation/*?*/ mbLocation) {
@@ -160,14 +168,17 @@ namespace Microsoft.Cci {
   /// A provider that aggregates a set of providers in order to
   /// map offsets in an IL stream to block scopes.
   /// </summary>
+  [ContractVerification(false)]
   public sealed class AggregatingLocalScopeProvider : ILocalScopeProvider, IDisposable {
 
-    Dictionary<IUnit, ILocalScopeProvider> unit2Provider = new Dictionary<IUnit, ILocalScopeProvider>();
+    readonly Dictionary<IUnit, ILocalScopeProvider> unit2Provider = new Dictionary<IUnit, ILocalScopeProvider>();
 
     /// <summary>
     /// Copies the contents of the table
     /// </summary>
     public AggregatingLocalScopeProvider(IDictionary<IUnit, ILocalScopeProvider> unit2ProviderMap) {
+      Contract.Requires(unit2ProviderMap != null);
+
       foreach (var keyValuePair in unit2ProviderMap) {
         this.unit2Provider.Add(keyValuePair.Key, keyValuePair.Value);
       }
@@ -178,6 +189,8 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="unit2ProviderMap"></param>
     public AggregatingLocalScopeProvider(Dictionary<IUnit, ILocalScopeProvider> unit2ProviderMap) {
+      Contract.Requires(unit2ProviderMap != null);
+
       this.unit2Provider = unit2ProviderMap;
     }
 
@@ -304,16 +317,25 @@ namespace Microsoft.Cci {
 
     private IMethodDefinition lastUsedMethod = Dummy.MethodDefinition;
     private ILocalScopeProvider lastUsedProvider = null;
+
     private ILocalScopeProvider/*?*/ GetProvider(IMethodDefinition methodDefinition) {
+      Contract.Requires(methodDefinition != null);
+
       if (methodDefinition == lastUsedMethod) return lastUsedProvider;
       ILocalScopeProvider provider = null;
-      var definingUnit = TypeHelper.GetDefiningUnit(methodDefinition.ResolvedMethod.ContainingTypeDefinition);
+      var definingUnit = TypeHelper.GetDefiningUnit(methodDefinition.ContainingTypeDefinition);
       this.unit2Provider.TryGetValue(definingUnit, out provider);
       if (provider != null) {
         this.lastUsedMethod = methodDefinition;
         this.lastUsedProvider = provider;
+        return provider;
       }
-      return provider;
+      foreach (var location in methodDefinition.Locations) {
+        var ilLocation = location as IILLocation;
+        if (ilLocation == null || ilLocation.MethodDefinition == methodDefinition) continue;
+        return this.GetProvider(ilLocation.MethodDefinition);
+      }
+      return null;
     }
 
     private ILocalScopeProvider/*?*/ GetProvider(IILLocation/*?*/ mbLocation) {
@@ -322,10 +344,261 @@ namespace Microsoft.Cci {
     }
 
     private ILocalScopeProvider/*?*/ GetProvider(ILocalDefinition localDefinition) {
+      Contract.Requires(localDefinition != null);
+
       return this.GetProvider(localDefinition.MethodDefinition);
     }
 
     #endregion
 
+  }
+
+  /// <summary>
+  /// A local scope provider that can be used together with an object model that is a deep copy made by MetadataDeepCopier. It ensures that all
+  /// metadata definitions obtained from the original ILocalScopeProvider have been mapped to their copies and does the reverse map before
+  /// passing queries along to the original ILocalScopeProvider.
+  /// </summary>
+  public sealed class CopiedLocalScopeProvider : ILocalScopeProvider {
+
+    /// <summary>
+    /// A local scope provider that can be used together with an object model that is a deep copy made by MetadataDeepCopier. It ensures that all
+    /// metadata definitions obtained from the original ILocalScopeProvider have been mapped to their copies and does the reverse map before
+    /// passing queries along to the original ILocalScopeProvider.
+    /// </summary>
+    /// <param name="mapFromCopyToOriginal">A map from copied definition objects to the original definitions from which the copies were constructed.</param>
+    /// <param name="mapFromOriginalToCopy">A map from original definition objects to the copied definitions.</param>
+    /// <param name="providerForOriginal">An ILocalScopeProvider associated with the original object model.</param>
+    public CopiedLocalScopeProvider(Hashtable<object, object> mapFromCopyToOriginal, Hashtable<object, object> mapFromOriginalToCopy, ILocalScopeProvider providerForOriginal) {
+      Contract.Requires(mapFromCopyToOriginal != null);
+      Contract.Requires(mapFromOriginalToCopy != null);
+      Contract.Requires(providerForOriginal != null);
+
+      this.mapFromCopyToOriginal = mapFromCopyToOriginal;
+      this.mapFromOriginalToCopy = mapFromOriginalToCopy;
+      this.providerForOriginal = providerForOriginal;
+    }
+
+    /// <summary>
+    /// A map from copied definition objects to the original definitions from which the copies were constructed.
+    /// </summary>
+    private Hashtable<object, object> mapFromCopyToOriginal;
+
+    /// <summary>
+    /// A map from original definition objects to the copied definitions.
+    /// </summary>
+    private Hashtable<object, object> mapFromOriginalToCopy;
+
+    /// <summary>
+    /// An ILocalScopeProvider associated with the original object model.
+    /// </summary>
+    ILocalScopeProvider providerForOriginal;
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.mapFromCopyToOriginal != null);
+      Contract.Invariant(this.mapFromOriginalToCopy != null);
+      Contract.Invariant(this.providerForOriginal != null);
+    }
+
+    #region ILocalScopeProvider Members
+
+    IEnumerable<ILocalScope> ILocalScopeProvider.GetIteratorScopes(IMethodBody methodBody) {
+      var originalMethod = (this.mapFromCopyToOriginal[methodBody.MethodDefinition] as IMethodDefinition)??methodBody.MethodDefinition;
+      Contract.Assume(!originalMethod.IsAbstract && !originalMethod.IsExternal);
+      foreach (var localScope in this.providerForOriginal.GetIteratorScopes(originalMethod.Body)) {
+        Contract.Assume(localScope != null);
+        yield return new CopiedLocalScope(localScope, methodBody);
+      }
+    }
+
+    IEnumerable<ILocalScope> ILocalScopeProvider.GetLocalScopes(IMethodBody methodBody) {
+      var originalMethod = (this.mapFromCopyToOriginal[methodBody.MethodDefinition] as IMethodDefinition)??methodBody.MethodDefinition;
+      Contract.Assume(!originalMethod.IsAbstract && !originalMethod.IsExternal);
+      foreach (var localScope in this.providerForOriginal.GetLocalScopes(originalMethod.Body)) {
+        Contract.Assume(localScope != null);
+        yield return new CopiedLocalScope(localScope, methodBody);
+      }
+    }
+
+    IEnumerable<INamespaceScope> ILocalScopeProvider.GetNamespaceScopes(IMethodBody methodBody) {
+      var originalMethod = (this.mapFromCopyToOriginal[methodBody.MethodDefinition] as IMethodDefinition)??methodBody.MethodDefinition;
+      Contract.Assume(!originalMethod.IsAbstract && !originalMethod.IsExternal);
+      return this.providerForOriginal.GetNamespaceScopes(originalMethod.Body);
+    }
+
+    IEnumerable<ILocalDefinition> ILocalScopeProvider.GetConstantsInScope(ILocalScope scope) {
+      Contract.Assume(!scope.MethodDefinition.IsAbstract && !scope.MethodDefinition.IsExternal);
+      IMethodBody body = scope.MethodDefinition.Body;
+      var copiedScope = scope as CopiedLocalScope;
+      if (copiedScope != null) scope = copiedScope.OriginalScope;
+      foreach (var localDef in this.providerForOriginal.GetConstantsInScope(scope)) {
+        Contract.Assume(localDef != null);
+        yield return this.GetCorrespondingLocal(localDef);
+      }
+    }
+
+    IEnumerable<ILocalDefinition> ILocalScopeProvider.GetVariablesInScope(ILocalScope scope) {
+      Contract.Assume(!scope.MethodDefinition.IsAbstract && !scope.MethodDefinition.IsExternal);
+      IMethodBody body = scope.MethodDefinition.Body;
+      var copiedScope = scope as CopiedLocalScope;
+      if (copiedScope != null) scope = copiedScope.OriginalScope;
+      foreach (var localDef in this.providerForOriginal.GetVariablesInScope(scope)) {
+        Contract.Assume(localDef != null);
+        yield return this.GetCorrespondingLocal(localDef);
+      }
+    }
+
+    private ILocalDefinition GetCorrespondingLocal(ILocalDefinition originalLocalDef) {
+      Contract.Requires(originalLocalDef != null);
+      Contract.Ensures(Contract.Result<ILocalDefinition>() != null);
+
+      return (this.mapFromOriginalToCopy[originalLocalDef] as ILocalDefinition)??originalLocalDef;
+    }
+
+    bool ILocalScopeProvider.IsIterator(IMethodBody methodBody) {
+      var originalMethod = (this.mapFromCopyToOriginal[methodBody.MethodDefinition] as IMethodDefinition)??methodBody.MethodDefinition;
+      Contract.Assume(!originalMethod.IsAbstract && !originalMethod.IsExternal);
+      return this.providerForOriginal.IsIterator(originalMethod.Body);
+    }
+
+    [ContractVerification(false)]
+    ISynchronizationInformation/*?*/ ILocalScopeProvider.GetSynchronizationInformation(IMethodBody methodBody) {
+      var originalMethod = (this.mapFromCopyToOriginal[methodBody.MethodDefinition] as IMethodDefinition)??methodBody.MethodDefinition;
+      Contract.Assume(!originalMethod.IsAbstract && !originalMethod.IsExternal);
+      var originalSyncInfo = this.providerForOriginal.GetSynchronizationInformation(originalMethod.Body);
+      if (originalSyncInfo == null) return null;
+      return new CopiedSynchronizationInformation(originalSyncInfo, this.mapFromOriginalToCopy);
+    }
+
+    #endregion
+  }
+
+  internal sealed class CopiedLocalScope : ILocalScope {
+
+    internal CopiedLocalScope(ILocalScope originalScope, IMethodBody copiedMethodBody) {
+      Contract.Requires(originalScope != null);
+      Contract.Requires(copiedMethodBody != null);
+      this.originalScope = originalScope;
+      this.copiedMethodBody = copiedMethodBody;
+    }
+
+    IMethodBody copiedMethodBody;
+    ILocalScope originalScope;
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.copiedMethodBody != null);
+      Contract.Invariant(this.originalScope != null);
+    }
+
+    uint ILocalScope.Length {
+      get { return this.originalScope.Length; }
+    }
+
+    IMethodDefinition ILocalScope.MethodDefinition {
+      get { return this.copiedMethodBody.MethodDefinition; }
+    }
+
+    uint ILocalScope.Offset {
+      get { return this.originalScope.Offset; } 
+    }
+
+    /// <summary>
+    /// The scope that was copied to make this one.
+    /// </summary>
+    internal ILocalScope OriginalScope {
+      get {
+        Contract.Ensures(Contract.Result<ILocalScope>() != null);
+        return this.originalScope;
+      }
+    }
+
+  }
+
+  internal sealed class CopiedSynchronizationInformation : ISynchronizationInformation {
+
+    internal CopiedSynchronizationInformation(ISynchronizationInformation originalSyncrhonizationInformation, Hashtable<object, object> mapFromOriginaltoCopy) {
+      Contract.Requires(originalSyncrhonizationInformation != null);
+      Contract.Requires(mapFromOriginaltoCopy != null);
+      this.originalSyncrhonizationInformation = originalSyncrhonizationInformation;
+      this.mapFromOriginaltoCopy = mapFromOriginaltoCopy;
+    }
+
+    Hashtable<object, object> mapFromOriginaltoCopy;
+    ISynchronizationInformation originalSyncrhonizationInformation;
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.mapFromOriginaltoCopy != null);
+      Contract.Invariant(this.originalSyncrhonizationInformation != null);
+    }
+
+    #region ISynchronizationInformation Members
+
+    IMethodDefinition ISynchronizationInformation.AsyncMethod {
+      get {
+        var originalMethod = this.originalSyncrhonizationInformation.AsyncMethod;
+        return (this.mapFromOriginaltoCopy[originalMethod] as IMethodDefinition)??originalMethod;
+      }
+    }
+
+    IMethodDefinition ISynchronizationInformation.MoveNextMethod {
+      get {
+        var originalMethod = this.originalSyncrhonizationInformation.MoveNextMethod;
+        return (this.mapFromOriginaltoCopy[originalMethod] as IMethodDefinition)??originalMethod;
+      }
+    }
+
+    uint ISynchronizationInformation.GeneratedCatchHandlerOffset {
+      get { return this.originalSyncrhonizationInformation.GeneratedCatchHandlerOffset; }
+    }
+
+    IEnumerable<ISynchronizationPoint> ISynchronizationInformation.SynchronizationPoints {
+      get {
+        foreach (var syncPoint in this.originalSyncrhonizationInformation.SynchronizationPoints)
+          yield return new CopiedSynchronizationPoint(syncPoint, this.mapFromOriginaltoCopy);
+      }
+    }
+
+    #endregion
+  }
+
+  internal sealed class CopiedSynchronizationPoint : ISynchronizationPoint {
+
+    internal CopiedSynchronizationPoint(ISynchronizationPoint original, Hashtable<object, object> mapFromOriginaltoCopy) {
+      Contract.Requires(original != null);
+      Contract.Requires(mapFromOriginaltoCopy != null);
+      this.original = original;
+      this.mapFromOriginaltoCopy = mapFromOriginaltoCopy;
+    }
+
+    Hashtable<object, object> mapFromOriginaltoCopy;
+    ISynchronizationPoint original;
+
+    [ContractInvariantMethod]
+    private void ObjectInvariant() {
+      Contract.Invariant(this.mapFromOriginaltoCopy != null);
+      Contract.Invariant(this.original != null);
+    }
+
+    #region ISynchronizationPoint Members
+
+    uint ISynchronizationPoint.SynchronizeOffset {
+      get { return this.original.SynchronizeOffset; }
+    }
+
+    IMethodDefinition/*?*/ ISynchronizationPoint.ContinuationMethod {
+      get {
+        var originalMethod = this.original.ContinuationMethod;
+        if (originalMethod == null) return null;
+        return (this.mapFromOriginaltoCopy[originalMethod] as IMethodDefinition)??originalMethod;
+      }
+    }
+
+    uint ISynchronizationPoint.ContinuationOffset {
+      get { return this.original.ContinuationOffset; }
+    }
+
+    #endregion
   }
 }

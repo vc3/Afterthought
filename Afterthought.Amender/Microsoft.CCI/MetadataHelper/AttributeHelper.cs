@@ -39,7 +39,7 @@ namespace Microsoft.Cci {
       foreach (ICustomAttribute attribute in attributes) {
         if (attribute == null) continue;
         if (TypeHelper.TypesAreEquivalent(attribute.Type, attributeType)) return true;
-      }
+      } 
       return false;
     }
 

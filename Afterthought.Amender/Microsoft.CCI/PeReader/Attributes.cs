@@ -15,6 +15,7 @@ using Microsoft.Cci.Immutable;
 using Microsoft.Cci.MetadataReader.ObjectModelImplementation;
 using Microsoft.Cci.MetadataReader.PEFileFlags;
 using Microsoft.Cci.UtilityDataStructures;
+using System.Diagnostics.Contracts;
 
 namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
@@ -387,17 +388,27 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     internal readonly NamespaceName/*?*/ ParentNamespaceName;
     internal readonly IName Name;
 
-    internal NamespaceName(
-      INameTable nameTable,
-      NamespaceName/*?*/ parentNamespaceName,
-      IName name
-    ) {
+    internal NamespaceName(INameTable nameTable, NamespaceName/*?*/ parentNamespaceName, IName name) {
       this.ParentNamespaceName = parentNamespaceName;
       this.Name = name;
       if (parentNamespaceName == null)
         this.FullyQualifiedName = name;
       else
         this.FullyQualifiedName = nameTable.GetNameFor(parentNamespaceName.FullyQualifiedName.Value + "." + name);
+    }
+
+    internal IUnitNamespace/*?*/ Resolve(IModule module) {
+      Contract.Requires(module != null);
+      IUnitNamespace containingNamespace;
+      if (this.ParentNamespaceName == null)
+        containingNamespace = module.UnitNamespaceRoot;
+      else
+        containingNamespace = this.ParentNamespaceName.Resolve(module);
+      foreach (var member in containingNamespace.GetMembersNamed(this.Name, false)) {
+        var ns = member as IUnitNamespace;
+        if (ns != null) return ns;
+      }
+      return null;
     }
 
     public override string ToString() {
@@ -435,9 +446,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       return this.GetAsNomimalType(peFileToObjectModel, module);
     }
 
-    internal abstract INamedTypeDefinition/*?*/ ResolveNominalTypeName(
-      PEFileToObjectModel peFileToObjectModel
-    );
+    internal abstract INamedTypeDefinition/*?*/ ResolveNominalTypeName(IMetadataReaderModuleReference module);
 
     internal abstract IName UnmangledTypeName { get; }
   }
@@ -498,19 +507,40 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       }
     }
 
-    internal override INamedTypeDefinition/*?*/ ResolveNominalTypeName(
-      PEFileToObjectModel peFileToObjectModel
-    ) {
+    internal override INamedTypeDefinition/*?*/ ResolveNominalTypeName(IMetadataReaderModuleReference module) {
+      var readerModule = module.ResolvedModule as Module;
+      if (readerModule != null) {
+        var peFileToObjectModel = readerModule.PEFileToObjectModel;
+        if (this.NamespaceName == null)
+          return peFileToObjectModel.ResolveNamespaceTypeDefinition(
+            peFileToObjectModel.NameTable.EmptyName,
+            this.Name
+          );
+        else
+          return peFileToObjectModel.ResolveNamespaceTypeDefinition(
+            this.NamespaceName.FullyQualifiedName,
+            this.Name
+          );
+      }
+      IUnitNamespace containingNamespace;
       if (this.NamespaceName == null)
-        return peFileToObjectModel.ResolveNamespaceTypeDefinition(
-          peFileToObjectModel.NameTable.EmptyName,
-          this.Name
-        );
+        containingNamespace = module.ResolvedModule.UnitNamespaceRoot;
       else
-        return peFileToObjectModel.ResolveNamespaceTypeDefinition(
-          this.NamespaceName.FullyQualifiedName,
-          this.Name
-        );
+        containingNamespace = this.NamespaceName.Resolve(module.ResolvedModule);
+      if (containingNamespace == null) return null;
+      foreach (var member in containingNamespace.GetMembersNamed(this.UnmangledTypeName, false)) {
+        var t = member as INamedTypeDefinition;
+        if (t != null && t.GenericParameterCount == this.GenericParameterCount) return t;
+      }
+      var assembly = module as IAssembly;
+      if (assembly == null) return null;
+      foreach (var alias in assembly.ExportedTypes) {
+        var nsAlias = alias as INamespaceAliasForType;
+        if (nsAlias == null || nsAlias.Name != this.UnmangledTypeName) continue;
+        var aliasedType = nsAlias.AliasedType.ResolvedType;
+        if (aliasedType.GenericParameterCount == this.GenericParameterCount) return aliasedType;
+      }      
+      return null;
     }
 
     internal bool MangleName {
@@ -550,16 +580,10 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       }
     }
 
-    internal override INamedTypeDefinition/*?*/ ResolveNominalTypeName(
-      PEFileToObjectModel peFileToObjectModel
-    ) {
-      var containingType = this.ContainingTypeName.ResolveNominalTypeName(peFileToObjectModel);
-      if (containingType == null)
-        return null;
-      return peFileToObjectModel.ResolveNestedTypeDefinition(
-        containingType,
-        this.Name
-      );
+    internal override INamedTypeDefinition/*?*/ ResolveNominalTypeName(IMetadataReaderModuleReference module) {
+      var containingType = this.ContainingTypeName.ResolveNominalTypeName(module);
+      if (containingType == null) return null;
+      return TypeHelper.GetNestedType(containingType, this.UnmangledTypeName, (int)this.GenericParameterCount);
     }
 
     internal bool MangleName {
@@ -1317,7 +1341,6 @@ namespace Microsoft.Cci.MetadataReader {
           if (!(typeDef is Dummy)) {
             if (typeDef.IsEnum)
               return new ConstantExpression(type, this.GetPrimitiveValue(typeDef.UnderlyingType));
-            type = typeDef;
           }
           if (TypeHelper.TypesAreEquivalent(type, this.PEFileToObjectModel.PlatformType.SystemObject)) {
             ITypeReference/*?*/ underlyingType = this.GetFieldOrPropType();

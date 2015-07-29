@@ -9,9 +9,11 @@
 //
 //-----------------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics.Contracts;
+using Microsoft.Cci.Immutable;
 
 //^ using Microsoft.Contracts;
 
@@ -310,6 +312,70 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// Returns true if the method conforms to the naming conventions for being a property getter:
+    /// it is public, special name, and its name is "get_P" for any string P
+    /// </summary>
+    [Pure]
+    public static bool IsGetter(IMethodDefinition method, bool ignoreVisibility = false) {
+      if (!ignoreVisibility && method.Visibility != TypeMemberVisibility.Public || !method.IsSpecialName) return false;
+      return QualifiedMethodNameBeginsWith(method.Name.Value, "get_");
+    }
+
+    /// <summary>
+    /// Returns true if the method conforms to the naming conventions for being a property setter:
+    /// it is public, special name, and its name is "set_P" for any string P
+    /// </summary>
+    [Pure]
+    public static bool IsSetter(IMethodDefinition method, bool ignoreVisibility = false) {
+      if (!ignoreVisibility && method.Visibility != TypeMemberVisibility.Public || !method.IsSpecialName) return false;
+      return QualifiedMethodNameBeginsWith(method.Name.Value, "set_");
+    }
+
+    /// <summary>
+    /// Returns true if the method conforms to the naming conventions for being an event adder:
+    /// it is public, special name, and its name is "add_E" for any string E
+    /// </summary>
+    [Pure]
+    public static bool IsAdder(IMethodDefinition method, bool ignoreVisibility = false) {
+      if (!ignoreVisibility && method.Visibility != TypeMemberVisibility.Public || !method.IsSpecialName) return false;
+      return QualifiedMethodNameBeginsWith(method.Name.Value, "add_");
+    }
+
+    /// <summary>
+    /// Returns true if the method conforms to the naming conventions for being an event remover:
+    /// it is public, special name, and its name is "add_E" for any string E
+    /// </summary>
+    [Pure]
+    public static bool IsRemover(IMethodDefinition method, bool ignoreVisibility = false) {
+      if (!ignoreVisibility && method.Visibility != TypeMemberVisibility.Public || !method.IsSpecialName) return false;
+      return QualifiedMethodNameBeginsWith(method.Name.Value, "remove_");
+    }
+
+    /// <summary>
+    /// Returns true if the method conforms to the naming conventions for being an event caller:
+    /// it is public, special name, and its name is "raise_E" for any string E
+    /// </summary>
+    [Pure]
+    public static bool IsCaller(IMethodDefinition method) {
+      if (method.Visibility != TypeMemberVisibility.Public || !method.IsSpecialName) return false;
+      return QualifiedMethodNameBeginsWith(method.Name.Value, "raise_");
+    }
+
+    /// <summary>
+    /// For event/property accessors, the name might be "T.U.get_P",
+    /// i.e., the "get_" doesn't necessarily come at the beginning of the name,
+    /// but it always comes before the event/property name.
+    /// </summary>
+    [ContractVerification(true)]
+    public static bool QualifiedMethodNameBeginsWith(string methodName, string prefix) {
+      Contract.Requires(methodName != null);
+      Contract.Requires(prefix != null);
+      var indexOfLastDot = methodName.LastIndexOf('.');
+      if (indexOfLastDot == -1) return methodName.StartsWith(prefix);
+      return String.Compare(methodName, indexOfLastDot + 1, prefix, 0, prefix.Length, false) == 0;
+    }
+
+    /// <summary>
     /// Decides if the given type definition member is visible outside of the assembly it is defined in.
     /// It does not take into account friend assemblies: the meaning of this method
     /// is that it returns true for those members that are visible outside of their
@@ -401,6 +467,57 @@ namespace Microsoft.Cci {
     }
 
     /// <summary>
+    /// Returns a method definition that is defined by the given method reference's containing type definition
+    /// or one of its base classes or base interfaces, and that matches the signature of the given method reference.
+    /// If no such method can be found, Dummy.MethodDefinition is returned.
+    /// </summary>
+    /// <param name="methodReference">A method reference to resolve.</param>
+    public static IMethodDefinition ResolveMethod(IMethodReference methodReference) {
+      return ResolveMethod(methodReference.ContainingType.ResolvedType, methodReference);
+    }
+
+    /// <summary>
+    /// Returns a method definition that is defined by the given type definition
+    /// or one of its base classes or base interfaces, and that matches the signature of the given method reference.
+    /// If no such method can be found, Dummy.MethodDefinition is returned.
+    /// </summary>
+    /// <param name="declaringType">The type that defines or inherits the method to be returned.</param>
+    /// <param name="methodReference">A method reference whose name and signature matches that of the desired result.</param>
+    private static IMethodDefinition ResolveMethod(ITypeDefinition declaringType, IMethodReference methodReference) {
+      Contract.Requires(declaringType != null);
+      Contract.Requires(methodReference != null);
+      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+
+      IMethodDefinition result = TypeHelper.GetMethod(declaringType.GetMembersNamed(methodReference.Name, false), methodReference, resolveTypes: true);
+      if (result is Dummy) {
+        foreach (ITypeDefinitionMember member in declaringType.PrivateHelperMembers) {
+          IMethodDefinition/*?*/ meth = member as IMethodDefinition;
+          if (meth == null) continue;
+          if (meth.Name.UniqueKey != methodReference.Name.UniqueKey) continue;
+          if (meth.GenericParameterCount != methodReference.GenericParameterCount) continue;
+          if (meth.ParameterCount != methodReference.ParameterCount) continue;
+          if (meth.IsGeneric) {
+            if (MemberHelper.GenericMethodSignaturesAreEqual(meth, methodReference, resolveTypes: true)) return meth;
+          } else {
+            if (MemberHelper.SignaturesAreEqual(meth, methodReference, resolveTypes: true)) return meth;
+          }
+        }
+        //perhaps this is an inherited method?
+        foreach (var baseTypeRef in declaringType.BaseClasses) {
+          var meth = MemberHelper.ResolveMethod(baseTypeRef.ResolvedType, methodReference);
+          if (!(meth is Dummy)) return meth;
+        }
+        if (declaringType.IsInterface) {
+          foreach (ITypeReference baseInterfaceRef in declaringType.Interfaces) {
+            result = MemberHelper.ResolveMethod(baseInterfaceRef.ResolvedType, methodReference);
+            if (!(result is Dummy)) return result;
+          }
+        }
+      }
+      return result;
+    }
+
+    /// <summary>
     /// Returns true if the two signatures match according to the criteria of the CLR loader.
     /// </summary>
     public static bool SignaturesAreEqual(ISignature signature1, ISignature signature2, bool resolveTypes = false) {
@@ -451,6 +568,171 @@ namespace Microsoft.Cci {
     public readonly static ParameterInformationComparer ResolvingParameterInformationComparer = new ParameterInformationComparer(true);
 
     /// <summary>
+    /// Returns a field definition, nested in the given type if possible, otherwise nested in the given unitNamespace if possible,
+    /// otherwise nested in the given unit if possible, otherwise nested in the given host if possible, otherwise it returns Dummy.FieldDefinition.
+    /// </summary>
+    public static IFieldDefinition ResolveField(IFieldReference fieldReference, IMetadataHost host, IUnit unit = null, IUnitNamespace unitNamespace = null, ITypeDefinition type = null) {
+      Contract.Requires(fieldReference != null);
+      Contract.Requires(host != null);
+      Contract.Requires(unit != null || unitNamespace == null);
+      Contract.Requires(unitNamespace != null || type == null);
+      Contract.Ensures(Contract.Result<IFieldDefinition>() != null);
+
+      if (type != null) {
+        var resolvedField = MemberHelper.ResolveField(fieldReference, type, host, unit, unitNamespace);
+        if (resolvedField != null) return resolvedField;
+      }
+      var resolvedContainingType = TypeHelper.Resolve(fieldReference.ContainingType, host, unit, unitNamespace);
+      if (!(resolvedContainingType is Dummy)) {
+        var resolvedField = MemberHelper.ResolveField(fieldReference, resolvedContainingType, host, unit, unitNamespace);
+        if (resolvedField != null) return resolvedField;
+      }
+      return Dummy.FieldDefinition;
+    }
+
+    private static IFieldDefinition/*?*/ ResolveField(IFieldReference fieldReference, ITypeDefinition type, IMetadataHost host, IUnit unit = null, IUnitNamespace unitNamespace = null) {
+      Contract.Requires(fieldReference != null);
+      Contract.Requires(type != null);
+      Contract.Requires(host != null);
+      Contract.Requires(unit != null || unitNamespace == null);
+
+      var fieldTypeDef = TypeHelper.Resolve(fieldReference.Type, host, unit, unitNamespace);
+      if (fieldTypeDef is Dummy) return null;
+
+      foreach (var typeMember in type.GetMembersNamed(fieldReference.Name, ignoreCase: false)) {
+        IFieldDefinition/*?*/ field = typeMember as IFieldDefinition;
+        if (field == null) continue;
+        var fTypeDef = TypeHelper.Resolve(field.Type, host, unit, unitNamespace);
+        if (fTypeDef != fieldTypeDef) continue;
+        //TODO: check that custom modifiers are the same
+        return field;
+      }
+      foreach (ITypeDefinitionMember member in type.PrivateHelperMembers) {
+        IFieldDefinition/*?*/ field = member as IFieldDefinition;
+        if (field == null) continue;
+        if (field.Name.UniqueKey != fieldReference.Name.UniqueKey) continue;
+        var fTypeDef = TypeHelper.Resolve(field.Type, host, unit, unitNamespace);
+        if (fTypeDef != fieldTypeDef) continue;
+        //TODO: check that custom modifiers are the same
+        return field;
+      }
+      return Dummy.FieldDefinition;
+    }
+
+    /// <summary>
+    /// Returns a method definition, nested in the given type if possible, otherwise nested in the given unitNamespace if possible,
+    /// otherwise nested in the given unit if possible, otherwise nested in the given host if possible, otherwise it returns Dummy.MethodDefinition.
+    /// </summary>
+    public static IMethodDefinition ResolveMethod(IMethodReference methodReference, IMetadataHost host, IUnit unit = null, IUnitNamespace unitNamespace = null, ITypeDefinition type = null) {
+      Contract.Requires(methodReference != null);
+      Contract.Requires(host != null);
+      Contract.Requires(unit != null || unitNamespace == null);
+      Contract.Requires(unitNamespace != null || type == null);
+      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+
+      var genericMethodInstanceReference = methodReference as IGenericMethodInstanceReference;
+      if (genericMethodInstanceReference != null) {
+        var genericMethDef = MemberHelper.ResolveMethod(genericMethodInstanceReference.GenericMethod, host, unit, unitNamespace, type);
+        if (genericMethDef is Dummy) return Dummy.MethodDefinition;
+        var genericArgs = new ITypeReference[genericMethodInstanceReference.GenericParameterCount];
+        int i = 0;
+        foreach (var genArgRef in genericMethodInstanceReference.GenericArguments) {
+          if (i >= genericArgs.Length) return Dummy.MethodDefinition;
+          genericArgs[i] = TypeHelper.Resolve(genArgRef, host, unit, unitNamespace, type);
+          if (genericArgs[i] is Dummy) return Dummy.MethodDefinition;
+          i++;
+        }
+        if (i < genericArgs.Length) return Dummy.MethodDefinition;
+        return new GenericMethodInstance(genericMethDef, IteratorHelper.GetReadonly(genericArgs), host.InternFactory);
+      }
+      if (type != null) {
+        var resolvedMethod = MemberHelper.ResolveMethod(methodReference, type, host, unit, unitNamespace);
+        if (resolvedMethod != null) return resolvedMethod;
+      }
+      var resolvedContainingType = TypeHelper.Resolve(methodReference.ContainingType, host, unit, unitNamespace);
+      if (!(resolvedContainingType is Dummy)) {
+        var resolvedMethod = MemberHelper.ResolveMethod(methodReference, resolvedContainingType, host, unit, unitNamespace);
+        if (resolvedMethod != null) return resolvedMethod;
+      }
+      return Dummy.MethodDefinition;
+    }
+
+    private static IMethodDefinition/*?*/ ResolveMethod(IMethodReference methodReference, ITypeDefinition type, IMetadataHost host, IUnit unit = null, IUnitNamespace unitNamespace = null) {
+      Contract.Requires(methodReference != null);
+      Contract.Requires(type != null);
+      Contract.Requires(host != null);
+      Contract.Requires(unit != null || unitNamespace == null);
+
+      foreach (var typeMember in type.GetMembersNamed(methodReference.Name, ignoreCase: false)) {
+        IMethodDefinition/*?*/ meth = typeMember as IMethodDefinition;
+        if (meth == null) continue;
+        if (meth.GenericParameterCount != methodReference.GenericParameterCount) continue;
+        if (meth.ParameterCount != methodReference.ParameterCount) continue;
+        if (meth.IsGeneric) {
+          if (MemberHelper.GenericMethodSignaturesAreEqual(meth, methodReference, resolveTypes: true)) return meth;
+        } else {
+          if (MemberHelper.SignaturesAreEqual(meth, methodReference, host, unit, unitNamespace)) return meth;
+        }
+      }
+      foreach (ITypeDefinitionMember member in type.PrivateHelperMembers) {
+        IMethodDefinition/*?*/ meth = member as IMethodDefinition;
+        if (meth == null) continue;
+        if (meth.Name.UniqueKey != methodReference.Name.UniqueKey) continue;
+        if (meth.GenericParameterCount != methodReference.GenericParameterCount) continue;
+        if (meth.ParameterCount != methodReference.ParameterCount) continue;
+        if (meth.IsGeneric) {
+          if (MemberHelper.SignaturesAreEqual(meth, methodReference, host, unit, unitNamespace, meth)) return meth;
+        } else {
+          if (MemberHelper.SignaturesAreEqual(meth, methodReference, host, unit, unitNamespace)) return meth;
+        }
+      }
+      //perhaps this is an inherited method?
+      foreach (var baseTypeRef in type.BaseClasses) {
+        var baseTypeDef = TypeHelper.Resolve(baseTypeRef, host, unit, unitNamespace);
+        if (baseTypeDef is Dummy) continue;
+        var meth = MemberHelper.ResolveMethod(methodReference, baseTypeDef, host, unit, unitNamespace);
+        if (!(meth is Dummy)) return meth;
+      }
+      if (type.IsInterface) {
+        foreach (ITypeReference baseInterfaceRef in type.Interfaces) {
+          var baseInterfaceDef = TypeHelper.Resolve(baseInterfaceRef, host, unit, unitNamespace);
+          if (baseInterfaceDef is Dummy) continue;
+          var result = MemberHelper.ResolveMethod(methodReference, baseInterfaceDef, host, unit, unitNamespace);
+          if (!(result is Dummy)) return result;
+        }
+      }
+      return null;
+    }
+
+    private static bool SignaturesAreEqual(ISignature signature1, ISignature signature2, IMetadataHost host, IUnit unit = null, IUnitNamespace unitNamespace = null, IMethodDefinition method = null) {
+      Contract.Requires(signature1 != null);
+      Contract.Requires(signature2 != null);
+
+      if (signature1.CallingConvention != signature2.CallingConvention) return false;
+      if (signature1.ReturnValueIsByRef != signature2.ReturnValueIsByRef) return false;
+      if (signature1.ReturnValueIsModified != signature2.ReturnValueIsModified) return false;
+      var resolvedType1 = TypeHelper.Resolve(signature1.Type, host, unit, unitNamespace, null, method);
+      var resolvedType2 = TypeHelper.Resolve(signature2.Type, host, unit, unitNamespace, null, method);
+      if (resolvedType1 != resolvedType2 || resolvedType1 is Dummy) return false;
+
+      var enum1 = signature1.Parameters.GetEnumerator();
+      var enum2 = signature2.Parameters.GetEnumerator();
+      while (enum1.MoveNext()) {
+        if (!enum2.MoveNext()) return false;
+        var par1 = enum1.Current;
+        var par2 = enum2.Current;
+        if (par1.Index != par2.Index) return false;
+        if (par1.IsByReference != par2.IsByReference) return false;
+        if (par1.IsModified != par2.IsModified) return false;
+        //TODO: compare modifiers
+        var type1 = TypeHelper.Resolve(par1.Type, host, unit, unitNamespace, null, method);
+        var type2 = TypeHelper.Resolve(par2.Type, host, unit, unitNamespace, null, method);
+        if (type1 != type2 || type1 is Dummy) return false;
+      }
+      return !enum2.MoveNext();
+    }
+
+    /// <summary>
     /// If the given event definition has been specialized, return its unspecialized version. Otherwise just return the given definition.
     /// </summary>
     public static IEventDefinition Unspecialize(IEventDefinition potentiallySpecializedEventDefinition) {
@@ -484,6 +766,8 @@ namespace Microsoft.Cci {
     public static IMethodReference UninstantiateAndUnspecialize(IMethodReference potentiallySpecializedMethodReference) {
       Contract.Requires(potentiallySpecializedMethodReference != null);
       Contract.Ensures(Contract.Result<IMethodReference>() != null);
+      Contract.Ensures(!(Contract.Result<IMethodReference>() is IGenericMethodInstanceReference));
+      Contract.Ensures(!(Contract.Result<IMethodReference>() is ISpecializedMethodReference));
 
       var genericMethodInstanceReference = potentiallySpecializedMethodReference as IGenericMethodInstanceReference;
       if (genericMethodInstanceReference != null)
@@ -501,6 +785,10 @@ namespace Microsoft.Cci {
     public static IMethodDefinition UninstantiateAndUnspecialize(IMethodDefinition potentiallySpecializedMethod) {
       Contract.Requires(potentiallySpecializedMethod != null);
       Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+      Contract.Ensures(!(Contract.Result<IMethodDefinition>() is IGenericMethodInstanceReference));
+      Contract.Ensures(!(Contract.Result<IMethodDefinition>() is ISpecializedMethodReference));
+      Contract.Ensures(!(Contract.Result<IMethodDefinition>() is IGenericMethodInstance));
+      Contract.Ensures(!(Contract.Result<IMethodDefinition>() is ISpecializedMethodDefinition));
 
       var genericMethodInstance = potentiallySpecializedMethod as IGenericMethodInstance;
       if (genericMethodInstance != null)
@@ -721,34 +1009,11 @@ namespace Microsoft.Cci {
     public IMethodDefinition ResolvedMethod {
       get {
         if (this.resolvedMethod == null)
-          this.resolvedMethod = this.Resolve(this.ContainingType.ResolvedType);
+          this.resolvedMethod = MemberHelper.ResolveMethod(this);
         return this.resolvedMethod;
       }
     }
     IMethodDefinition/*?*/ resolvedMethod;
-
-    /// <summary>
-    /// Searches the given type, as well as its base classes or base interfaces (if it is an interface), for a method
-    /// that matches this method reference and returns the method. Returns Dummy.MethodDefinition is no matching method can be found.
-    /// </summary>
-    private IMethodDefinition Resolve(ITypeDefinition typeToSearch) {
-      Contract.Requires(typeToSearch != null);
-      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
-
-      IMethodDefinition result = TypeHelper.GetMethod(typeToSearch, this, true);
-      if (result != null) return result;
-      foreach (ITypeReference baseClass in typeToSearch.BaseClasses) {
-        result = TypeHelper.GetMethod(baseClass.ResolvedType, this, true);
-        if (!(result is Dummy)) return result;
-      }
-      if (typeToSearch.IsInterface) {
-        foreach (ITypeReference baseInterface in typeToSearch.Interfaces) {
-          result = TypeHelper.GetMethod(baseInterface.ResolvedType, this, true);
-          if (!(result is Dummy)) return result;
-        }
-      }
-      return Dummy.MethodDefinition;
-    }
 
     /// <summary>
     ///  Returns a C#-like string that corresponds to the signature of the referenced method.
@@ -1119,8 +1384,9 @@ namespace Microsoft.Cci {
       Contract.Ensures(Contract.Result<string>() != null);
 
       StringBuilder sb = new StringBuilder();
+      this.AppendReturnTypeSignature(property, formattingOptions, sb);
       this.AppendPropertyName(property, formattingOptions, sb);
-      this.AppendPropertyParameters(property.Parameters, formattingOptions, sb);
+      this.AppendPropertyParameters(property, formattingOptions, sb);
       return sb.ToString();
     }
 
@@ -1334,14 +1600,19 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Appends a formatted string of parameters. Enclosed in square brackets and comma-delimited.
     /// </summary>
-    protected virtual void AppendPropertyParameters(IEnumerable<IParameterDefinition> parameters, NameFormattingOptions formattingOptions, StringBuilder sb) {
-      Contract.Requires(parameters != null);
-      Contract.Requires(Contract.ForAll(parameters, x => x != null));
+    protected virtual void AppendPropertyParameters(IPropertyDefinition property, NameFormattingOptions formattingOptions, StringBuilder sb) {
+      Contract.Requires(property != null);
       Contract.Requires(sb != null);
 
+      // [MaF: property parameters are sort of dummies as they contain only the type, not the name. In order to properly format signatures
+      //       we have to grab the getter or setter parameters instead.]
       if ((formattingOptions & NameFormattingOptions.Signature) == 0) return;
+      var parameters = property.Parameters;
       bool isNotEmpty = IteratorHelper.EnumerableIsNotEmpty(parameters);
       if (isNotEmpty) sb.Append((formattingOptions & NameFormattingOptions.FormattingForDocumentationId) != 0 ? '(' : '[');
+
+      if (property.Getter != null) { parameters = property.Getter.ResolvedMethod.Parameters; }
+      else if (property.Setter != null) { parameters = property.Setter.ResolvedMethod.Parameters.Take(parameters.Count()); }
       bool first = true;
       foreach (IParameterTypeInformation param in parameters) {
         if (first) first = false; else sb.Append(',');

@@ -1,0 +1,218 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Microsoft.Cci.ErrorEventArgs">
+    <Position X="0.75" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <AssociationLine Name="Errors" Type="Microsoft.Cci.IErrorMessage">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.798" Y="0.07" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAQAAAAMAAAACAgAAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Location" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="Errors" />
+    </ShowAsCollectionAssociation>
+  </Class>
+  <Class Name="Microsoft.Cci.GlobalLock" Collapsed="true">
+    <Position X="0.5" Y="22.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="Microsoft.Cci.IErrorMessage">
+    <Position X="3.75" Y="0.5" Width="1.75" />
+    <AssociationLine Name="Location" Type="Microsoft.Cci.ILocation">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.141" Y="0.539" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="RelatedLocations" Type="Microsoft.Cci.ILocation">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-1.296" Y="0.591" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAIAAAAAAAIgAAAAAiAAAEAAAAAAIAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Location" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="RelatedLocations" />
+    </ShowAsCollectionAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IDefinition" HideInheritanceLine="true">
+    <Position X="7.5" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.ILocation">
+    <Position X="3.75" Y="3" Width="1.5" />
+    <AssociationLine Name="Document" Type="Microsoft.Cci.IDocument">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="-0.909" Y="0.641" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Document" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IDocument">
+    <Position X="3.75" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAIAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IBinaryDocumentMemoryBlock">
+    <Position X="0.5" Y="6.75" Width="2.25" />
+    <AssociationLine Name="BinaryDocument" Type="Microsoft.Cci.IBinaryDocument" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="1.625" Y="7.895" />
+        <Point X="1.625" Y="8.27" />
+        <Point X="3.75" Y="8.27" />
+        <Point X="3.75" Y="7.851" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="0.862" Y="0.141" Height="0.162" Width="1.212" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAAAAAAAAAAAAAAABAAIAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="BinaryDocument" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IContainer&lt;MemberType&gt;">
+    <Position X="4.25" Y="9.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IContainerMember&lt;ContainerType&gt;">
+    <Position X="7.25" Y="9.25" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAQAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IReference">
+    <Position X="7.5" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAAAAAAAAAAAIAAAAQAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IScope&lt;MemberType&gt;">
+    <Position X="4.25" Y="11" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAACAAAAAEAAAAAAAAAAAAAAAAgAAAAEAAAQAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IScopeMember&lt;ScopeType&gt;">
+    <Position X="7.25" Y="11" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IInternFactory">
+    <Position X="10.5" Y="5.75" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>ABAAEAAAAAABIIAAAAAgAAEAAAIQAABAAQgAAEIAAgA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IMetadataVisitor">
+    <Position X="0.5" Y="9.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IBinaryDocument">
+    <Position X="3.5" Y="6.75" Width="2.25" />
+    <InheritanceLine Type="Microsoft.Cci.IDocument" FixedToPoint="true">
+      <Path>
+        <Point X="4.5" Y="5.895" />
+        <Point X="4.5" Y="6.75" />
+      </Path>
+    </InheritanceLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IBinaryLocation">
+    <Position X="0.75" Y="4.5" Width="1.5" />
+    <InheritanceLine Type="Microsoft.Cci.ILocation" FixedFromPoint="true">
+      <Path>
+        <Point X="4.125" Y="3.788" />
+        <Point X="4.125" Y="4.125" />
+        <Point X="1.5" Y="4.125" />
+        <Point X="1.5" Y="4.5" />
+      </Path>
+    </InheritanceLine>
+    <AssociationLine Name="BinaryDocument" Type="Microsoft.Cci.IBinaryDocument" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="2.25" Y="4.938" />
+        <Point X="3.125" Y="4.938" />
+        <Point X="3.125" Y="6.812" />
+        <Point X="3.5" Y="6.812" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.1" Y="1.987" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAgAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="BinaryDocument" />
+    </ShowAsAssociation>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IILLocation">
+    <Position X="6" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAE=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IMetadataHost">
+    <Position X="10.5" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>IAJABAAIAAEBBQAAEAAAAEABEAAAAAAEIIRAAAEAAAA=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Microsoft.Cci.IMetadataObjectWithToken">
+    <Position X="7" Y="0.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=</HashCode>
+      <FileName>Core.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>
