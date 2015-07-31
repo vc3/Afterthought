@@ -30,14 +30,6 @@ namespace Microsoft.Cci
       this.requiredOptions = GatherRequiredOptions();
     }
 
-    [ContractInvariantMethod]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic", Justification = "Required for code contracts.")]
-    private void ObjectInvariant()
-    {
-      Contract.Invariant(this.generalArguments != null);
-      Contract.Invariant(this.errorMessages != null);
-    }
-
     /// <summary>
     /// The number of errors discovered during command-line option parsing.
     /// </summary>
@@ -82,14 +74,7 @@ namespace Microsoft.Cci
     /// <summary>
     /// The list of errors or other messages produced during parsing
     /// </summary>
-    protected IEnumerable<string> Messages
-    {
-      get
-      {
-        Contract.Ensures(Contract.Result<IEnumerable<string>>() != null);
-        return this.errorMessages;
-      }
-    }
+    protected IEnumerable<string> Messages { get { return this.errorMessages; } }
 
     /// <summary>
     /// Put this on fields if you want a more verbose help description
@@ -158,15 +143,7 @@ namespace Microsoft.Cci
     /// <summary>
     /// The non-option arguments provided on the command line.
     /// </summary>
-    public List<string> GeneralArguments
-    {
-      get
-      {
-        Contract.Ensures(Contract.Result<List<string>>() != null);
-
-        return this.generalArguments;
-      }
-    }
+    public List<string> GeneralArguments { get { return this.generalArguments; } }
 
     #region Parsing and Reflection
 
@@ -455,24 +432,14 @@ namespace Microsoft.Cci
       return success;
     }
 
-    /// <summary>
-    /// A delegate that represents the various TryParse methods from int, bool, etc.
-    /// </summary>
-    public delegate bool TryParseConverter<in TInput, TOutput>(TInput input, out TOutput output);
-
-    private bool TryParseValue<T>(TryParseConverter<string, T> tryParser, string argument, ref T result) {
-      return (argument != null) ? tryParser(argument, out result) : false;
-    }
-
     private object ParseValue(Type type, string argument, string option)
     {
       object result = null;
       if (type == typeof(bool))
       {
-        bool boolResult = false;
         if (argument != null)
         {
-          if (!TryParseValue<bool>(Boolean.TryParse, argument, ref boolResult))
+          if (!ParseValue<bool>(Boolean.Parse, argument, ref result))
           {
             // Allow "+/-" to turn on/off boolean options
             if (argument.Equals("-"))
@@ -488,10 +455,6 @@ namespace Microsoft.Cci
               AddError("option -{0} requires a bool argument", option);
             }
           }
-          else
-          {
-            result = boolResult;
-          }
         }
         else
         {
@@ -500,21 +463,16 @@ namespace Microsoft.Cci
       }
       else if (type == typeof(string))
       {
-        if (!ParseValue<string>(s => s, argument, ref result))
+        if (!ParseValue<string>(Identity, argument, ref result))
         {
           AddError("option -{0} requires a string argument", option);
         }
       }
       else if (type == typeof(int))
       {
-        int intResult = 0;
-        if (!TryParseValue<int>(Int32.TryParse, argument, ref intResult))
+        if (!ParseValue<int>(Int32.Parse, argument, ref result))
         {
           AddError("option -{0} requires an int argument", option);
-        }
-        else
-        {
-          result = intResult;
         }
       }
       else if (type.IsEnum)
@@ -738,6 +696,8 @@ namespace Microsoft.Cci
 
       return res;
     }
+
+    string Identity(string s) { return s; }
 
     Converter<string, object> ParseEnum(Type enumType)
     {

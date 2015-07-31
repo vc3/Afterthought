@@ -914,7 +914,7 @@ namespace Microsoft.Cci.MetadataReader {
 
     internal IMethodReference GetEntryPointMethod() {
       //  TODO: Do we ever want to take care of Native methods?
-      if ((this.PEFileReader.COR20Header.COR20Flags & COR20Flags.Prefers32bits) != 0)
+      if ((this.PEFileReader.COR20Header.COR20Flags & COR20Flags.NativeEntryPoint) != 0)
         return Dummy.MethodReference;
       uint tokenType = this.PEFileReader.COR20Header.EntryPointTokenOrRVA & TokenTypeIds.TokenTypeMask;
       if (tokenType == TokenTypeIds.File) {
@@ -1122,14 +1122,24 @@ namespace Microsoft.Cci.MetadataReader {
       return type;
     }
 
-    ExportedTypeNamespaceAlias CreateExportedNamespaceType(uint exportedTypeRowId, ExportedTypeRow exportedTypeRow, Namespace moduleNamespace) {
-      ExportedTypeNamespaceAlias exportedType = new ExportedTypeNamespaceAlias(this, exportedTypeRowId, exportedTypeRow.Flags, moduleNamespace);
+    ExportedTypeNamespaceAlias CreateExportedNamespaceType(
+      uint exportedTypeRowId,
+      ExportedTypeRow exportedTypeRow,
+      Namespace moduleNamespace
+    ) {
+      IName typeName = this.GetNameFromOffset(exportedTypeRow.TypeName);
+      ExportedTypeNamespaceAlias exportedType = new ExportedTypeNamespaceAlias(this, typeName, exportedTypeRowId, exportedTypeRow.Flags, moduleNamespace);
       moduleNamespace.AddMember(exportedType);
       return exportedType;
     }
 
-    ExportedTypeNestedAlias CreateExportedNestedType(uint exportedTypeRowId, ExportedTypeRow exportedTypeRow, ExportedTypeAliasBase parentExportedType) {
-      ExportedTypeNestedAlias exportedType = new ExportedTypeNestedAlias(this, exportedTypeRowId, exportedTypeRow.Flags, parentExportedType);
+    ExportedTypeNestedAlias CreateExportedNestedType(
+      uint exportedTypeRowId,
+      ExportedTypeRow exportedTypeRow,
+      ExportedTypeAliasBase parentExportedType
+    ) {
+      IName typeName = this.GetNameFromOffset(exportedTypeRow.TypeName);
+      ExportedTypeNestedAlias exportedType = new ExportedTypeNestedAlias(this, typeName, exportedTypeRowId, exportedTypeRow.Flags, parentExportedType);
       parentExportedType.AddMember(exportedType);
       return exportedType;
     }
@@ -3569,62 +3579,37 @@ namespace Microsoft.Cci.MetadataReader {
         return null;
       }
       var genericArgumentCount = (ushort)this.SignatureMemoryReader.ReadCompressedUInt32();
-      var typeNamesAreMangled = SeeIfTypeNamesAreMangled(templateTypeReference);
-      if (typeNamesAreMangled)
-        return SpecializeAndOrInstantiate(typeSpecToken, templateTypeReference, ref genericArgumentCount, outer: true);
-      else {
-        //Add in the generic argument count
-        var nestedTemplate = templateTypeReference as INestedTypeReference;
-        if (nestedTemplate != null) {
-          templateTypeReference = new NestedTypeReference(this.PEFileToObjectModel.ModuleReader.metadataReaderHost, nestedTemplate.ContainingType, nestedTemplate.Name,
-            genericArgumentCount, nestedTemplate.IsEnum, nestedTemplate.IsValueType, mangleName: false);
-        } else {
-          var namespaceTemplate = templateTypeReference as INamespaceTypeReference;
-          if (namespaceTemplate != null) {
-            templateTypeReference = new NamespaceTypeReference(this.PEFileToObjectModel.ModuleReader.metadataReaderHost, namespaceTemplate.ContainingUnitNamespace, namespaceTemplate.Name,
-              genericArgumentCount, namespaceTemplate.IsEnum, namespaceTemplate.IsValueType, mangleName: false);
-          }
-        }
-        return this.Instantiate(typeSpecToken, templateTypeReference, genericArgumentCount);
-      }        
+      return Specialize(typeSpecToken, templateTypeReference, ref genericArgumentCount, outer: true);
     }
 
-    private static bool SeeIfTypeNamesAreMangled(INamedTypeReference/*?*/ templateTypeReference) {
-      if (templateTypeReference == null) return false;
-      if (templateTypeReference.MangleName) return true;
-      var nestedTypeReference = templateTypeReference as INestedTypeReference;
-      if (nestedTypeReference != null) return SeeIfTypeNamesAreMangled(nestedTypeReference.ContainingType as INamedTypeReference);
-      return false;
-    }
-
-    private ITypeReference SpecializeAndOrInstantiate(uint typeSpecToken, INamedTypeReference namedTypeReference, ref ushort genericArgumentCount, bool outer) {
+    private ITypeReference Specialize(uint typeSpecToken, INamedTypeReference namedTypeReference, ref ushort genericArgumentCount, bool outer) {
       if (genericArgumentCount == 0) return namedTypeReference;
       var nestedTypeReference = namedTypeReference as INestedTypeReference;
       if (nestedTypeReference != null) {
         Contract.Assume(!(nestedTypeReference is ISpecializedNestedTypeReference)); //the type reference comes from the metadata, which is always fully unspecialized
-        var containingType = this.SpecializeAndOrInstantiate(0, (INamedTypeReference)nestedTypeReference.ContainingType, ref genericArgumentCount, outer: false);
+        var containingType = this.Specialize(0, (INamedTypeReference)nestedTypeReference.ContainingType, ref genericArgumentCount, outer: false);
         if (containingType != nestedTypeReference.ContainingType)
           namedTypeReference = new SpecializedNestedTypeReference(nestedTypeReference, containingType, this.PEFileToObjectModel.InternFactory);
       }
-      if (genericArgumentCount <= 0) return namedTypeReference;
       var genericParametersCount = namedTypeReference.GenericParameterCount;
+      if (genericParametersCount == 0) {
+        if (genericArgumentCount == 0 || !outer) return namedTypeReference;
+        //If we get here we believed that namedTypeReference has no type parameters because it has no tick in its name.
+        //However, there actually are generic types without ticks, so we better now change our belief to match this signature.
+        //This does not work for nested generics, but that is just too bad.
+        genericParametersCount = genericArgumentCount;
+      }
       genericArgumentCount -= genericParametersCount;
-      if (genericArgumentCount < 0) { genericParametersCount += genericArgumentCount; };
-      if (genericParametersCount == 0) return namedTypeReference;
-      return this.Instantiate(typeSpecToken, namedTypeReference, genericParametersCount);
-    }
-
-    private ITypeReference Instantiate(uint typeSpecToken, INamedTypeReference templateTypeReference, ushort genericArgumentCount) {
-      //It would be very desirable to cache these objects by structure so that we can reuse them.
+      var genericArgumentArray = new ITypeReference[genericParametersCount];
+      //TODO: it would be very desirable to cache these objects by structure so that we can reuse them.
       //However, it is not safe at this point to use the intern table because we might still be reading the
       //signature of a generic method whose generic parameters feature in the arguments to the generic type.
       //We cannot compute the intern key of a generic method type parameter before we are able to compute the intern key of the generic method.
-      var genericArgumentArray = new ITypeReference[genericArgumentCount];
-      for (int i = 0; i < genericArgumentCount; ++i) genericArgumentArray[i] = this.GetTypeReference()??Dummy.TypeReference;
-      if (typeSpecToken != 0xFFFFFFFF)
-        return new GenericTypeInstanceReferenceWithToken(typeSpecToken, templateTypeReference, IteratorHelper.GetReadonly(genericArgumentArray), this.PEFileToObjectModel.InternFactory);
+      for (int i = 0; i < genericParametersCount; ++i) genericArgumentArray[i] = this.GetTypeReference()??Dummy.TypeReference;
+      if (outer && typeSpecToken != 0xFFFFFFFF)
+        return new GenericTypeInstanceReferenceWithToken(typeSpecToken, namedTypeReference, IteratorHelper.GetReadonly(genericArgumentArray), this.PEFileToObjectModel.InternFactory);
       else
-        return new GenericTypeInstanceReference(templateTypeReference, IteratorHelper.GetReadonly(genericArgumentArray), this.PEFileToObjectModel.InternFactory);
+        return new GenericTypeInstanceReference(namedTypeReference, IteratorHelper.GetReadonly(genericArgumentArray), this.PEFileToObjectModel.InternFactory);
     }
 
     protected ManagedPointerType/*?*/ GetModuleManagedPointerType(uint typeSpecToken) {

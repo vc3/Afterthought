@@ -38,7 +38,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// Provides an abstraction over the application hosting compilers based on this framework.
   /// </summary>
-  [ContractVerification(false)]
   public abstract class SourceEditHostEnvironment : MetadataReaderHost, ISourceEditHost {
 
     /// <summary>
@@ -67,16 +66,15 @@ namespace Microsoft.Cci {
     /// Whether the GAC (Global Assembly Cache) should be searched when resolving references.
     /// </param>
     protected SourceEditHostEnvironment(INameTable nameTable, IInternFactory factory, byte pointerSize, IEnumerable<string> searchPaths, bool searchInGAC)
-      : base(nameTable, factory, pointerSize, searchPaths, searchInGAC) {
-      Contract.Requires(pointerSize == 0 || pointerSize == 4 || pointerSize == 8);
+      : base(nameTable, factory, pointerSize, searchPaths, searchInGAC)
+      //^ requires pointerSize == 0 || pointerSize == 4 || pointerSize == 8;
+    {
     }
 
     /// <summary>
     /// Gets a unit set corresponding to the referenced unit set.
     /// </summary>
     public IUnitSet GetUnitSetFor(UnitSetIdentity referencedUnitSet) {
-      Contract.Requires(referencedUnitSet != null);
-
       IUnitSet/*?*/ result = null;
       WeakReference/*?*/ entry;
       lock (GlobalLock.LockingObject) {
@@ -86,7 +84,6 @@ namespace Microsoft.Cci {
       }
       List<IUnit> units = new List<IUnit>();
       foreach (UnitIdentity unitId in referencedUnitSet.Units) {
-        Contract.Assume(unitId != null);
         IUnit unit = this.LoadUnit(unitId);
         if (unit is Dummy) return Dummy.UnitSet;
         units.Add(unit);
@@ -110,9 +107,6 @@ namespace Microsoft.Cci {
     /// each corresponding element is the object.
     /// </summary>
     private static bool UnitsAreTheSameObjects(List<IUnit> unitList, IEnumerable<IUnit> unitEnumeration) {
-      Contract.Requires(unitList != null);
-      Contract.Requires(unitEnumeration != null);
-
       var enumerator = unitEnumeration.GetEnumerator();
       for (int i = 0, n = unitList.Count; i < n; i++)
         if (!enumerator.MoveNext() || !object.ReferenceEquals(unitList[i], enumerator.Current)) return false;
@@ -149,9 +143,9 @@ namespace Microsoft.Cci {
     /// Raises the Edits event with the given edit event arguments. 
     /// </summary>
     /// <param name="state">The edit event arguments.</param>
-    private void ReportEditsUsingDifferentThread(object/*?*/ state) {
-      Contract.Requires(state is EditEventArgs);
-
+    private void ReportEditsUsingDifferentThread(object/*?*/ state)
+      //^ requires state is EditEventArgs;
+    {
       EditEventArgs editEventArguments = (EditEventArgs)state;
       if (this.Edits != null)
         this.Edits(this, editEventArguments);
@@ -170,9 +164,9 @@ namespace Microsoft.Cci {
     /// Raises the SymbolTableEdits event with the given edit event arguments.
     /// </summary>
     /// <param name="state">The edit event arguments.</param>
-    private void ReportSymbolTableEditsUsingDifferentThread(object/*?*/ state) {
-      Contract.Requires(state is EditEventArgs);
-
+    private void ReportSymbolTableEditsUsingDifferentThread(object/*?*/ state)
+      //^ requires state is EditEventArgs;
+    {
       EditEventArgs editEventArguments = (EditEventArgs)state;
       if (this.SymbolTableEdits != null)
         this.SymbolTableEdits(this, editEventArguments);
@@ -189,24 +183,16 @@ namespace Microsoft.Cci {
   /// <summary>
   /// An object that describes an edit to a source file.
   /// </summary>
-  [ContractVerification(false)]
   public abstract class SourceDocumentEdit : ISourceDocumentEdit {
 
     /// <summary>
     /// Allocates an object that describes an edit to a source file.
     /// </summary>
-    protected SourceDocumentEdit(ISourceLocation sourceLocationBeforeEdit, ISourceDocument sourceDocumentAfterEdit) {
-      Contract.Requires(sourceLocationBeforeEdit != null);
-      Contract.Requires(sourceDocumentAfterEdit != null);
-      Contract.Requires(sourceDocumentAfterEdit.IsUpdatedVersionOf(sourceLocationBeforeEdit.SourceDocument));
-
+    protected SourceDocumentEdit(ISourceLocation sourceLocationBeforeEdit, ISourceDocument sourceDocumentAfterEdit)
+      //^ requires sourceDocumentAfterEdit.IsUpdatedVersionOf(sourceLocationBeforeEdit.SourceDocument);
+    {
       this.sourceLocationBeforeEdit = sourceLocationBeforeEdit;
       this.sourceDocumentAfterEdit = sourceDocumentAfterEdit;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.sourceDocumentAfterEdit.IsUpdatedVersionOf(this.sourceLocationBeforeEdit.SourceDocument));
     }
 
     /// <summary>
@@ -228,6 +214,7 @@ namespace Microsoft.Cci {
       }
     }
     readonly ISourceDocument sourceDocumentAfterEdit;
+    //^ invariant sourceDocumentAfterEdit.IsUpdatedVersionOf(sourceLocationBeforeEdit.SourceDocument);
 
   }
 
@@ -245,10 +232,6 @@ namespace Microsoft.Cci {
     /// <param name="messageKey">A string that is used as the key when looking for the localized error message using a resource manager.</param>
     /// <param name="messageArguments">Zero or more strings that are to be subsituted for "{i}" sequences in the message string return by GetMessage.</param>
     protected ErrorMessage(ISourceLocation sourceLocation, long errorCode, string messageKey, params string[] messageArguments) {
-      Contract.Requires(sourceLocation != null);
-      Contract.Requires(messageKey != null);
-      Contract.Requires(messageArguments != null);
-
       this.sourceLocation = sourceLocation;
       this.errorCode = errorCode;
       this.messageKey = messageKey;
@@ -265,24 +248,11 @@ namespace Microsoft.Cci {
     /// <param name="relatedLocations">Zero ore more locations that are related to this error.</param>
     /// <param name="messageArguments">Zero or more strings that are to be subsituted for "{i}" sequences in the message string return by GetMessage.</param>
     protected ErrorMessage(ISourceLocation sourceLocation, long errorCode, string messageKey, IEnumerable<ILocation> relatedLocations, params string[] messageArguments) {
-      Contract.Requires(sourceLocation != null);
-      Contract.Requires(messageKey != null);
-      Contract.Requires(relatedLocations != null);
-      Contract.Requires(messageArguments != null);
-
       this.sourceLocation = sourceLocation;
       this.errorCode = errorCode;
       this.messageKey = messageKey;
       this.relatedLocations = relatedLocations;
       this.messageArguments = messageArguments;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.sourceLocation != null);
-      Contract.Invariant(this.relatedLocations != null);
-      Contract.Invariant(this.messageKey != null);
-      Contract.Invariant(this.messageArguments != null);
     }
 
     /// <summary>
@@ -319,8 +289,6 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="rm">A resource manager corresponding to the current locale.</param>
     protected string GetMessage(System.Resources.ResourceManager rm) {
-      Contract.Requires(rm != null);
-
       string/*?*/ localizedString = null;
       try {
         localizedString = rm.GetString(this.messageKey);
@@ -373,8 +341,6 @@ namespace Microsoft.Cci {
     /// Zero or more strings that are to be subsituted for "{i}" sequences in the message string return by GetMessage.
     /// </summary>
     protected string[] MessageArguments() {
-      Contract.Ensures(Contract.Result<string[]>() != null);
-
       return this.messageArguments;
     }
     readonly string[] messageArguments;
@@ -383,11 +349,7 @@ namespace Microsoft.Cci {
     /// A string that is used as the key when looking for the localized error message using a resource manager.
     /// </summary>
     protected string MessageKey {
-      get {
-        Contract.Ensures(Contract.Result<string>() != null);
-
-        return this.messageKey; 
-      }
+      get { return this.messageKey; }
     }
     readonly string messageKey;
 
@@ -421,7 +383,6 @@ namespace Microsoft.Cci {
   /// An object that represents a source document that is the composition of an ordered enumeration of fragments from other source document.
   /// The document is parsed according to the rules of a particular language, such as C#, to produce an object model that can be obtained via the CompilationPart property.
   /// </summary>
-  [ContractVerification(false)]
   public abstract class CompositeSourceDocument : SourceDocument, IDerivedSourceDocument {
 
     /// <summary>
@@ -445,13 +406,6 @@ namespace Microsoft.Cci {
       : base(previousVersion, position, oldLength, newLength) {
     }
 
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(!this.enumeratorIsValid || this.fragmentEnumerator != null);
-      Contract.Invariant(currentFragmentOffset <= this.Length);
-      Contract.Invariant(!this.enumeratorIsValid || this.fragmentEnumerator != null);
-    }
-
     /// <summary>
     /// Copies no more than the specified number of characters to the destination character array, starting at the specified position in the source document.
     /// Returns the actual number of characters that were copied. This number will be greater than zero as long as position is less than this.Length.
@@ -472,7 +426,7 @@ namespace Microsoft.Cci {
         this.currentFragmentOffset = 0;
         this.enumeratorIsValid = this.fragmentEnumerator.MoveNext();
       }
-      Contract.Assert(this.fragmentEnumerator != null);
+      //^ assert this.fragmentEnumerator != null;
       while (this.enumeratorIsValid) {
         int fragmentLength = this.fragmentEnumerator.Current.Length;
         if (this.currentFragmentOffset + fragmentLength > position) break;
@@ -480,28 +434,29 @@ namespace Microsoft.Cci {
         this.enumeratorIsValid = this.fragmentEnumerator.MoveNext();
       }
       int charsCopied = 0;
-      Contract.Assume(0 <= position && position <= this.Length); //follows from the precondition
-      while (this.enumeratorIsValid && charsCopied < length) {
-        Contract.Assert(this.fragmentEnumerator != null);
-        Contract.Assert(this.currentFragmentOffset+this.fragmentEnumerator.Current.Length > position);
-        Contract.Assert(0 <= position && position <= this.Length);
-        Contract.Assert(0 <= charsCopied && charsCopied <= length);
-        Contract.Assert(position+charsCopied <= this.Length);
-
+      //^ assume 0 <= position && position <= this.Length; //follows from the precondition
+      while (this.enumeratorIsValid && charsCopied < length)
+      //^ invariant this.currentFragmentOffset+this.fragmentEnumerator.Current.Length > position;
+      //^ invariant 0 <= position && position <= this.Length;
+      //^ invariant 0 <= charsCopied && charsCopied <= length;
+      //^ invariant position+charsCopied <= this.Length;
+      {
         int fragmentLength = this.fragmentEnumerator.Current.Length;
         int fragmentStart = 0;
         if (position > this.currentFragmentOffset) fragmentStart = position - this.currentFragmentOffset;
-        Contract.Assume(fragmentStart <= this.Length); //position < this.Length as per the loop invariant
+        //^ assume fragmentStart <= this.Length; //position < this.Length as per the loop invariant
         int fragmentCharsToCopy = fragmentLength - fragmentStart;
         if (charsCopied + fragmentCharsToCopy > length) fragmentCharsToCopy = length - charsCopied;
-        //Contract.Assume(fragmentStart <= this.Length);
+        //^ assert fragmentStart <= this.Length;
+        //unsatisfied precondition: requires offset <= this.Length; (offset == fragmentStart)
+        //^ assume false;
         int fragCharsCopied = this.fragmentEnumerator.Current.CopyTo(fragmentStart, destination, destinationOffset, fragmentCharsToCopy);
         if (fragCharsCopied == 0) {
           this.enumeratorIsValid = false;
           break;
         }
         charsCopied += fragCharsCopied;
-        Contract.Assume(position + charsCopied <= this.Length);
+        //^ assume position + charsCopied <= this.Length;
         destinationOffset += fragmentCharsToCopy;
         if (fragmentStart + fragmentCharsToCopy >= fragmentLength) {
           this.currentFragmentOffset += fragmentLength;
@@ -509,7 +464,8 @@ namespace Microsoft.Cci {
         }
       }
       if (!this.enumeratorIsValid) this.length = this.currentFragmentOffset;
-      Contract.Assert(0 <= charsCopied && charsCopied <= length && position+charsCopied <= this.Length);
+      //^ assert 0 <= charsCopied && charsCopied <= length && position+charsCopied <= this.Length;
+      //^ assume false; //unsatisfied postcondition: ensures 0 <= result && result <= length && position+result <= this.Length;
       return charsCopied;
     }
 
@@ -553,10 +509,7 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Returns an enumeration of fragments from other documents. The source of the enumeration could be a computation, such as a pre-processor.
     /// </summary>
-    protected virtual IEnumerable<ISourceLocation> GetFragments() {
-      Contract.Ensures(Contract.Result<IEnumerable<ISourceLocation>>() != null);
-      throw new InvalidOperationException(); //This method would be abstract but for the contract.
-    }
+    protected abstract IEnumerable<ISourceLocation> GetFragments();
 
     /// <summary>
     /// Returns an enumeration of fragments from other documents that together make up the given source location in this document.
@@ -706,7 +659,7 @@ namespace Microsoft.Cci {
     /// on where it left off when this routine is called next. If the given position precedes the last given position, scanning restarts from the start.
     /// Optimal use of this method requires the client to sort calls in order of position.
     /// </summary>
-    public void ToLineColumn(int position, out int line, out int column)
+    public override void ToLineColumn(int position, out int line, out int column)
       //^^ requires position >= 0 && position <= Length;
       //^^ ensures line >= 1 && column >= 1;
     {
@@ -720,9 +673,8 @@ namespace Microsoft.Cci {
       }
       line = this.lineCounter;
       column = this.columnCounter;
-      Contract.Assert(this.fragmentEnumerator != null);
+      //^ assert this.fragmentEnumerator != null;
       while (this.enumeratorIsValid) {
-        Contract.Assume((this.lastPosition >= position - this.currentFragmentOffset || this.lastPosition >= this.fragmentEnumerator.Current.Source.Length) || 0 <= this.lastPosition);
         this.ToLineColumn(position - this.currentFragmentOffset, ref line, ref column, this.fragmentEnumerator.Current.Source);
         int fragmentLength = this.fragmentEnumerator.Current.Length;
         if (this.currentFragmentOffset + fragmentLength > position) break;
@@ -743,9 +695,6 @@ namespace Microsoft.Cci {
     /// <param name="column">The column counter to increment for every character scanned and to reset to 1 every time a new line sequence is encountered.</param>
     /// <param name="text">The text to scan.</param>
     private void ToLineColumn(int position, ref int line, ref int column, string text) {
-      Contract.Requires(text != null);
-      Contract.Requires(((this.lastPosition >= position || this.lastPosition >= text.Length) || 0 <= this.lastPosition));
-
       int i = this.lastPosition;
       int n = text.Length;
       while (i < position && i < n) {
@@ -797,7 +746,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A source location that falls inside a region of text that originally came from another source document.
   /// </summary>
-  [ContractVerification(false)]
   public class IncludedSourceLocation : IIncludedSourceLocation {
 
     /// <summary>
@@ -806,30 +754,20 @@ namespace Microsoft.Cci {
     /// <param name="document">A document with a region of text that orignally came from another source document.</param>
     /// <param name="startIndex">The character index of the first character of this location, when treating the source document as a single string.</param>
     /// <param name="length">The number of characters in this source location.</param>
-    internal IncludedSourceLocation(SourceDocumentWithInclusion document, int startIndex, int length) {
-      Contract.Requires(document != null);
-      Contract.Requires(startIndex >= 0 && (startIndex < document.Length || startIndex == 0));
-      Contract.Requires(length >= 0 && length <= document.Length);
-      Contract.Requires((startIndex + length) <= document.Length);
-
+    internal IncludedSourceLocation(SourceDocumentWithInclusion document, int startIndex, int length)
+      //^ requires startIndex >= 0 && (startIndex < document.Length || startIndex == 0);
+      //^ requires length >= 0 && length <= document.Length;
+      //^ requires (startIndex + length) <= document.Length;
+    {
       this.sourceDocument = document;
       this.startIndex = startIndex;
       this.length = length;
     }
 
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.sourceDocument != null);
-      Contract.Invariant(length >= 0);
-      Contract.Invariant(length <= this.SourceDocument.Length);
-      Contract.Invariant(0 <= this.StartIndex+length);
-      Contract.Invariant(this.StartIndex+length <= this.SourceDocument.Length);
-    }
-
     /// <summary>
     /// True if this source at the given location is completely contained by the source at this location.
     /// </summary>
-    [Pure]
+    //^ [Pure]
     public bool Contains(ISourceLocation location) {
       if (location.SourceDocument != this.SourceDocument) return false;
       int otherPosition = location.StartIndex;
@@ -844,7 +782,7 @@ namespace Microsoft.Cci {
     /// <param name="destination">The destination array. Must have at least destinationOffset+length elements.</param>
     /// <param name="destinationOffset">The starting index where the characters must be copied to in the destination array.</param>
     /// <param name="length">The maximum number of characters to copy. Cannot be more than this.Length-position.</param>
-    [Pure]
+    //^ [Pure]
     public int CopyTo(int offset, char[] destination, int destinationOffset, int length)
       //^^ requires 0 <= offset;
       //^^ requires 0 <= destinationOffset;
@@ -928,6 +866,10 @@ namespace Microsoft.Cci {
       get { return this.length; }
     }
     readonly int length;
+    //^ invariant length >= 0;
+    //^ invariant length <= this.SourceDocument.Length;
+    //^ invariant 0 <= this.StartIndex+length;
+    //^ invariant this.StartIndex+length <= this.SourceDocument.Length;
 
     /// <summary>
     /// The name of the document from which this text in this source location was originally obtained.
@@ -1055,7 +997,6 @@ namespace Microsoft.Cci {
   /// makes the wrapped source location appear as if it were a location in the document that was included.
   /// This is useful for error reporting. For editing, the wrapped location is better.
   /// </summary>
-  [ContractVerification(false)]
   public sealed class OriginalSourceLocation : IPrimarySourceLocation {
 
     /// <summary>
@@ -1156,7 +1097,6 @@ namespace Microsoft.Cci {
   /// An object that represents a source document that corresponds to a persistable artifact such as a file or an editor buffer.
   /// The document is parsed according to the rules of a particular language, such as C#, to produce an object model that can be obtained via the CompilationPart property.
   /// </summary>
-  [ContractVerification(false)]
   public abstract class PrimarySourceDocument : SourceDocument, IPrimarySourceDocument {
 
     /// <summary>
@@ -1166,20 +1106,13 @@ namespace Microsoft.Cci {
     /// <param name="name">The name of the document. Used to identify the document in user interaction.</param>
     /// <param name="location">The location where the document was found or where it will be stored.</param>
     /// <param name="streamReader">A StreamReader instance whose BaseStream produces the contents of the document.</param>
-    [ContractVerification(false)]
     protected PrimarySourceDocument(IName name, string location, StreamReader streamReader)
       : base(name) {
-      Contract.Requires(name != null);
-      Contract.Requires(location != null);
-      Contract.Requires(streamReader != null);
-
       this.location = location;
       this.GetOwnStreamReaderAndReadAhead(streamReader);
     }
 
     private void GetOwnStreamReaderAndReadAhead(StreamReader streamReader) {
-      Contract.Requires(streamReader != null);
-
       streamReader.BaseStream.Position = 0;
       StreamReader sr = new StreamReader(streamReader.BaseStream, streamReader.CurrentEncoding, false, 128);
       char[] buffer = new char[8192];
@@ -1199,13 +1132,8 @@ namespace Microsoft.Cci {
     /// <param name="name">The name of the document. Used to identify the document in user interaction.</param>
     /// <param name="location">The location where the document was found or where it will be stored.</param>
     /// <param name="text">The source text of the document.</param>
-    [ContractVerification(false)]
     protected PrimarySourceDocument(IName name, string location, string text)
       : base(name) {
-      Contract.Requires(name != null);
-      Contract.Requires(location != null);
-      Contract.Requires(text != null);
-
       this.location = location;
       this.text = text;
     }
@@ -1219,12 +1147,8 @@ namespace Microsoft.Cci {
     /// <param name="oldLength">The number of characters in the previous verion of the new document that will be changed in the new document.</param>
     /// <param name="newLength">The number of replacement characters in the new document. 
     /// (The length of the string that replaces the substring from position to position+length in the previous version of the new document.)</param>
-    [ContractVerification(false)]
     protected PrimarySourceDocument(string text, SourceDocument previousVersion, int position, int oldLength, int newLength)
       : base(previousVersion, position, oldLength, newLength) {
-      Contract.Requires(text != null);
-      Contract.Requires(previousVersion != null);
-
       this.location = previousVersion.Location;
       this.text = text;
     }
@@ -1232,27 +1156,14 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Allocates a copy of the given source document.
     /// </summary>
-    [ContractVerification(false)]
     protected PrimarySourceDocument(PrimarySourceDocument template)
       : base(template.Name) {
-      Contract.Requires(template != null);
-
       this.location = template.location;
       if (template.streamReader != null)
         this.GetOwnStreamReaderAndReadAhead(template.streamReader);
       else
         this.text = template.GetText();
     }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.streamReader == null || this.buffer != null);
-      Contract.Invariant(0 <= this.charsInBuffer);
-      //Contract.Invariant(this.buffer == null || this.charsInBuffer < this.buffer.Length);
-      Contract.Invariant(this.lastPositions != null);
-      //Contract.Invariant(this.lastPositions.Length > 0);
-    }
-
 
     /// <summary>
     /// Copies no more than the specified number of characters to the destination character array, starting at the specified position in the source document.
@@ -1362,6 +1273,7 @@ namespace Microsoft.Cci {
       return string.Empty;
     }
     /// <summary>Caches the entire text of the source document.</summary>
+    //^ [SpecPublic]
     string/*?*/ text;
 
     /// <summary>
@@ -1385,9 +1297,8 @@ namespace Microsoft.Cci {
       get
         //^^ ensures result >= 0;
         //^^ ensures result.Length == this.Length;
+        //^ ensures this.text != null ==> result == this.text.Length;
       {
-        Contract.Ensures(this.text == null || Contract.Result<int>() == this.text.Length);
-
         int result = 0;
         if (this.length == null) {
           if (this.text != null)
@@ -1447,9 +1358,7 @@ namespace Microsoft.Cci {
       //^ requires this.streamReader != null;
       //^ ensures this.streamReaderPosition-this.charsInBuffer <= position && position <= this.streamReaderPosition;
     {
-      Contract.Requires(this.streamReader != null);
-      Contract.Ensures(this.streamReaderPosition-this.charsInBuffer <= position && position <= this.streamReaderPosition);
-
+      //^ assume this.buffer != null; //follows from invariant
       if (position < this.streamReaderPosition - this.charsInBuffer) {
         this.streamReader.BaseStream.Position = 0;
         this.streamReader = new StreamReader(this.streamReader.BaseStream, this.streamReader.CurrentEncoding, false, 128);
@@ -1474,9 +1383,9 @@ namespace Microsoft.Cci {
     /// A source location corresponding to the entire document.
     /// </summary>
     public override SourceLocation SourceLocation {
-      get {
-        Contract.Ensures(Contract.Result<SourceLocation>() is PrimarySourceLocation);
-
+      get
+        //^ ensures result is PrimarySourceLocation;
+      {
         if (this.sourceLocation == null) {
           lock (GlobalLock.LockingObject) {
             if (this.sourceLocation == null)
@@ -1498,13 +1407,12 @@ namespace Microsoft.Cci {
     /// In such cases, a slower implementation based on streaming would be more appropriate. However, it is assumed that getting source context
     /// information from such really large files is an extremely rare event and that bad performance in such cases is better than degraded performance
     /// in the common case.</remarks>
-    public virtual void ToLineColumn(int position, out int line, out int column)
+    public override void ToLineColumn(int position, out int line, out int column)
       //^^ requires position >= 0 && position <= Length;
       //^^ ensures line >= 1 && column >= 1;
     {
       int n = this.Length;
-      int offset = position == n ? 1 : 0;
-      position -= offset;
+      if (position == n) position--;
       int best = FindBestStartPointForPosition(position);
       line = this.lineCounters[best];
       column = this.columnCounters[best];
@@ -1554,7 +1462,7 @@ namespace Microsoft.Cci {
         }
       }
       this.lineCounters[best] = line;
-      this.columnCounters[best] = column+offset;
+      this.columnCounters[best] = column;
       this.lastPositions[best] = position;
     }
 
@@ -1621,8 +1529,8 @@ namespace Microsoft.Cci {
       int best = 0;
       int bestDistance = int.MaxValue;
 
-      for (int i = 0; i < this.lastPositions.Length; i++) {
-        int distance = Math.Abs(this.lastPositions[i] - position);
+      for (int i = 0; i < lastPositions.Length; i++) {
+        int distance = Math.Abs(lastPositions[i] - position);
         if (distance < bestDistance) {
           bestDistance = distance;
           best = i;
@@ -1634,7 +1542,7 @@ namespace Microsoft.Cci {
 
 
     /// <summary>
-    /// From the set of stored states for position/(line,column) conversion, find the one that is closest to line.
+    /// From the set of stored states for position/(line,column) conversion, find the one that is closed to line
     /// </summary>
     private int FindBestStartPointForLine(int line) {
       int best = 0;
@@ -1656,21 +1564,21 @@ namespace Microsoft.Cci {
     /// For non-linear access to position information, keep multiple state sets to reduce
     /// jumping around in the file.
     /// </summary>
-    private readonly int[] lineCounters = { 1, 1 };
+    private int[] lineCounters = { 1, 1 };
 
     /// <summary>
     /// The column number computed during the last call to the routine. Initially set to 1.
     /// For non-linear access to position information, keep multiple state sets to reduce
     /// jumping around in the file.
     /// </summary>
-    private readonly int[] columnCounters = { 1, 1 };
+    private int[] columnCounters = { 1, 1 };
 
     /// <summary>
     /// The position supplied to the last call of this routine. Initially set to 0.
     /// For non-linear access to position information, keep multiple state sets to reduce
     /// jumping around in the file.
     /// </summary>
-    private readonly int[] lastPositions = new int[2];
+    private int[] lastPositions = new int[2];
 
     #region IPrimarySourceDocument Members
 
@@ -1686,7 +1594,6 @@ namespace Microsoft.Cci {
   /// An object that represents a source document.
   /// The document is parsed according to the rules of a particular language, such as C#, to produce an object model that can be obtained via the CompilationPart property.
   /// </summary>
-  [ContractVerification(false)]
   public abstract class SourceDocument : ISourceDocument {
 
     /// <summary>
@@ -1695,8 +1602,6 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="name">The name of the document. Used to identify the document in user interaction.</param>
     protected SourceDocument(IName name) {
-      Contract.Requires(name != null);
-
       this.name = name;
     }
 
@@ -1709,8 +1614,6 @@ namespace Microsoft.Cci {
     /// <param name="newLength">The number of replacement characters in the new document. 
     /// (The length of the string that replaces the substring from position to position+length in the previous version of the new document.)</param>
     protected SourceDocument(SourceDocument previousVersion, int position, int oldLength, int newLength) {
-      Contract.Requires(previousVersion != null);
-
       this.name = previousVersion.Name;
       WeakReference wr = new WeakReference(previousVersion);
       //^ assume wr.Target is SourceDocument;
@@ -1727,8 +1630,9 @@ namespace Microsoft.Cci {
     public virtual ISourceLocation GetCorrespondingSourceLocation(ISourceLocation sourceLocationInPreviousVersionOfDocument)
       //^^ requires this.IsUpdatedVersionOf(sourceLocationInPreviousVersionOfDocument.SourceDocument);
     {
+      //^ assume this.previousVersion != null; //follows from the precondition
       SourceDocument/*?*/ prev = this.previousVersion.Target as SourceDocument;
-      Contract.Assume(prev != null); //follows from the precondition because older versions keep younger versions alive.
+      //^ assume prev != null; //follows from the precondition because older versions keep younger versions alive.
       if (sourceLocationInPreviousVersionOfDocument.SourceDocument != prev)
         sourceLocationInPreviousVersionOfDocument = prev.GetCorrespondingSourceLocation(sourceLocationInPreviousVersionOfDocument);
       int startIndex = sourceLocationInPreviousVersionOfDocument.StartIndex;
@@ -1767,17 +1671,12 @@ namespace Microsoft.Cci {
         //The location starts before the edit region and ends inside it.
         if (delta < 0) {
           //The edit deleted characters. Make length correspondingly smaller, but no smaller than 0.
-          if (startIndex + length < this.editStartIndex) {
-            length = this.editStartIndex - startIndex;
-            //Contract.Assume(length >= 0);
-          }
+          if (startIndex + length < this.editStartIndex) length = this.editStartIndex - startIndex;
         }
       } else {
         //The location contains the edit.
         length += delta;
       }
-      Contract.Assume(length <= this.Length);
-      Contract.Assume(length >= 0);
       return this.GetSourceLocation(startIndex, length);
     }
 
@@ -1885,6 +1784,16 @@ namespace Microsoft.Cci {
     public abstract string GetText();
     //^^ ensures result.Length == this.Length;
 
+    /// <summary>
+    /// Maps the given (zero based) source position to a (one based) line and column, by scanning the source character by character, counting
+    /// new lines until the given source position is reached. The source position and corresponding line+column are remembered and scanning carries
+    /// on where it left off when this routine is called next. If the given position precedes the last given position, scanning restarts from the start.
+    /// Optimal use of this method requires the client to sort calls in order of position.
+    /// </summary>
+    public abstract void ToLineColumn(int position, out int line, out int column);
+    //^^ requires position >= 0 && position <= Length;
+    //^^ ensures line >= 1 && column >= 1;
+
     #region ISourceDocument Members
 
     ISourceLocation ISourceDocument.SourceLocation {
@@ -1897,7 +1806,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// An object that represents a primary source document that has a region of text that originally came from another source document.
   /// </summary>
-  [ContractVerification(false)]
   public sealed class SourceDocumentWithInclusion : IPrimarySourceDocument {
 
     /// <summary>
@@ -1907,19 +1815,13 @@ namespace Microsoft.Cci {
     /// <param name="originalLineNumber">The starting line number that the included region of text has in the the document it originated from.</param>
     /// <param name="originalDocumentName">The name of the document from which the included region of text has originated.</param>
     /// <param name="startingPositionOfIncludedRegion">The position in the wrapped document where the included region starts.</param>
-    public SourceDocumentWithInclusion(IPrimarySourceDocument wrappedDocument, int originalLineNumber, string originalDocumentName, int startingPositionOfIncludedRegion) {
-      Contract.Requires(wrappedDocument != null);
-      Contract.Requires(0 <= startingPositionOfIncludedRegion && startingPositionOfIncludedRegion < wrappedDocument.Length);
-
+    public SourceDocumentWithInclusion(IPrimarySourceDocument wrappedDocument, int originalLineNumber, string originalDocumentName, int startingPositionOfIncludedRegion)
+      //^ requires 0 <= startingPositionOfIncludedRegion && startingPositionOfIncludedRegion < wrappedDocument.Length;
+    {
       this.wrappedDocument = wrappedDocument;
       this.originalLineNumber = originalLineNumber;
       this.originalDocumentName = originalDocumentName;
       this.startingPositionOfIncludedRegion = startingPositionOfIncludedRegion;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(0 <= this.startingPositionOfIncludedRegion && this.startingPositionOfIncludedRegion < this.Length);
     }
 
     /// <summary>
@@ -1940,7 +1842,7 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Obtains a source location instance that corresponds to the substring of the document specified by the given start position and length.
     /// </summary>
-    [Pure]
+    //^ [Pure]
     public ISourceLocation GetSourceLocation(int position, int length)
       //^^ requires 0 <= position && (position < this.Length || position == 0);
       //^^ requires 0 <= length;
@@ -1977,8 +1879,9 @@ namespace Microsoft.Cci {
     /// The position in the document where the included region of text starts.
     /// </summary>
     public int StartingPositionOfIncludedRegion {
-      get {
-        Contract.Ensures(0 <= Contract.Result<int>() && Contract.Result<int>() < this.Length);
+      get
+        //^ ensures 0 <= result && result < this.Length;
+      {
         return this.startingPositionOfIncludedRegion;
       }
     }
@@ -2158,7 +2061,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A range of source text that corresponds to an identifiable entity.
   /// </summary>
-  [ContractVerification(false)]
   public abstract class SourceLocation : ISourceLocation {
 
     /// <summary>
@@ -2330,21 +2232,12 @@ namespace Microsoft.Cci {
     /// <param name="startIndex">The character index of the first character of this location, when treating the source document as a single string.</param>
     /// <param name="length">The number of characters in this source location.</param>
     public DerivedSourceLocation(IDerivedSourceDocument derivedSourceDocument, int startIndex, int length)
-      : base(startIndex, length) {
-      Contract.Requires(derivedSourceDocument != null);
-      //Contract.Requires(startIndex >= 0 && startIndex <= derivedSourceDocument.Length);
-      //Contract.Requires(length >= 0 && length <= derivedSourceDocument.Length);
-      //Contract.Requires((startIndex + length) <= derivedSourceDocument.Length);
-
+      : base(startIndex, length)
+      //^ requires startIndex >= 0 && startIndex <= derivedSourceDocument.Length;
+      //^ requires length >= 0 && length <= derivedSourceDocument.Length;
+      //^ requires (startIndex + length) <= derivedSourceDocument.Length;
+    {
       this.derivedSourceDocument = derivedSourceDocument;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.derivedSourceDocument != null);
-      //Contract.Invariant(this.Length <= this.SourceDocument.Length);
-      //Contract.Invariant(this.StartIndex <= this.SourceDocument.Length);
-      //Contract.Invariant(this.StartIndex+this.Length <= this.SourceDocument.Length);
     }
 
     /// <summary>
@@ -2361,6 +2254,9 @@ namespace Microsoft.Cci {
     public override ISourceDocument SourceDocument {
       get { return this.DerivedSourceDocument; }
     }
+    //^ invariant this.Length <= this.SourceDocument.Length;
+    //^ invariant this.StartIndex <= this.SourceDocument.Length;
+    //^ invariant this.StartIndex+this.Length <= this.SourceDocument.Length;
 
     #region IDerivedSourceLocation Members
 
@@ -2382,25 +2278,14 @@ namespace Microsoft.Cci {
     /// <param name="primarySourceDocument">The document containing the source text of which this location is a subrange.</param>
     /// <param name="startIndex">The character index of the first character of this location, when treating the source document as a single string.</param>
     /// <param name="length">The number of characters in this source location.</param>
-    [ContractVerification(false)]
     public PrimarySourceLocation(IPrimarySourceDocument primarySourceDocument, int startIndex, int length)
-      : base(startIndex, length) {
-      Contract.Requires(primarySourceDocument != null);
-      Contract.Requires(startIndex >= 0 && startIndex <= primarySourceDocument.Length);
-      Contract.Requires(length >= 0 && length <= primarySourceDocument.Length);
-      //Contract.Requires(0 <= startIndex + length);
-      Contract.Requires(startIndex + length <= primarySourceDocument.Length);
-
+      : base(startIndex, length)
+      //^ requires startIndex >= 0 && startIndex <= primarySourceDocument.Length;
+      //^ requires length >= 0 && length <= primarySourceDocument.Length;
+      //^ requires 0 <= startIndex + length;
+      //^ requires startIndex + length <= primarySourceDocument.Length;
+    {
       this.primarySourceDocument = primarySourceDocument;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.primarySourceDocument != null);
-      Contract.Invariant(this.Length <= this.PrimarySourceDocument.Length);
-      Contract.Invariant(this.StartIndex <= this.PrimarySourceDocument.Length);
-      Contract.Invariant(0 <= this.StartIndex+this.Length);
-      Contract.Invariant(this.StartIndex+this.Length <= this.PrimarySourceDocument.Length);
     }
 
     /// <summary>
@@ -2412,7 +2297,9 @@ namespace Microsoft.Cci {
       {
         int line, column;
         int position = this.StartIndex + this.Length;
+        //^ assume 0 <= position; //invariant says so
         IPrimarySourceDocument primarySourceDocument = this.PrimarySourceDocument;
+        //^ assume position <= primarySourceDocument.Length; //invariant says so
         primarySourceDocument.ToLineColumn(position, out line, out column);
         return column;
       }
@@ -2427,7 +2314,9 @@ namespace Microsoft.Cci {
       {
         int line, column;
         int position = this.StartIndex + this.Length;
+        //^ assume 0 <= position; //invariant says so
         IPrimarySourceDocument primarySourceDocument = this.PrimarySourceDocument;
+        //^ assume position <= primarySourceDocument.Length; //invariant says so
         primarySourceDocument.ToLineColumn(position, out line, out column);
         return line;
       }
@@ -2440,6 +2329,10 @@ namespace Microsoft.Cci {
       get { return this.primarySourceDocument; }
     }
     readonly IPrimarySourceDocument primarySourceDocument;
+    //^ invariant this.Length <= this.PrimarySourceDocument.Length;
+    //^ invariant this.StartIndex <= this.PrimarySourceDocument.Length;
+    //^ invariant 0 <= this.StartIndex+this.Length;
+    //^ invariant this.StartIndex+this.Length <= this.PrimarySourceDocument.Length;
 
     /// <summary>
     /// The document containing the source text of which this location is a subrange.
@@ -2456,7 +2349,9 @@ namespace Microsoft.Cci {
       get {
         int line, column;
         int position = this.StartIndex;
+        //^ assume 0 <= position; //invariant says so
         IPrimarySourceDocument primarySourceDocument = this.PrimarySourceDocument;
+        //^ assume position <= primarySourceDocument.Length; //invariant says so
         primarySourceDocument.ToLineColumn(position, out line, out column);
         return column;
       }
@@ -2469,7 +2364,9 @@ namespace Microsoft.Cci {
       get {
         int line, column;
         int position = this.StartIndex;
+        //^ assume 0 <= position; //invariant says so
         IPrimarySourceDocument primarySourceDocument = this.PrimarySourceDocument;
+        //^ assume position <= primarySourceDocument.Length; //invariant says so
         primarySourceDocument.ToLineColumn(position, out line, out column);
         //^ IPrimarySourceLocation ithis = (IPrimarySourceLocation)this;
         //^ assume line <= ithis.EndLine;
@@ -2483,7 +2380,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A source location that spans entire primary source document, but that delays computing this.Length until needed so that the document can be streamed.
   /// </summary>
-  [ContractVerification(false)]
   public sealed class SourceLocationSpanningEntirePrimaryDocument : PrimarySourceLocation {
 
     /// <summary>
@@ -2492,7 +2388,6 @@ namespace Microsoft.Cci {
     /// <param name="primarySourceDocument">The document that the resulting source location spans.</param>
     public SourceLocationSpanningEntirePrimaryDocument(IPrimarySourceDocument primarySourceDocument)
       : base(primarySourceDocument, 0, 0) {
-      Contract.Requires(primarySourceDocument != null);
     }
 
     /// <summary>
@@ -2543,7 +2438,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A source location that spans entire derived source document, but that delays computing this.Length until needed so that the document can be streamed.
   /// </summary>
-  [ContractVerification(false)]
   public sealed class SourceLocationSpanningEntireDerivedSourceDocument : DerivedSourceLocation {
 
     /// <summary>
@@ -2552,7 +2446,6 @@ namespace Microsoft.Cci {
     /// <param name="derivedSourceDocument"></param>
     public SourceLocationSpanningEntireDerivedSourceDocument(IDerivedSourceDocument derivedSourceDocument)
       : base(derivedSourceDocument, 0, 0) {
-      Contract.Requires(derivedSourceDocument != null);
     }
 
     /// <summary>
@@ -2602,7 +2495,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// Describes an edit to a compilation as being either the addition, deletion or modification of a definition.
   /// </summary>
-  [ContractVerification(false)]
   public sealed class EditDescriptor : IEditDescriptor {
 
     /// <summary>
@@ -2619,30 +2511,15 @@ namespace Microsoft.Cci {
     /// <param name="modifiedSourceDocument">The source document that is the result of the edit described by this edit instance.</param>
     /// <param name="originalSourceDocument">The source document that has been edited as described by this edit instance.</param>
     public EditDescriptor(EditEventKind kind, IDefinition affectedDefinition,
-      IDefinition modifiedParent, IDefinition originalParent, ISourceDocument modifiedSourceDocument, ISourceDocument originalSourceDocument) {
-      Contract.Requires(affectedDefinition != null);
-      Contract.Requires(modifiedParent != null);
-      Contract.Requires(originalParent != null);
-      Contract.Requires(modifiedSourceDocument != null);
-      Contract.Requires(originalSourceDocument != null);
-      Contract.Requires(modifiedSourceDocument.IsUpdatedVersionOf(originalSourceDocument));
-
+      IDefinition modifiedParent, IDefinition originalParent, ISourceDocument modifiedSourceDocument, ISourceDocument originalSourceDocument)
+      //^ requires modifiedSourceDocument.IsUpdatedVersionOf(originalSourceDocument);
+    {
       this.kind = kind;
       this.affectedDefinition = affectedDefinition;
       this.modifiedSourceDocument = modifiedSourceDocument;
       this.modifiedParent = modifiedParent;
       this.originalSourceDocument = originalSourceDocument;
       this.originalParent = originalParent;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.affectedDefinition != null);
-      Contract.Invariant(this.modifiedParent != null);
-      Contract.Invariant(this.modifiedSourceDocument != null);
-      Contract.Invariant(this.originalParent != null);
-      Contract.Invariant(this.originalSourceDocument != null);
-      Contract.Invariant(this.modifiedSourceDocument.IsUpdatedVersionOf(this.originalSourceDocument));
     }
 
     /// <summary>
@@ -2711,28 +2588,18 @@ namespace Microsoft.Cci {
     /// Allocates a mutable class that allows a source location to be built in an incremental fashion.
     /// </summary>
     /// <param name="sourceLocation">An initial source location.</param>
-    public SourceLocationBuilder(ISourceLocation sourceLocation) {
-      Contract.Requires(sourceLocation != null);
-      Contract.Ensures(this.SourceDocument == sourceLocation.SourceDocument);
-
+    public SourceLocationBuilder(ISourceLocation sourceLocation)
+      // ^ ensures this.SourceDocument == sourceLocation.SourceDocument; //TODO: Spec# should allow such post conditions
+    {
       this.sourceDocument = sourceLocation.SourceDocument;
       this.length = sourceLocation.Length;
       this.startIndex = sourceLocation.StartIndex;
     }
 
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(0 <= this.length);
-      Contract.Invariant(this.length <= this.sourceDocument.Length);
-      Contract.Invariant(this.startIndex+this.length <= this.sourceDocument.Length);
-      Contract.Invariant(0 <= this.startIndex);
-      Contract.Invariant(this.startIndex < this.sourceDocument.Length || this.startIndex == 0);
-    }
-
-
     /// <summary>
     /// The current length of the source location being built.
     /// </summary>
+    //^ [SpecPublic]
     int length;
     //^ invariant 0 <= this.length;
     //^ invariant this.length <= this.sourceDocument.Length;
@@ -2741,6 +2608,7 @@ namespace Microsoft.Cci {
     /// <summary>
     /// The current startIndex of the source location being built.
     /// </summary>
+    //^ [SpecPublic]
     int startIndex;
     //^ invariant 0 <= this.startIndex;
     //^ invariant this.startIndex < this.sourceDocument.Length || this.startIndex == 0;
@@ -2749,18 +2617,22 @@ namespace Microsoft.Cci {
     /// The document containing the source text of which this location is a subrange.
     /// </summary>
     public ISourceDocument SourceDocument {
-      get { return this.sourceDocument; }
+      get
+        //^ ensures result == this.sourceDocument;
+      {
+        return this.sourceDocument;
+      }
     }
+    //^ [SpecPublic]
     ISourceDocument sourceDocument;
 
     /// <summary>
     /// Make the smallest update to the current start index and/or length so that the value of this.GetSourceLocation resulting from a subsequent call will span the given source location.
     /// </summary>
     /// <param name="sourceLocation"></param>
-    [ContractVerification(false)]
-    public void UpdateToSpan(ISourceLocation sourceLocation) {
-      Contract.Requires(sourceLocation != null);
-
+    public void UpdateToSpan(ISourceLocation sourceLocation)
+      //^ modifies this.*;
+    {
       int slStartIndex = sourceLocation.StartIndex;
       int slLength = sourceLocation.Length;
       int myStartIndex = this.startIndex;
@@ -2777,29 +2649,32 @@ namespace Microsoft.Cci {
         newLength = (slStartIndex + slLength) - myStartIndex;
         newStartIndex = myStartIndex;
       }
+      // ^ expose(this){
       this.length = newLength;
       this.startIndex = newStartIndex;
+      // ^ }
     }
 
     /// <summary>
     /// Returns a source location that spans the initial source location and any other source locations subsequently provided via calls to this.UpdateToSpan.
     /// </summary>
-    [Pure]
-    public ISourceLocation GetSourceLocation() {
-      Contract.Ensures(Contract.Result<ISourceLocation>() != null);
-      Contract.Ensures(Contract.Result<ISourceLocation>().StartIndex == this.startIndex);
-      Contract.Ensures(Contract.Result<ISourceLocation>().Length == this.length);
-      Contract.Ensures(Contract.Result<ISourceLocation>().SourceDocument == this.sourceDocument);
-
+    //^ [Pure]
+    public ISourceLocation GetSourceLocation()
+      //^ ensures result.StartIndex == this.startIndex;
+      //^ ensures result.Length == this.length;
+      //^ ensures result.SourceDocument == this.sourceDocument;
+    {
       return this.sourceDocument.GetSourceLocation(this.startIndex, this.length);
     }
 
     #region ISourceLocation Members
 
+    //^ [Pure]
     bool ISourceLocation.Contains(ISourceLocation location) {
       return this.GetSourceLocation().Contains(location);
     }
 
+    //^ [Pure]
     int ISourceLocation.CopyTo(int offset, char[] destination, int destinationOffset, int length)
       //^^ requires 0 <= offset;
       //^^ requires 0 <= destinationOffset;
@@ -2813,7 +2688,7 @@ namespace Microsoft.Cci {
       ISourceLocation sloc = this.GetSourceLocation();
       //^ assert sloc.StartIndex == this.startIndex;
       //^ assert sloc.Length == this.length;
-      Contract.Assume(this.length == ((ISourceLocation)this).Length);
+      //^ assume this.length == ((ISourceLocation)this).Length;
       return sloc.CopyTo(offset, destination, destinationOffset, length);
     }
 
@@ -2826,7 +2701,7 @@ namespace Microsoft.Cci {
         //^ assert result == this.startIndex + this.length;
         //^ assume result == ((ISourceLocation)this).StartIndex + ((ISourceLocation)this).Length;
         //^ assert result <= this.SourceDocument.Length;
-        Contract.Assume(result <= ((ISourceLocation)this).SourceDocument.Length);
+        //^ assume result <= ((ISourceLocation)this).SourceDocument.Length;
         return result;
       }
     }
@@ -2842,7 +2717,7 @@ namespace Microsoft.Cci {
         //^ assert sloc.Length == this.length;
         int result = sloc.Length;
         //^ assert this.startIndex + result <= this.SourceDocument.Length;
-        Contract.Assume(((ISourceLocation)this).StartIndex + result <= ((ISourceLocation)this).SourceDocument.Length);
+        //^ assume ((ISourceLocation)this).StartIndex + result <= ((ISourceLocation)this).SourceDocument.Length;
         return result;
       }
     }
@@ -2857,10 +2732,10 @@ namespace Microsoft.Cci {
       {
         ISourceLocation sloc = this.GetSourceLocation();
         //^ assert sloc.Length == this.length;
-        Contract.Assume(this.length == ((ISourceLocation)this).Length);
+        //^ assume this.length == ((ISourceLocation)this).Length;
         string result = sloc.Source;
         //^ assert result.Length == sloc.Length;
-        Contract.Assume(result.Length == ((ISourceLocation)this).Length); //result.Length == sloc.Length == this.Length == ((ISourceLocation)this).Length;
+        //^ assume result.Length == ((ISourceLocation)this).Length; //result.Length == sloc.Length == this.Length == ((ISourceLocation)this).Length;
         return result;
       }
     }
@@ -2878,7 +2753,7 @@ namespace Microsoft.Cci {
         //^ assert result >= 0 && (result < sloc.SourceDocument.Length || result == 0);
         //^ assert result == this.startIndex;
         //^ assert result < this.sourceDocument.Length || result == 0;
-        Contract.Assume(result < ((ISourceLocation)this).SourceDocument.Length || result == 0);
+        //^ assume result < ((ISourceLocation)this).SourceDocument.Length || result == 0;
         return result;
       }
     }
@@ -2912,12 +2787,6 @@ namespace Microsoft.Cci {
       this.synchronizationPoint = synchronizationPoint;
     }
 
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.document != null);
-      Contract.Invariant(this.synchronizationPoint != null);
-    }
-
     /// <summary>
     /// 
     /// </summary>
@@ -2949,11 +2818,6 @@ namespace Microsoft.Cci {
       Contract.Requires(synchronizationPointLocation != null);
 
       this.synchronizationPointLocation = synchronizationPointLocation;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.synchronizationPointLocation != null);
     }
 
     /// <summary>

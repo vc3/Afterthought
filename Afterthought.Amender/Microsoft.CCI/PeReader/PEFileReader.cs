@@ -2531,22 +2531,27 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
     #endregion Fields [Inited]
 
     #region Constructors and Utils
-
-    internal PEFileReader(PeReader moduleReadWriteFactory, IBinaryDocumentMemoryBlock binaryDocumentMemoryBlock, bool snapshot = false) {
+    /*^
+    #pragma warning disable 2674, 2666
+    ^*/
+    internal PEFileReader(
+      PeReader moduleReadWriteFactory,
+      IBinaryDocumentMemoryBlock binaryDocumentMemoryBlock
+    ) {
       this.ErrorContainer = new MetadataErrorContainer(moduleReadWriteFactory, binaryDocumentMemoryBlock.BinaryDocument);
       this.ReaderState = ReaderState.Initialized;
       this.BinaryDocumentMemoryBlock = binaryDocumentMemoryBlock;
-      if (!snapshot) {
-        if (!this.ReadPEFileLevelData()) return;
-        if (!this.ReadCORModuleLevelData()) return;
-      } else {
-        this.SectionHeaders = new SectionHeader[0];
-        if (!this.ReadMetadataRoot()) return;
-      }
-      if (!this.ReadMetadataLevelData()) return;
+      if (!this.ReadPEFileLevelData())
+        return;
+      if (!this.ReadCORModuleLevelData())
+        return;
+      if (!this.ReadMetadataLevelData())
+        return;
       //  TODO: Add phase for Metadata validation of offsets type row ids etc...
     }
-
+    /*^
+    #pragma warning restore 2674, 2666
+    ^*/
     #endregion Constructors and Utils
 
 
@@ -3379,22 +3384,6 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
       this.StrongNameSignature = this.DirectoryToMemoryBlock(this.COR20Header.StrongNameSignatureDirectory);
       return true;
     }
-
-    bool ReadMetadataRoot() {
-      var metadataRoot = new MemoryBlock(this.BinaryDocumentMemoryBlock.Pointer, (int)this.BinaryDocumentMemoryBlock.Length);
-      MemoryReader memReader = new MemoryReader(metadataRoot);
-      if (
-        !this.ReadMetadataHeader(ref memReader)
-        || !this.ReadStorageHeader(ref memReader)
-        || !this.ReadStreamHeaders(ref memReader)
-        || !this.ProcessAndCacheStreams(ref metadataRoot)
-      ) {
-        return false;
-      }
-      this.ReaderState = ReaderState.CORModule;
-      return true;
-    }
-
     #endregion Methods [CORModule]
 
     #region Fields and Properties [Metadata]
@@ -3939,12 +3928,16 @@ namespace Microsoft.Cci.MetadataReader.PEFile {
       return retSEHEntries;
     }
 
-    internal MethodIL/*?*/ GetMethodIL(uint methodDefRowId) {
+    internal MethodIL/*?*/ GetMethodIL(
+      uint methodDefRowId
+    ) {
       MethodRow methodRow = this.MethodTable[methodDefRowId];
-      if ((methodRow.ImplFlags & MethodImplFlags.CodeTypeMask) != MethodImplFlags.ILCodeType || methodRow.RVA == 0) {
+      if (
+        (methodRow.ImplFlags & MethodImplFlags.CodeTypeMask) != MethodImplFlags.ILCodeType
+        || methodRow.RVA == 0
+      ) {
         return null;
       }
-      if (this.SectionHeaders.Length == 0) return null; //reading a snapshot
       MemoryBlock memBlock = this.RVAToMemoryBlock(methodRow.RVA);
       //  Error need to check if the Memory Block is empty. This is calse for all the calls...
       MemoryReader memReader = new MemoryReader(memBlock);

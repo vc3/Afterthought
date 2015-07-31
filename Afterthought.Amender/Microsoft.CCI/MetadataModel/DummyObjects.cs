@@ -46,7 +46,7 @@ namespace Microsoft.Cci {
       get {
         Contract.Ensures(Contract.Result<AssemblyIdentity>() != null);
         if (Dummy.assemblyIdentity == null)
-          Interlocked.CompareExchange(ref Dummy.assemblyIdentity, new AssemblyIdentity(Dummy.name, "", new Version(0, 0), Enumerable<byte>.Empty, ""), null);
+          Interlocked.CompareExchange(ref Dummy.assemblyIdentity, new AssemblyIdentity(Dummy.name, "", new Version(), Enumerable<byte>.Empty, ""), null);
         return Dummy.assemblyIdentity;
       }
     }
@@ -793,10 +793,6 @@ namespace Microsoft.Cci {
       get { return Dummy.NamedTypeReference; }
     }
 
-    public ushort GenericParameterCount {
-      get { return 0; }
-    }
-
     #endregion
 
     #region IContainer<IAliasMember> Members
@@ -998,7 +994,7 @@ namespace Microsoft.Cci {
       get { return false; }
     }
 
-    public bool Prefers32bits {
+    public bool NativeEntryPoint {
       get { return false; }
     }
 
@@ -1100,18 +1096,6 @@ namespace Microsoft.Cci {
 
     public IEnumerable<INamedTypeDefinition> GetAllTypes() {
       return Enumerable<INamedTypeDefinition>.Empty;
-    }
-
-    public IEnumerable<IGenericMethodInstanceReference> GetGenericMethodInstances() {
-      return Enumerable<IGenericMethodInstanceReference>.Empty;
-    }
-
-    public IEnumerable<ITypeReference> GetStructuralTypeInstances() {
-      return Enumerable<ITypeReference>.Empty;
-    }
-
-    public IEnumerable<ITypeMemberReference> GetStructuralTypeInstanceMembers() {
-      return Enumerable<ITypeMemberReference>.Empty;
     }
 
     public IEnumerable<ITypeReference> GetTypeReferences() {
@@ -3100,7 +3084,7 @@ namespace Microsoft.Cci {
       get { return false; }
     }
 
-    public bool Prefers32bits {
+    public bool NativeEntryPoint {
       get { return false; }
     }
 
@@ -3202,18 +3186,6 @@ namespace Microsoft.Cci {
 
     public IEnumerable<INamedTypeDefinition> GetAllTypes() {
       return Enumerable<INamedTypeDefinition>.Empty;
-    }
-
-    public IEnumerable<IGenericMethodInstanceReference> GetGenericMethodInstances() {
-      return Enumerable<IGenericMethodInstanceReference>.Empty;
-    }
-
-    public IEnumerable<ITypeReference> GetStructuralTypeInstances() {
-      return Enumerable<ITypeReference>.Empty;
-    }
-
-    public IEnumerable<ITypeMemberReference> GetStructuralTypeInstanceMembers() {
-      return Enumerable<ITypeMemberReference>.Empty;
     }
 
     public IEnumerable<ITypeReference> GetTypeReferences() {
@@ -4392,10 +4364,6 @@ namespace Microsoft.Cci {
       get { return Enumerable<ITypeReference>.Empty; }
     }
 
-    public bool DoesNotInheritGenericParameters {
-      get { throw new NotImplementedException(); }
-    }
-
     public IEnumerable<IEventDefinition> Events {
       get { return Enumerable<IEventDefinition>.Empty; }
     }
@@ -5000,10 +4968,6 @@ namespace Microsoft.Cci {
     }
 
     public INamespaceTypeReference SystemRuntimeInteropServicesDllImportAttribute {
-      get { return Dummy.NamespaceTypeReference; }
-    }
-
-    public INamespaceTypeReference SystemRuntimeInteropServicesTypeIdentifierAttribute {
       get { return Dummy.NamespaceTypeReference; }
     }
 
@@ -5875,10 +5839,6 @@ namespace Microsoft.Cci {
 
     public IEnumerable<ITypeReference> BaseClasses {
       get { return Enumerable<ITypeReference>.Empty; }
-    }
-
-    public bool DoesNotInheritGenericParameters {
-      get { throw new NotImplementedException(); }
     }
 
     public IEnumerable<IEventDefinition> Events {

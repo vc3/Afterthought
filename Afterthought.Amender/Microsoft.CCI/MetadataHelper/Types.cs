@@ -360,7 +360,7 @@ namespace Microsoft.Cci.Immutable {
     #region ISignature Members
 
     bool ISignature.IsStatic {
-      get { return (this.CallingConvention & Cci.CallingConvention.HasThis) == 0; }
+      get { return this.IsStatic; }
     }
 
     ITypeReference ISignature.Type {
@@ -428,20 +428,12 @@ namespace Microsoft.Cci.Immutable {
     }
 
     public IEnumerable<IEventDefinition> Events {
-      get {
-        this.InitializeIfNecessary();
-        return this.events;
-      }
+      get { return IteratorHelper.GetFilterEnumerable<ITypeDefinitionMember, IEventDefinition>(this.Members); }
     }
-    IEnumerable<IEventDefinition> events;
 
     public IEnumerable<IFieldDefinition> Fields {
-      get {
-        this.InitializeIfNecessary();
-        return this.fields;
-      }
+      get { return IteratorHelper.GetFilterEnumerable<ITypeDefinitionMember, IFieldDefinition>(this.Members); }
     }
-    IEnumerable<IFieldDefinition> fields;
 
     public IEnumerable<ILocation> Locations {
       get { return Enumerable<ILocation>.Empty; }
@@ -468,71 +460,10 @@ namespace Microsoft.Cci.Immutable {
       if (this.initialized) return;
       lock (GlobalLock.LockingObject) {
         if (this.initialized) return;
-        var template = this.GenericType.ResolvedType;
-        List<IEventDefinition> eventList = null;
-        foreach (var unspecializedEvent in template.Events) {
-          var specializedEvent = (IEventDefinition)this.SpecializeMember(unspecializedEvent, this.InternFactory);
-          this.AddMemberToCache(specializedEvent);
-          if (eventList == null) eventList = new List<IEventDefinition>();
-          eventList.Add(specializedEvent);
-        }
-        if (eventList != null) {
-          eventList.TrimExcess();
-          this.events = eventList.AsReadOnly();
-        } else {
-          this.events = Enumerable<IEventDefinition>.Empty;
-        }
-        List<IFieldDefinition> fieldList = null;
-        foreach (var unspecializedField in template.Fields) {
-          var specializedField = (IFieldDefinition)this.SpecializeMember(unspecializedField, this.InternFactory);
-          this.AddMemberToCache(specializedField);
-          if (fieldList == null) fieldList = new List<IFieldDefinition>();
-          fieldList.Add(specializedField);
-        }
-        if (fieldList != null) {
-          fieldList.TrimExcess();
-          this.fields = fieldList.AsReadOnly();
-        } else {
-          this.fields = Enumerable<IFieldDefinition>.Empty;
-        }
-        List<IMethodDefinition> methodList = null;
-        foreach (var unspecializedMethod in template.Methods) {
-          var specializedMethod = (IMethodDefinition)this.SpecializeMember(unspecializedMethod, this.InternFactory);
-          this.AddMemberToCache(specializedMethod);
-          if (methodList == null) methodList = new List<IMethodDefinition>();
-          methodList.Add(specializedMethod);
-        }
-        if (methodList != null) {
-          methodList.TrimExcess();
-          this.methods = methodList.AsReadOnly();
-        } else {
-          this.methods = Enumerable<IMethodDefinition>.Empty;
-        }
-        List<INestedTypeDefinition> nestedTypeList = null;
-        foreach (var unspecializedNestedType in template.NestedTypes) {
-          var specializedNestedType = (INestedTypeDefinition)this.SpecializeMember(unspecializedNestedType, this.InternFactory);
-          this.AddMemberToCache(specializedNestedType);
-          if (nestedTypeList == null) nestedTypeList = new List<INestedTypeDefinition>();
-          nestedTypeList.Add(specializedNestedType);
-        }
-        if (nestedTypeList != null) {
-          nestedTypeList.TrimExcess();
-          this.nestedTypes = nestedTypeList.AsReadOnly();
-        } else {
-          this.nestedTypes = Enumerable<INestedTypeDefinition>.Empty;
-        }
-        List<IPropertyDefinition> propertyList = null;
-        foreach (var unspecializedProperty in template.Properties) {
-          var specializedProperty = (IPropertyDefinition)this.SpecializeMember(unspecializedProperty, this.InternFactory);
-          this.AddMemberToCache(specializedProperty);
-          if (propertyList == null) propertyList = new List<IPropertyDefinition>();
-          propertyList.Add(specializedProperty);
-        }
-        if (propertyList != null) {
-          propertyList.TrimExcess();
-          this.properties = propertyList.AsReadOnly();
-        } else {
-          this.properties = Enumerable<IPropertyDefinition>.Empty;
+        foreach (ITypeDefinitionMember unspecializedMember in this.GenericType.ResolvedType.Members) {
+          //^ assume unspecializedMember is IEventDefinition || unspecializedMember is IFieldDefinition || unspecializedMember is IMethodDefinition ||
+          //^   unspecializedMember is IPropertyDefinition || unspecializedMember is INestedTypeDefinition; //follows from informal post condition on Members property.
+          this.AddMemberToCache(this.SpecializeMember(unspecializedMember, this.InternFactory));
         }
         this.initialized = true;
       }
@@ -601,20 +532,12 @@ namespace Microsoft.Cci.Immutable {
     }
 
     public IEnumerable<IMethodDefinition> Methods {
-      get {
-        this.InitializeIfNecessary();
-        return this.methods;
-      }
+      get { return IteratorHelper.GetFilterEnumerable<ITypeDefinitionMember, IMethodDefinition>(this.Members); }
     }
-    IEnumerable<IMethodDefinition> methods;
 
     public IEnumerable<INestedTypeDefinition> NestedTypes {
-      get {
-        this.InitializeIfNecessary();
-        return this.nestedTypes;
-      }
+      get { return IteratorHelper.GetFilterEnumerable<ITypeDefinitionMember, INestedTypeDefinition>(this.Members); }
     }
-    IEnumerable<INestedTypeDefinition> nestedTypes;
 
     public IPlatformType PlatformType {
       get { return this.GenericType.PlatformType; }
@@ -628,12 +551,8 @@ namespace Microsoft.Cci.Immutable {
     }
 
     public IEnumerable<IPropertyDefinition> Properties {
-      get {
-        this.InitializeIfNecessary();
-        return this.properties;
-      }
+      get { return IteratorHelper.GetFilterEnumerable<ITypeDefinitionMember, IPropertyDefinition>(this.Members); }
     }
-    IEnumerable<IPropertyDefinition> properties;
 
     /// <summary>
     /// Returns a deep copy of a generic type instance reference. In the copy, every reference to a partially specialized type parameter defined by
@@ -956,6 +875,9 @@ namespace Microsoft.Cci.Immutable {
       Contract.Requires(genericArguments != null);
       Contract.Requires(internFactory != null);
 
+      foreach (var genarg in genericArguments) {
+        Contract.Assume(!(genarg is Dummy));
+      }
       this.genericType = genericType;
       this.genericArguments = genericArguments;
       this.internFactory = internFactory;
@@ -1146,9 +1068,7 @@ namespace Microsoft.Cci.Immutable {
     /// was used to create the method instance.
     /// </summary>
     public static ITypeReference SpecializeIfConstructedFromApplicableTypeParameter(IGenericMethodParameterReference genericMethodParameter, IGenericMethodInstanceReference containingMethodInstance) {
-      var methodReference = containingMethodInstance.GenericMethod;
-      var specializedMethod = methodReference as ISpecializedMethodReference;
-      if (genericMethodParameter.DefiningMethod.InternedKey == methodReference.InternedKey || (specializedMethod != null && genericMethodParameter.DefiningMethod.InternedKey == specializedMethod.UnspecializedVersion.InternedKey)) {
+      if (genericMethodParameter.DefiningMethod.InternedKey == containingMethodInstance.GenericMethod.InternedKey) {
         ushort i = 0;
         ushort n = genericMethodParameter.Index;
         IEnumerator<ITypeReference> genericArguments = containingMethodInstance.GenericArguments.GetEnumerator();
@@ -2765,13 +2685,6 @@ namespace Microsoft.Cci.Immutable {
       }
     }
     IEnumerable<ITypeReference>/*?*/ baseClasses;
-
-    /// <summary>
-    /// If true, the type does not inherit generic parameters from its containing type.
-    /// </summary>
-    public bool DoesNotInheritGenericParameters {
-      get { return this.UnspecializedVersion.DoesNotInheritGenericParameters; }
-    }
 
     internal static ITypeReference DeepCopyTypeReference(INestedTypeReference nestedType, SpecializedNestedTypeDefinition targetContainer, IInternFactory internFactory) {
       var parentCopy = TypeDefinition.DeepCopyTypeReference(nestedType.ContainingType, targetContainer, internFactory);

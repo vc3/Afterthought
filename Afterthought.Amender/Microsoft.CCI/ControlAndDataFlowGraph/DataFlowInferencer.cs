@@ -26,7 +26,7 @@ namespace Microsoft.Cci.Analysis {
       this.platformType = host.PlatformType;
       this.cdfg = cdfg;
       this.operandStackSetupInstructions = new List<Instruction>(cdfg.MethodBody.MaxStack);
-      this.stack = new Stack<Instruction>(cdfg.MethodBody.MaxStack);
+      this.stack = new Stack<Instruction>(cdfg.MethodBody.MaxStack, this.operandStackSetupInstructions);
       this.blocksToVisit = new Queue<BasicBlock>((int)numberOfBlocks);
       this.blocksAlreadyVisited = new SetOfObjects(numberOfBlocks); ;
       this.internFactory = host.InternFactory;
@@ -39,7 +39,6 @@ namespace Microsoft.Cci.Analysis {
     Queue<BasicBlock> blocksToVisit;
     SetOfObjects blocksAlreadyVisited;
     IInternFactory internFactory;
-    bool codeIsUnreachable;
 
     [ContractInvariantMethod]
     private void ObjectInvariant() {
@@ -77,7 +76,6 @@ namespace Microsoft.Cci.Analysis {
           this.DequeueBlockAndSetupDataFlow();
       }
       //At this point, all reachable code blocks have had their data flow inferred. Now look for unreachable blocks.
-      this.codeIsUnreachable = true; //unreachable code might not satisfy invariants.
       foreach (var block in this.cdfg.AllBlocks) {
         if (this.blocksAlreadyVisited.Contains(block)) continue;
         blocksToVisit.Enqueue(block);
@@ -91,7 +89,7 @@ namespace Microsoft.Cci.Analysis {
       Contract.Requires(methodBody != null);
 
       foreach (var exinfo in methodBody.OperationExceptionInformation) {
-        Contract.Assert(exinfo != null); //The checker can't work out that all collection elements are non null, even though there is a contract to that effect
+        Contract.Assume(exinfo != null); //The checker can't work out that all collection elements are non null, even though there is a contract to that effect
         if (exinfo.HandlerKind == HandlerKind.Filter) {
           var block = this.cdfg.BlockFor[exinfo.FilterDecisionStartOffset];
           Contract.Assume(block != null); //All branch targets must have blocks, but we can't put that in a contract that satisfies the checker.
@@ -150,7 +148,7 @@ namespace Microsoft.Cci.Analysis {
         int startingCount = this.operandStackSetupInstructions.Count;
         for (int i = 0; i <= n; i++) {
           var pushInstruction = this.stack.Peek(i);
-          this.operandStackSetupInstructions.Add(new Instruction() { Operand1 = pushInstruction });
+          this.operandStackSetupInstructions.Add(new Instruction() { Operand2 = new List<Instruction>(4) { pushInstruction } });
         }
         successor.OperandStack = new Sublist<Instruction>(this.operandStackSetupInstructions, startingCount, operandStackSetupInstructions.Count-startingCount);
       } else {
@@ -159,17 +157,9 @@ namespace Microsoft.Cci.Analysis {
         for (int i = 0; i <= n; i++) {
           var pushInstruction = this.stack.Peek(i);
           var setupInstruction = successor.OperandStack[i];
-          if (setupInstruction.Operand2 == null)
-            setupInstruction.Operand2 = pushInstruction;
-          else {
-            var list = setupInstruction.Operand2 as List<Instruction>;
-            if (list == null) {
-              Contract.Assume(setupInstruction.Operand2 is Instruction);
-              list = new List<Instruction>(4);
-              list.Add((Instruction)setupInstruction.Operand2);
-            }
-            list.Add(pushInstruction);
-          }
+          Contract.Assume(setupInstruction.Operand2 is List<Instruction>); //This is set up in the successor.OperandStack.Count == 0, but is hard to write a contract to that effect.
+          var list = (List<Instruction>)setupInstruction.Operand2;
+          list.Add(pushInstruction);
         }
       }
     }
@@ -468,7 +458,6 @@ namespace Microsoft.Cci.Analysis {
           break;
 
         case OperationCode.Ret:
-          if (this.codeIsUnreachable && this.stack.Top < 0) break;
           if (this.cdfg.MethodBody.MethodDefinition.Type.TypeCode != PrimitiveTypeCode.Void)
             instruction.Operand1 = this.stack.Pop();
           break;
@@ -480,9 +469,7 @@ namespace Microsoft.Cci.Analysis {
       Contract.Requires(stack != null);
       Contract.Requires(signature != null);
 
-      var methodRef = signature as IMethodReference;
-      uint numArguments = IteratorHelper.EnumerableCount(signature.Parameters);
-      if (methodRef != null && methodRef.AcceptsExtraArguments) numArguments += IteratorHelper.EnumerableCount(methodRef.ExtraParameters);
+      var numArguments = IteratorHelper.EnumerableCount(signature.Parameters);
       if (!signature.IsStatic) numArguments++;
       if (numArguments > 0) {
         numArguments--;

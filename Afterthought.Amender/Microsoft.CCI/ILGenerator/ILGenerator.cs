@@ -330,22 +330,6 @@ namespace Microsoft.Cci {
     /// <param name="value">An argument that parameterizes the IL instruction at compile time (not a runtime operand for the instruction).</param>
     [ContractVerification(false)]
     public void Emit(OperationCode opcode, object value) {
-      // For the following one-byte opcodes, the reader supplies a value to make it easier for clients.
-      // But that messes up the dispatch in the succeeding switch statement.
-      switch (opcode) {
-        case OperationCode.Ldc_I4_0:
-        case OperationCode.Ldc_I4_1:
-        case OperationCode.Ldc_I4_2:
-        case OperationCode.Ldc_I4_3:
-        case OperationCode.Ldc_I4_4:
-        case OperationCode.Ldc_I4_5:
-        case OperationCode.Ldc_I4_6:
-        case OperationCode.Ldc_I4_7:
-        case OperationCode.Ldc_I4_8:
-        case OperationCode.Ldc_I4_M1:
-          this.Emit(opcode);
-          return;
-      }
       switch (System.Convert.GetTypeCode(value)) {
         case TypeCode.Byte: this.Emit(opcode, (byte)value); break;
         case TypeCode.Double: this.Emit(opcode, (double)value); break;

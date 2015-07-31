@@ -72,13 +72,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(IEventDefinition eventDefinition) {
-        Contract.Assume(!(eventDefinition is ISpecializedEventDefinition));
-        this.result = this.rewriter.RewriteUnspecialized(eventDefinition);
+        this.result = this.rewriter.Rewrite(eventDefinition);
       }
 
       public override void Visit(IFieldDefinition fieldDefinition) {
-        Contract.Assume(!(fieldDefinition is ISpecializedFieldDefinition));
-        this.result = this.rewriter.RewriteUnspecialized(fieldDefinition);
+        this.result = this.rewriter.Rewrite(fieldDefinition);
       }
 
       public override void Visit(IFieldReference fieldReference) {
@@ -135,8 +133,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(IMethodDefinition method) {
-        Contract.Assume(!(method is ISpecializedMethodDefinition));
-        this.result = this.rewriter.RewriteUnspecialized(method);
+        this.result = this.rewriter.Rewrite(method);
       }
 
       public override void Visit(IMethodReference methodReference) {
@@ -174,8 +171,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(INestedTypeDefinition nestedTypeDefinition) {
-        Contract.Assume(!(nestedTypeDefinition is ISpecializedNestedTypeDefinition));
-        this.result = this.rewriter.RewriteUnspecialized(nestedTypeDefinition);
+        this.result = this.rewriter.Rewrite(nestedTypeDefinition);
       }
 
       public override void Visit(INestedTypeReference nestedTypeReference) {
@@ -196,8 +192,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(IPropertyDefinition propertyDefinition) {
-        Contract.Assume(!(propertyDefinition is ISpecializedPropertyDefinition));
-        this.result = this.rewriter.RewriteUnspecialized(propertyDefinition);
+        this.result = this.rewriter.Rewrite(propertyDefinition);
       }
 
       public override void Visit(IRootUnitNamespaceReference rootUnitNamespaceReference) {
@@ -205,11 +200,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(ISpecializedEventDefinition specializedEventDefinition) {
-        this.result = this.rewriter.Rewrite(specializedEventDefinition);
+        throw new InvalidOperationException("Rewriting a generic type instance");
       }
 
       public override void Visit(ISpecializedFieldDefinition specializedFieldDefinition) {
-        this.result = this.rewriter.Rewrite(specializedFieldDefinition);
+        throw new InvalidOperationException("Rewriting a generic type instance");
       }
 
       public override void Visit(ISpecializedFieldReference specializedFieldReference) {
@@ -217,7 +212,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(ISpecializedMethodDefinition specializedMethodDefinition) {
-        this.result = this.rewriter.Rewrite(specializedMethodDefinition);
+        throw new InvalidOperationException("Rewriting a generic type instance");
       }
 
       public override void Visit(ISpecializedMethodReference specializedMethodReference) {
@@ -225,11 +220,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       }
 
       public override void Visit(ISpecializedPropertyDefinition specializedPropertyDefinition) {
-        this.result = this.rewriter.Rewrite(specializedPropertyDefinition);
+        throw new InvalidOperationException("Rewriting a generic type instance");
       }
 
       public override void Visit(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
-        this.result = this.rewriter.Rewrite(specializedNestedTypeDefinition);
+        throw new InvalidOperationException("Rewriting a generic type instance");
       }
 
       public override void Visit(ISpecializedNestedTypeReference specializedNestedTypeReference) {
@@ -314,7 +309,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(assemblyReference, out result)) return (IAssemblyReference)result;
       var mutableAssemblyReference = assemblyReference as AssemblyReference;
       if (mutableAssemblyReference == null || mutableAssemblyReference.IsFrozen) {
-        if (this.shallowCopier == null || assemblyReference is Assembly) return assemblyReference;
+        if (this.shallowCopier == null) return assemblyReference;
         mutableAssemblyReference = this.shallowCopier.Copy(assemblyReference);
       }
       this.referenceRewrites[assemblyReference] = mutableAssemblyReference;
@@ -355,21 +350,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IEventDefinition Rewrite(IEventDefinition eventDefinition) {
       Contract.Requires(eventDefinition != null);
-      Contract.Ensures(Contract.Result<IEventDefinition>() != null);
-
-      if (eventDefinition is Dummy) return eventDefinition;
-      eventDefinition.Dispatch(this.dispatchingVisitor);
-      return (this.dispatchingVisitor.result as IEventDefinition)??eventDefinition;
-    }
-
-    /// <summary>
-    /// Rewrites the given unspecialized event definition.
-    /// </summary>
-    protected virtual IEventDefinition RewriteUnspecialized(IEventDefinition eventDefinition) {
-      Contract.Requires(eventDefinition != null);
       Contract.Requires(!(eventDefinition is ISpecializedEventDefinition));
       Contract.Ensures(Contract.Result<IEventDefinition>() != null);
 
+      if (eventDefinition is Dummy) return eventDefinition;
       var mutableEventDefinition = eventDefinition as EventDefinition;
       if (mutableEventDefinition == null) return eventDefinition;
       this.RewriteChildren(mutableEventDefinition);
@@ -381,21 +365,10 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IFieldDefinition Rewrite(IFieldDefinition fieldDefinition) {
       Contract.Requires(fieldDefinition != null);
-      Contract.Ensures(Contract.Result<IFieldDefinition>() != null);
-
-      if (fieldDefinition is Dummy) return fieldDefinition;
-      fieldDefinition.Dispatch(this.dispatchingVisitor);
-      return (this.dispatchingVisitor.result as IFieldDefinition)??fieldDefinition;
-    }
-
-    /// <summary>
-    /// Rewrites the given unspecialized field definition.
-    /// </summary>
-    protected virtual IFieldDefinition RewriteUnspecialized(IFieldDefinition fieldDefinition) {
-      Contract.Requires(fieldDefinition != null);
       Contract.Requires(!(fieldDefinition is ISpecializedFieldDefinition));
       Contract.Ensures(Contract.Result<IFieldDefinition>() != null);
 
+      if (fieldDefinition is Dummy) return fieldDefinition;
       var mutableFieldDefinition = fieldDefinition as FieldDefinition;
       if (mutableFieldDefinition == null) return fieldDefinition;
       this.RewriteChildren(mutableFieldDefinition);
@@ -414,26 +387,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       return (this.dispatchingVisitor.result as IFieldReference)??fieldReference;
     }
 
-    /// <summary>
-    /// Rewrites the given field reference.
-    /// </summary>
-    protected virtual IFieldReference RewriteUnspecialized(IFieldReference fieldReference) {
-      Contract.Requires(fieldReference != null);
-      Contract.Requires(!(fieldReference is ISpecializedFieldReference));
-      Contract.Ensures(Contract.Result<IFieldReference>() != null);
-
-      if (fieldReference is Dummy) return fieldReference;
-      object result;
-      if (this.referenceRewrites.TryGetValue(fieldReference, out result)) return (IFieldReference)result;
-      var mutableFieldReference = fieldReference as FieldReference;
-      if (mutableFieldReference == null || mutableFieldReference.IsFrozen) {
-        if (this.shallowCopier == null || fieldReference is FieldDefinition) return fieldReference;
-        mutableFieldReference = this.shallowCopier.Copy(fieldReference);
-      }
-      this.referenceRewrites[fieldReference] = mutableFieldReference;
-      this.RewriteChildren(mutableFieldReference);
-      return mutableFieldReference;
-    }
 
     /// <summary>
     /// Rewrites the reference to a local definition.
@@ -453,6 +406,27 @@ namespace Microsoft.Cci.MutableCodeModel {
       Contract.Ensures(Contract.Result<object>() != null);
 
       return parameterDefinition;
+    }
+
+    /// <summary>
+    /// Rewrites the given field reference.
+    /// </summary>
+    public virtual IFieldReference RewriteUnspecialized(IFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+      Contract.Requires(!(fieldReference is ISpecializedFieldReference));
+      Contract.Ensures(Contract.Result<IFieldReference>() != null);
+
+      if (fieldReference is Dummy) return fieldReference;
+      object result;
+      if (this.referenceRewrites.TryGetValue(fieldReference, out result)) return (IFieldReference)result;
+      var mutableFieldReference = fieldReference as FieldReference;
+      if (mutableFieldReference == null || mutableFieldReference.IsFrozen) {
+        if (this.shallowCopier == null) return fieldReference;
+        mutableFieldReference = this.shallowCopier.Copy(fieldReference);
+      }
+      this.referenceRewrites[fieldReference] = mutableFieldReference;
+      this.RewriteChildren(mutableFieldReference);
+      return mutableFieldReference;
     }
 
     /// <summary>
@@ -480,7 +454,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       object result;
       if (this.referenceRewrites.TryGetValue(functionPointerTypeReference, out result)) return (IFunctionPointerTypeReference)result;
       var mutableFunctionPointerTypeReference = functionPointerTypeReference as FunctionPointerTypeReference;
-      if (mutableFunctionPointerTypeReference == null || mutableFunctionPointerTypeReference.IsFrozen) {
+      if (mutableFunctionPointerTypeReference == null) {
         if (this.shallowCopier == null) return functionPointerTypeReference;
         mutableFunctionPointerTypeReference = this.shallowCopier.Copy(functionPointerTypeReference);
       }
@@ -535,7 +509,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(genericMethodParameterReference, out result)) return (IGenericMethodParameterReference)result;
       var mutableGenericMethodInstanceReference = genericMethodParameterReference as GenericMethodParameterReference;
       if (mutableGenericMethodInstanceReference == null || mutableGenericMethodInstanceReference.IsFrozen) {
-        if (this.shallowCopier == null || genericMethodParameterReference is GenericMethodParameter) return genericMethodParameterReference;
+        if (this.shallowCopier == null) return genericMethodParameterReference;
         mutableGenericMethodInstanceReference = this.shallowCopier.Copy(genericMethodParameterReference);
       }
       this.referenceRewrites[genericMethodParameterReference] = mutableGenericMethodInstanceReference;
@@ -589,7 +563,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(genericTypeParameterReference, out result)) return (IGenericTypeParameterReference)result;
       var mutableGenericTypeParameterReference = genericTypeParameterReference as GenericTypeParameterReference;
       if (mutableGenericTypeParameterReference == null || mutableGenericTypeParameterReference.IsFrozen) {
-        if (this.shallowCopier == null || genericTypeParameterReference is GenericTypeParameter) return genericTypeParameterReference;
+        if (this.shallowCopier == null) return genericTypeParameterReference;
         mutableGenericTypeParameterReference = this.shallowCopier.Copy(genericTypeParameterReference);
       }
       this.referenceRewrites[genericTypeParameterReference] = mutableGenericTypeParameterReference;
@@ -758,28 +732,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// Rewrites the given method definition.
     /// </summary>
-    public virtual IMethodDefinition Rewrite(IMethodDefinition methodDefinition) {
-      Contract.Requires(methodDefinition != null);
-      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
+    public virtual IMethodDefinition Rewrite(IMethodDefinition method) {
+      Contract.Requires(!(method is ISpecializedMethodDefinition));
 
-      if (methodDefinition is Dummy) return methodDefinition;
-      var mutableMethodDefinition = methodDefinition as MethodDefinition;
-      if (mutableMethodDefinition == null) return methodDefinition;
+      if (method is Dummy) return method;
+      var mutableMethodDefinition = method as MethodDefinition;
+      if (mutableMethodDefinition == null) return method;
       this.RewriteChildren(mutableMethodDefinition);
       return mutableMethodDefinition;
-    }
-
-    /// <summary>
-    /// Rewrites the given method definition.
-    /// </summary>
-    protected virtual IMethodDefinition RewriteUnspecialized(IMethodDefinition methodDefinition) {
-      Contract.Requires(methodDefinition != null);
-      Contract.Requires(!(methodDefinition is ISpecializedMethodDefinition));
-      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
-
-      if (methodDefinition is Dummy) return methodDefinition;
-      methodDefinition.Dispatch(this.dispatchingVisitor);
-      return (this.dispatchingVisitor.result as IMethodDefinition)??methodDefinition;
     }
 
     /// <summary>
@@ -821,12 +781,12 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(methodReference, out result)) return (IMethodReference)result;
       var mutableMethodReference = methodReference as MethodReference;
       if (mutableMethodReference == null || mutableMethodReference.IsFrozen) {
-        if (this.shallowCopier == null || methodReference is MethodDefinition) return methodReference;
+        if (this.shallowCopier == null) return methodReference;
         mutableMethodReference = this.shallowCopier.Copy(methodReference);
       }
       this.referenceRewrites[methodReference] = mutableMethodReference;
       this.RewriteChildren(mutableMethodReference);
-      return mutableMethodReference;
+      return methodReference;
     }
 
     /// <summary>
@@ -877,7 +837,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(moduleReference, out result)) return (IModuleReference)result;
       var mutableModuleReference = moduleReference as ModuleReference;
       if (mutableModuleReference == null || mutableModuleReference.IsFrozen) {
-        if (this.shallowCopier == null || moduleReference is Module) return moduleReference;
+        if (this.shallowCopier == null) return moduleReference;
         mutableModuleReference = this.shallowCopier.Copy(moduleReference);
       }
       this.referenceRewrites[moduleReference] = mutableModuleReference;
@@ -973,7 +933,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(namespaceTypeReference, out result)) return (INamespaceTypeReference)result;
       var mutableNamespaceTypeReference = namespaceTypeReference as NamespaceTypeReference;
       if (mutableNamespaceTypeReference == null || mutableNamespaceTypeReference.IsFrozen) {
-        if (this.shallowCopier == null || namespaceTypeReference is NamespaceTypeDefinition) return namespaceTypeReference;
+        if (this.shallowCopier == null) return namespaceTypeReference;
         mutableNamespaceTypeReference = this.shallowCopier.Copy(namespaceTypeReference);
       }
       this.referenceRewrites[namespaceTypeReference] = mutableNamespaceTypeReference;
@@ -998,26 +958,13 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// <summary>
     /// Rewrites the given nested type definition.
     /// </summary>
-    public virtual INestedTypeDefinition Rewrite(INestedTypeDefinition nestedTypeDefinition) {
-      Contract.Requires(nestedTypeDefinition != null);
+    public virtual INestedTypeDefinition Rewrite(INestedTypeDefinition namespaceTypeDefinition) {
+      Contract.Requires(namespaceTypeDefinition != null);
       Contract.Ensures(Contract.Result<INestedTypeDefinition>() != null);
 
-      if (nestedTypeDefinition is Dummy) return nestedTypeDefinition;
-      nestedTypeDefinition.Dispatch(this.dispatchingVisitor);
-      return (this.dispatchingVisitor.result as INestedTypeDefinition)??nestedTypeDefinition;
-    }
-
-    /// <summary>
-    /// Rewrites the given unspecialized nested type definition.
-    /// </summary>
-    protected virtual INestedTypeDefinition RewriteUnspecialized(INestedTypeDefinition nestedTypeDefinition) {
-      Contract.Requires(nestedTypeDefinition != null);
-      Contract.Requires(!(nestedTypeDefinition is ISpecializedNestedTypeDefinition));
-      Contract.Ensures(Contract.Result<INestedTypeDefinition>() != null);
-
-      if (nestedTypeDefinition is Dummy) return nestedTypeDefinition;
-      var mutableNestedTypeDefinition = nestedTypeDefinition as NestedTypeDefinition;
-      if (mutableNestedTypeDefinition == null) return nestedTypeDefinition;
+      if (namespaceTypeDefinition is Dummy) return namespaceTypeDefinition;
+      var mutableNestedTypeDefinition = namespaceTypeDefinition as NestedTypeDefinition;
+      if (mutableNestedTypeDefinition == null) return namespaceTypeDefinition;
       this.RewriteChildren(mutableNestedTypeDefinition);
       return mutableNestedTypeDefinition;
     }
@@ -1047,7 +994,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(nestedTypeReference, out result)) return (INestedTypeReference)result;
       var mutableNestedTypeReference = nestedTypeReference as NestedTypeReference;
       if (mutableNestedTypeReference == null || mutableNestedTypeReference.IsFrozen) {
-        if (this.shallowCopier == null || nestedTypeReference is NestedTypeDefinition) return nestedTypeReference;
+        if (this.shallowCopier == null) return nestedTypeReference;
         mutableNestedTypeReference = this.shallowCopier.Copy(nestedTypeReference);
       }
       this.referenceRewrites[nestedTypeReference] = mutableNestedTypeReference;
@@ -1081,7 +1028,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(nestedUnitNamespaceReference, out result)) return (INestedUnitNamespaceReference)result;
       var mutableNestedUnitNamespaceReference = nestedUnitNamespaceReference as NestedUnitNamespaceReference;
       if (mutableNestedUnitNamespaceReference == null || mutableNestedUnitNamespaceReference.IsFrozen) {
-        if (this.shallowCopier == null || nestedUnitNamespaceReference is NestedUnitNamespace) return nestedUnitNamespaceReference;
+        if (this.shallowCopier == null) return nestedUnitNamespaceReference;
         mutableNestedUnitNamespaceReference = this.shallowCopier.Copy(nestedUnitNamespaceReference);
       }
       this.referenceRewrites[nestedUnitNamespaceReference] = mutableNestedUnitNamespaceReference;
@@ -1198,18 +1145,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public virtual IPropertyDefinition Rewrite(IPropertyDefinition propertyDefinition) {
       Contract.Requires(propertyDefinition != null);
-      Contract.Ensures(Contract.Result<IPropertyDefinition>() != null);
-
-      if (propertyDefinition is Dummy) return propertyDefinition;
-      propertyDefinition.Dispatch(this.dispatchingVisitor);
-      return (this.dispatchingVisitor.result as IPropertyDefinition)??propertyDefinition;
-    }
-
-    /// <summary>
-    /// Rewrites the given property definition.
-    /// </summary>
-    protected virtual IPropertyDefinition RewriteUnspecialized(IPropertyDefinition propertyDefinition) {
-      Contract.Requires(propertyDefinition != null);
       Contract.Requires(!(propertyDefinition is ISpecializedPropertyDefinition));
       Contract.Ensures(Contract.Result<IPropertyDefinition>() != null);
 
@@ -1260,7 +1195,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(rootUnitNamespaceReference, out result)) return (IRootUnitNamespaceReference)result;
       var mutableRootUnitNamespaceReference = rootUnitNamespaceReference as RootUnitNamespaceReference;
       if (mutableRootUnitNamespaceReference == null || mutableRootUnitNamespaceReference.IsFrozen) {
-        if (this.shallowCopier == null || rootUnitNamespaceReference is RootUnitNamespace) return rootUnitNamespaceReference;
+        if (this.shallowCopier == null) return rootUnitNamespaceReference;
         mutableRootUnitNamespaceReference = this.shallowCopier.Copy(rootUnitNamespaceReference);
       }
       this.referenceRewrites[rootUnitNamespaceReference] = mutableRootUnitNamespaceReference;
@@ -1283,37 +1218,11 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Rewrites the given specialized event definition.
-    /// </summary>
-    public virtual IEventDefinition Rewrite(ISpecializedEventDefinition specializedEventDefinition) {
-      Contract.Requires(specializedEventDefinition != null);
-      Contract.Ensures(Contract.Result<IEventDefinition>() != null);
-
-      var mutableSpecializedEventDefinition = specializedEventDefinition as SpecializedEventDefinition;
-      if (mutableSpecializedEventDefinition == null) return specializedEventDefinition;
-      this.RewriteChildren(mutableSpecializedEventDefinition);
-      return mutableSpecializedEventDefinition;
-    }
-
-    /// <summary>
-    /// Rewrites the given specialized field definition.
-    /// </summary>
-    public virtual IFieldDefinition Rewrite(ISpecializedFieldDefinition specializedFieldDefinition) {
-      Contract.Requires(specializedFieldDefinition != null);
-      Contract.Ensures(Contract.Result<IFieldDefinition>() != null);
-
-      var mutableSpecializedFieldDefinition = specializedFieldDefinition as SpecializedFieldDefinition;
-      if (mutableSpecializedFieldDefinition == null) return specializedFieldDefinition;
-      this.RewriteChildren(mutableSpecializedFieldDefinition);
-      return mutableSpecializedFieldDefinition;
-    }
-
-    /// <summary>
     /// Rewrites the given specialized field reference.
     /// </summary>
-    public virtual IFieldReference Rewrite(ISpecializedFieldReference specializedFieldReference) {
+    public virtual ISpecializedFieldReference Rewrite(ISpecializedFieldReference specializedFieldReference) {
       Contract.Requires(specializedFieldReference != null);
-      Contract.Ensures(Contract.Result<IFieldReference>() != null);
+      Contract.Ensures(Contract.Result<ISpecializedFieldReference>() != null);
 
       if (specializedFieldReference is Dummy) return specializedFieldReference;
       object result;
@@ -1326,19 +1235,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.referenceRewrites[specializedFieldReference] = mutableSpecializedFieldReference;
       this.RewriteChildren(mutableSpecializedFieldReference);
       return mutableSpecializedFieldReference;
-    }
-
-    /// <summary>
-    /// Rewrites the given specialized method definition.
-    /// </summary>
-    public virtual IMethodDefinition Rewrite(ISpecializedMethodDefinition specializedMethodDefinition) {
-      Contract.Requires(specializedMethodDefinition != null);
-      Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
-
-      var mutableSpecializedMethodDefinition = specializedMethodDefinition as SpecializedMethodDefinition;
-      if (mutableSpecializedMethodDefinition == null) return specializedMethodDefinition;
-      this.RewriteChildren(mutableSpecializedMethodDefinition);
-      return mutableSpecializedMethodDefinition;
     }
 
     /// <summary>
@@ -1362,19 +1258,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Rewrites the given specialized nested type definition.
-    /// </summary>
-    public virtual INestedTypeDefinition Rewrite(ISpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
-      Contract.Requires(specializedNestedTypeDefinition != null);
-      Contract.Ensures(Contract.Result<INestedTypeDefinition>() != null);
-
-      var mutableSpecializedNestedTypeDefinition = specializedNestedTypeDefinition as SpecializedNestedTypeDefinition;
-      if (mutableSpecializedNestedTypeDefinition == null) return specializedNestedTypeDefinition;
-      this.RewriteChildren(mutableSpecializedNestedTypeDefinition);
-      return mutableSpecializedNestedTypeDefinition;
-    }
-
-    /// <summary>
     /// Rewrites the given specialized nested type reference.
     /// </summary>
     public virtual INestedTypeReference Rewrite(ISpecializedNestedTypeReference specializedNestedTypeReference) {
@@ -1386,26 +1269,12 @@ namespace Microsoft.Cci.MutableCodeModel {
       if (this.referenceRewrites.TryGetValue(specializedNestedTypeReference, out result)) return (ISpecializedNestedTypeReference)result;
       var mutableSpecializedNestedTypeReference = specializedNestedTypeReference as SpecializedNestedTypeReference;
       if (mutableSpecializedNestedTypeReference == null || mutableSpecializedNestedTypeReference.IsFrozen) {
-        if (this.shallowCopier == null || specializedNestedTypeReference is SpecializedNestedTypeDefinition) return specializedNestedTypeReference;
+        if (this.shallowCopier == null) return specializedNestedTypeReference;
         mutableSpecializedNestedTypeReference = this.shallowCopier.Copy(specializedNestedTypeReference);
       }
       this.referenceRewrites[specializedNestedTypeReference] = mutableSpecializedNestedTypeReference;
       this.RewriteChildren(mutableSpecializedNestedTypeReference);
       return mutableSpecializedNestedTypeReference;
-    }
-
-    /// <summary>
-    /// Rewrites the given specialized property definition.
-    /// </summary>
-    public virtual IPropertyDefinition Rewrite(ISpecializedPropertyDefinition specializedPropertyDefinition) {
-      Contract.Requires(specializedPropertyDefinition != null);
-      Contract.Ensures(Contract.Result<IPropertyDefinition>() != null);
-
-      if (specializedPropertyDefinition is Dummy) return specializedPropertyDefinition;
-      var mutableSpecializedPropertyDefinition = specializedPropertyDefinition as SpecializedPropertyDefinition;
-      if (mutableSpecializedPropertyDefinition == null) return specializedPropertyDefinition;
-      this.RewriteChildren(mutableSpecializedPropertyDefinition);
-      return mutableSpecializedPropertyDefinition;
     }
 
     /// <summary>
@@ -2480,7 +2349,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Rewrites the children of given reference to a root unit namespace.
+    /// Rewrites the given reference to a root unit namespace.
     /// </summary>
     public virtual void RewriteChildren(RootUnitNamespaceReference rootUnitNamespaceReference) {
       Contract.Requires(rootUnitNamespaceReference != null);
@@ -2491,7 +2360,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Rewrites the children of given security attribute.
+    /// Rewrites the given security attribute.
     /// </summary>
     public virtual void RewriteChildren(SecurityAttribute securityAttribute) {
       Contract.Requires(securityAttribute != null);
@@ -2500,48 +2369,18 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Rewrites the children of given specialized event definition.
+    /// Rewrites the given specialized field reference.
     /// </summary>
-    public virtual void RewriteChildren(SpecializedEventDefinition specializedEventDefinition) {
-      Contract.Requires(specializedEventDefinition != null);
+    public virtual void RewriteChildren(SpecializedFieldReference fieldReference) {
+      Contract.Requires(fieldReference != null);
+      Contract.Requires(!fieldReference.IsFrozen);
 
-      this.RewriteChildren((EventDefinition)specializedEventDefinition);
-      specializedEventDefinition.UnspecializedVersion = this.Rewrite(specializedEventDefinition.UnspecializedVersion);
+      this.RewriteChildren((FieldReference)fieldReference);
+      fieldReference.UnspecializedVersion = this.Rewrite(fieldReference.UnspecializedVersion);
     }
 
     /// <summary>
-    /// Rewrites the children of given specialized field definition.
-    /// </summary>
-    public virtual void RewriteChildren(SpecializedFieldDefinition specializedFieldDefinition) {
-      Contract.Requires(specializedFieldDefinition != null);
-
-      this.RewriteChildren((FieldDefinition)specializedFieldDefinition);
-      specializedFieldDefinition.UnspecializedVersion = this.Rewrite(specializedFieldDefinition.UnspecializedVersion);
-    }
-
-    /// <summary>
-    /// Rewrites the children of given specialized field reference.
-    /// </summary>
-    public virtual void RewriteChildren(SpecializedFieldReference specializedFieldReference) {
-      Contract.Requires(specializedFieldReference != null);
-      Contract.Requires(!specializedFieldReference.IsFrozen);
-
-      this.RewriteChildren((FieldReference)specializedFieldReference);
-      specializedFieldReference.UnspecializedVersion = this.Rewrite(specializedFieldReference.UnspecializedVersion);
-    }
-
-    /// <summary>
-    /// Rewrites the children of given specialized method definition.
-    /// </summary>
-    public virtual void RewriteChildren(SpecializedMethodDefinition specializedMethodDefinition) {
-      Contract.Requires(specializedMethodDefinition != null);
-
-      this.RewriteChildren((MethodDefinition)specializedMethodDefinition);
-      specializedMethodDefinition.UnspecializedVersion = this.Rewrite(specializedMethodDefinition.UnspecializedVersion);
-    }
-
-    /// <summary>
-    /// Rewrites the children of given specialized method reference.
+    /// Rewrites the given specialized method reference.
     /// </summary>
     public virtual void RewriteChildren(SpecializedMethodReference specializedMethodReference) {
       Contract.Requires(specializedMethodReference != null);
@@ -2552,17 +2391,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
-    /// Rewrites the children of given specialized nested type definition.
-    /// </summary>
-    public virtual void RewriteChildren(SpecializedNestedTypeDefinition specializedNestedTypeDefinition) {
-      Contract.Requires(specializedNestedTypeDefinition != null);
-
-      this.RewriteChildren((NestedTypeDefinition)specializedNestedTypeDefinition);
-      specializedNestedTypeDefinition.UnspecializedVersion = this.Rewrite(specializedNestedTypeDefinition.UnspecializedVersion);
-    }
-
-    /// <summary>
-    /// Rewrites the children of given specialized nested type reference.
+    /// Rewrites the given specialized nested type reference.
     /// </summary>
     public virtual void RewriteChildren(SpecializedNestedTypeReference specializedNestedTypeReference) {
       Contract.Requires(specializedNestedTypeReference != null);
@@ -2570,16 +2399,6 @@ namespace Microsoft.Cci.MutableCodeModel {
 
       this.RewriteChildren((NestedTypeReference)specializedNestedTypeReference);
       specializedNestedTypeReference.UnspecializedVersion = this.Rewrite(specializedNestedTypeReference.UnspecializedVersion);
-    }
-
-    /// <summary>
-    /// Rewrites the children of given specialized property definition.
-    /// </summary>
-    public virtual void RewriteChildren(SpecializedPropertyDefinition specializedPropertyDefinition) {
-      Contract.Requires(specializedPropertyDefinition != null);
-
-      this.RewriteChildren((PropertyDefinition)specializedPropertyDefinition);
-      specializedPropertyDefinition.UnspecializedVersion = this.Rewrite(specializedPropertyDefinition.UnspecializedVersion);
     }
 
     /// <summary>

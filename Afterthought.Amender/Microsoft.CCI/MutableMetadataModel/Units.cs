@@ -713,11 +713,11 @@ namespace Microsoft.Cci.MutableCodeModel {
       this.fileAlignment = 512;
       this.ilOnly = true;
       this.StrongNameSigned = false;
-      this.Prefers32bits = false;
+      this.NativeEntryPoint = false;
       this.kind = ModuleKind.DynamicallyLinkedLibrary;
       this.linkerMajorVersion = 6;
       this.linkerMinorVersion = 0;
-      this.metadataFormatMajorVersion = 2; // assume generics
+      this.metadataFormatMajorVersion = 1;
       this.metadataFormatMinorVersion = 0;
       this.moduleAttributes = null;
       this.moduleReferences = null;
@@ -751,7 +751,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       ((ICopyFrom<IUnit>)this).Copy(module, internFactory);
       var allTypes = module.GetAllTypes();
       if (IteratorHelper.EnumerableIsNotEmpty(allTypes))
-        this.allTypes = new List<INamedTypeDefinition>(allTypes);
+        this.allTypes = new List<INamedTypeDefinition>(module.GetAllTypes());
       else
         this.allTypes = null;
       if (IteratorHelper.EnumerableIsNotEmpty(module.AssemblyReferences))
@@ -768,14 +768,9 @@ namespace Microsoft.Cci.MutableCodeModel {
       else
         this.entryPoint = Dummy.MethodReference;
       this.fileAlignment = module.FileAlignment;
-      var genericMethodInstances = module.GetGenericMethodInstances();
-      if (IteratorHelper.EnumerableIsNotEmpty(genericMethodInstances))
-        this.genericMethodInstances = new List<IGenericMethodInstanceReference>(genericMethodInstances);
-      else
-        this.genericMethodInstances = null;
       this.ilOnly = module.ILOnly;
       this.strongNameSigned = module.StrongNameSigned;
-      this.prefers32bits = module.Prefers32bits;
+      this.nativeEntryPoint = module.NativeEntryPoint;
       this.kind = module.Kind;
       this.linkerMajorVersion = module.LinkerMajorVersion;
       this.linkerMinorVersion = module.LinkerMinorVersion;
@@ -806,20 +801,18 @@ namespace Microsoft.Cci.MutableCodeModel {
         this.strings = null;
       this.subsystemMajorVersion = module.SubsystemMajorVersion;
       this.subsystemMinorVersion = module.SubsystemMinorVersion;
-      var structuralTypeInstances = module.GetStructuralTypeInstances();
-      if (IteratorHelper.EnumerableIsNotEmpty(structuralTypeInstances))
-        this.structuralTypeInstances = new List<ITypeReference>(structuralTypeInstances);
-      else
-        this.structuralTypeInstances = null;
-      var structuralTypeInstanceMembers = module.GetStructuralTypeInstanceMembers();
-      if (IteratorHelper.EnumerableIsNotEmpty(structuralTypeInstanceMembers))
-        this.structuralTypeInstanceMembers = new List<ITypeMemberReference>(structuralTypeInstanceMembers);
-      else
-        this.structuralTypeInstanceMembers = null;
       this.targetRuntimeVersion = module.TargetRuntimeVersion;
       this.trackDebugData = module.TrackDebugData;
-      this.typeMemberReferences = null;
-      this.typeReferences = null;
+      var memberRefs = module.GetTypeMemberReferences();
+      if (IteratorHelper.EnumerableIsNotEmpty(memberRefs))
+        this.typeMemberReferences = new List<ITypeMemberReference>(memberRefs);
+      else
+        this.typeMemberReferences = null;
+      var typeRefs = module.GetTypeReferences();
+      if (IteratorHelper.EnumerableIsNotEmpty(typeRefs))
+        this.typeReferences = new List<ITypeReference>(typeRefs);
+      else
+        this.typeReferences = null;
       this.usePublicKeyTokensForAssemblyReferences = module.UsePublicKeyTokensForAssemblyReferences;
       if (IteratorHelper.EnumerableIsNotEmpty(module.Win32Resources))
         this.win32Resources = new List<IWin32Resource>(module.Win32Resources);
@@ -937,15 +930,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     uint fileAlignment;
 
     /// <summary>
-    /// A usually empty (null) collection of generic method instances that are directly or indirectly used by this module.
-    /// </summary>
-    public List<IGenericMethodInstanceReference>/*?*/ GenericMethodInstances {
-      get { return this.genericMethodInstances; }
-      set { this.genericMethodInstances = value; }
-    }
-    List<IGenericMethodInstanceReference>/*?*/ genericMethodInstances;
-
-    /// <summary>
     /// True if the module contains only IL and is processor independent.
     /// </summary>
     /// <value></value>
@@ -965,32 +949,14 @@ namespace Microsoft.Cci.MutableCodeModel {
     bool strongNameSigned;
 
     /// <summary>
-    /// A usually empty (null) collection of structural type instances that are directly or indirectly used by this module.
-    /// </summary>
-    public List<ITypeReference>/*?*/ StructuralTypeInstances {
-      get { return this.structuralTypeInstances; }
-      set { this.structuralTypeInstances = value; }
-    }
-    List<ITypeReference>/*?*/ structuralTypeInstances;
-
-    /// <summary>
-    /// A usually empty (null) collection of structural type instance members that are directly or indirectly used by this module.
-    /// </summary>
-    public List<ITypeMemberReference>/*?*/ StructuralTypeInstanceMembers {
-      get { return this.structuralTypeInstanceMembers; }
-      set { this.structuralTypeInstanceMembers = value; }
-    }
-    List<ITypeMemberReference>/*?*/ structuralTypeInstanceMembers;
-
-    /// <summary>
-    /// If set, the module is platform independent but prefers to be loaded in a 32-bit process for performance reasons.
+    /// True if the module has a native entry point.
     /// </summary>
     /// <value></value>
-    public bool Prefers32bits {
-      get { return this.prefers32bits; }
-      set { this.prefers32bits = value; }
+    public bool NativeEntryPoint {
+      get { return this.nativeEntryPoint; }
+      set { this.nativeEntryPoint = value; }
     }
-    bool prefers32bits;
+    bool nativeEntryPoint;
 
     /// <summary>
     /// The kind of metadata stored in this module. For example whether this module is an executable or a manifest resource file.
@@ -1322,21 +1288,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     IEnumerable<INamedTypeDefinition> IModule.GetAllTypes() {
       if (this.allTypes == null) return Enumerable<INamedTypeDefinition>.Empty;
       return this.allTypes.AsReadOnly();
-    }
-
-    IEnumerable<IGenericMethodInstanceReference> IModule.GetGenericMethodInstances() {
-      if (this.genericMethodInstances == null) return Enumerable<IGenericMethodInstanceReference>.Empty;
-      return this.genericMethodInstances.AsReadOnly();
-    }
-
-    IEnumerable<ITypeReference> IModule.GetStructuralTypeInstances() {
-      if (this.structuralTypeInstances == null) return Enumerable<ITypeReference>.Empty;
-      return this.structuralTypeInstances.AsReadOnly();
-    }
-
-    IEnumerable<ITypeMemberReference> IModule.GetStructuralTypeInstanceMembers() {
-      if (this.structuralTypeInstanceMembers == null) return Enumerable<ITypeMemberReference>.Empty;
-      return this.structuralTypeInstanceMembers.AsReadOnly();
     }
 
     IEnumerable<ITypeReference> IModule.GetTypeReferences() {

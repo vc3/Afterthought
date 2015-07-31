@@ -9,8 +9,13 @@
 //
 //-----------------------------------------------------------------------------
 using System;
+using Microsoft.Cci;
 using System.Collections.Generic;
+using System.Text;
+using System.Globalization;
 using System.Diagnostics.Contracts;
+
+//^ using Microsoft.Contracts;
 
 namespace Microsoft.Cci {
 
@@ -27,23 +32,14 @@ namespace Microsoft.Cci {
     /// their containing namespace or type declarations.
     /// </summary>
     public EditEventArgs(IEnumerable<IEditDescriptor> edits) {
-      Contract.Requires(edits != null);
       this.edits = edits;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.edits != null);
     }
 
     /// <summary>
     /// A list of descriptors that collectively describe the edit that has caused this event.
     /// </summary>
     public IEnumerable<IEditDescriptor> Edits {
-      get {
-        Contract.Ensures(Contract.Result<IEnumerable<IEditDescriptor>>() != null);
-        return this.edits; 
-      }
+      get { return this.edits; }
     }
     readonly IEnumerable<IEditDescriptor> edits;
 
@@ -54,7 +50,6 @@ namespace Microsoft.Cci {
   /// A derived source document does not have to correspond to a user accessible entity, in which case its
   /// name and location should not be used in user interaction.
   /// </summary>
-  [ContractClass(typeof(IDerivedSourceDocumentContract))]
   public interface IDerivedSourceDocument : ISourceDocument {
 
     /// <summary>
@@ -83,94 +78,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region IDerivedSourceDocument contract binding
-  [ContractClassFor(typeof(IDerivedSourceDocument))]
-  abstract class IDerivedSourceDocumentContract : IDerivedSourceDocument {
-
-    #region IDerivedSourceDocument Members
-
-    public IDerivedSourceLocation DerivedSourceLocation {
-      get {
-        Contract.Ensures(Contract.Result<IDerivedSourceLocation>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IDerivedSourceLocation GetDerivedSourceLocation(int position, int length) {
-      Contract.Requires(0 <= position && (position < this.Length || position == 0));
-      Contract.Requires(0 <= length);
-      Contract.Requires(length <= this.Length);
-      Contract.Requires(position+length <= this.Length);
-      Contract.Ensures(Contract.Result<IDerivedSourceLocation>() != null);
-      Contract.Ensures(Contract.Result<IDerivedSourceLocation>().SourceDocument == this);
-      Contract.Ensures(Contract.Result<IDerivedSourceLocation>().StartIndex == position);
-      Contract.Ensures(Contract.Result<IDerivedSourceLocation>().Length == length);
-      throw new NotImplementedException();
-    }
-
-    public IEnumerable<IPrimarySourceLocation> GetPrimarySourceLocationsFor(IDerivedSourceLocation derivedSourceLocation) {
-      Contract.Requires(derivedSourceLocation != null);
-      Contract.Requires(derivedSourceLocation.DerivedSourceDocument == this);
-      Contract.Ensures(Contract.Result<IEnumerable<IPrimarySourceLocation>>() != null);
-      throw new NotImplementedException();
-    }
-
-    #endregion
-
-    #region ISourceDocument Members
-
-    public int CopyTo(int position, char[] destination, int destinationOffset, int length) {
-      throw new NotImplementedException();
-    }
-
-    public ISourceLocation GetCorrespondingSourceLocation(ISourceLocation sourceLocationInPreviousVersionOfDocument) {
-      throw new NotImplementedException();
-    }
-
-    public ISourceLocation GetSourceLocation(int position, int length) {
-      throw new NotImplementedException();
-    }
-
-    public string GetText() {
-      throw new NotImplementedException();
-    }
-
-    public bool IsUpdatedVersionOf(ISourceDocument sourceDocument) {
-      throw new NotImplementedException();
-    }
-
-    public int Length {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string SourceLanguage {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ISourceLocation SourceLocation {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IDocument Members
-
-    public string Location {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IName Name {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// A range of derived source text that corresponds to an identifiable entity.
   /// </summary>
-  [ContractClass(typeof(IDerivedSourceLocationContract))]
   public interface IDerivedSourceLocation : ISourceLocation {
 
     /// <summary>
@@ -188,74 +98,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region IDerivedSourceLocation contract binding
-  [ContractClassFor(typeof(IDerivedSourceLocation))]
-  abstract class IDerivedSourceLocationContract : IDerivedSourceLocation {
-
-    #region IDerivedSourceLocation Members
-
-    public IDerivedSourceDocument DerivedSourceDocument {
-      get {
-        Contract.Ensures(Contract.Result<IDerivedSourceDocument>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IEnumerable<IPrimarySourceLocation> PrimarySourceLocations {
-      get {
-        Contract.Ensures(Contract.Result<IEnumerable<IPrimarySourceLocation>>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-
-    #region ISourceLocation Members
-
-    public bool Contains(ISourceLocation location) {
-      throw new NotImplementedException();
-    }
-
-    public int CopyTo(int offset, char[] destination, int destinationOffset, int length) {
-      throw new NotImplementedException();
-    }
-
-    public int EndIndex {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int Length {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ISourceDocument SourceDocument {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string Source {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int StartIndex {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ILocation Members
-
-    public IDocument Document {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// Describes an edit to a compilation as being either the addition, deletion or modification of a definition.
   /// </summary>
-  [ContractClass(typeof(IEditDescriptorContract))]
   public interface IEditDescriptor {
     /// <summary>
     /// The definition that has been added, deleted or modified.
@@ -306,55 +151,6 @@ namespace Microsoft.Cci {
 
   }
 
-  #region IEditDescriptor contract binding
-  [ContractClassFor(typeof(IEditDescriptor))]
-  abstract class IEditDescriptorContract : IEditDescriptor {
-    #region IEditDescriptor Members
-
-    public IDefinition AffectedDefinition {
-      get {
-        Contract.Ensures(Contract.Result<IDefinition>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public EditEventKind Kind {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ISourceDocument ModifiedSourceDocument {
-      get {
-        Contract.Ensures(Contract.Result<ISourceDocument>() != null);
-        Contract.Ensures(Contract.Result<ISourceDocument>().IsUpdatedVersionOf(this.OriginalSourceDocument));
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IDefinition ModifiedParent {
-      get {
-        Contract.Ensures(Contract.Result<IDefinition>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public ISourceDocument OriginalSourceDocument {
-      get {
-        Contract.Ensures(Contract.Result<ISourceDocument>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IDefinition OriginalParent {
-      get {
-        Contract.Ensures(Contract.Result<IDefinition>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// Describes the kind of edit that has been performed on a unit of metadata (also known as a symbol table).
   /// </summary>
@@ -385,7 +181,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// The root of an AST that represents the inputs, options and output of a compilation.
   /// </summary>
-  [ContractClass(typeof(ICompilationContract))]
   public interface ICompilation {
 
     /// <summary>
@@ -419,51 +214,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region ICompilation contract binding
-  [ContractClassFor(typeof(ICompilation))]
-  abstract class ICompilationContract : ICompilation {
-    #region ICompilation Members
-
-    public bool Contains(ISourceDocument sourceDocument) {
-      Contract.Requires(sourceDocument != null);
-      throw new NotImplementedException();
-    }
-
-    public IUnitSet GetUnitSetFor(IName unitSetName) {
-      Contract.Requires(unitSetName != null);
-      Contract.Ensures(Contract.Result<IUnitSet>() != null);
-      throw new NotImplementedException();
-    }
-
-    public IPlatformType PlatformType {
-      get {
-        Contract.Ensures(Contract.Result<IPlatformType>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IUnit Result {
-      get {
-        Contract.Ensures(Contract.Result<IUnit>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IUnitSet UnitSet {
-      get {
-        Contract.Ensures(Contract.Result<IUnitSet>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// Provides a standard abstraction over the applications that host editing of source files based on this object model.
   /// </summary>
-  [ContractClass(typeof(ISourceEditHostContract))]
   public interface ISourceEditHost : IMetadataHost {
 
     /// <summary>
@@ -497,131 +250,6 @@ namespace Microsoft.Cci {
     event EventHandler<EditEventArgs> SymbolTableEdits;
   }
 
-  #region ISourceEditHost contract binding
-  [ContractClassFor(typeof(ISourceEditHost))]
-  abstract class ISourceEditHostContract : ISourceEditHost {
-    #region ISourceEditHost Members
-
-    public event EventHandler<EditEventArgs> Edits;
-
-    public void RegisterAsLatest(ICompilation compilation) {
-      Contract.Requires(compilation != null);
-      throw new NotImplementedException();
-    }
-
-    public void ReportEdits(EditEventArgs editEventArguments) {
-      Contract.Requires(editEventArguments != null);
-      this.Edits(this, editEventArguments);
-      throw new NotImplementedException();
-    }
-
-    public void ReportSymbolTableEdits(EditEventArgs editEventArguments) {
-      Contract.Requires(editEventArguments != null);
-      this.SymbolTableEdits(this, editEventArguments);
-      throw new NotImplementedException();
-    }
-
-    public event EventHandler<EditEventArgs> SymbolTableEdits;
-
-    #endregion
-
-    #region IMetadataHost Members
-
-    public event EventHandler<ErrorEventArgs> Errors;
-
-    public AssemblyIdentity ContractAssemblySymbolicIdentity {
-      get { throw new NotImplementedException(); }
-    }
-
-    public AssemblyIdentity CoreAssemblySymbolicIdentity {
-      get { throw new NotImplementedException(); }
-    }
-
-    public AssemblyIdentity SystemCoreAssemblySymbolicIdentity {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IAssembly FindAssembly(AssemblyIdentity assemblyIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public IModule FindModule(ModuleIdentity moduleIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public IUnit FindUnit(UnitIdentity unitIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public IInternFactory InternFactory {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IPlatformType PlatformType {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IAssembly LoadAssembly(AssemblyIdentity assemblyIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public IModule LoadModule(ModuleIdentity moduleIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public IUnit LoadUnit(UnitIdentity unitIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public IUnit LoadUnitFrom(string location) {
-      throw new NotImplementedException();
-    }
-
-    public IEnumerable<IUnit> LoadedUnits {
-      get { throw new NotImplementedException(); }
-    }
-
-    public INameTable NameTable {
-      get { throw new NotImplementedException(); }
-    }
-
-    public byte PointerSize {
-      get { throw new NotImplementedException(); }
-    }
-
-    public void ReportErrors(ErrorEventArgs errorEventArguments) {
-      this.Errors(this, errorEventArguments);
-      throw new NotImplementedException();
-    }
-
-    public void ReportError(IErrorMessage error) {
-      throw new NotImplementedException();
-    }
-
-    public AssemblyIdentity ProbeAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
-      throw new NotImplementedException();
-    }
-
-    public ModuleIdentity ProbeModuleReference(IUnit referringUnit, ModuleIdentity referencedModule) {
-      throw new NotImplementedException();
-    }
-
-    public AssemblyIdentity UnifyAssembly(AssemblyIdentity assemblyIdentity) {
-      throw new NotImplementedException();
-    }
-
-    public AssemblyIdentity UnifyAssembly(IAssemblyReference assemblyReference) {
-      throw new NotImplementedException();
-    }
-
-    public bool PreserveILLocations {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// This interface is implemented by providers of semantic errors. That is, errors discovered by analysis of a constructed object model.
   /// Many of these errors will be discovered incrementally and as part of background activities.
@@ -645,7 +273,6 @@ namespace Microsoft.Cci {
   /// <summary>
   /// A source location that falls inside a region of text that originally came from another source document.
   /// </summary>
-  [ContractClass(typeof(IIncludedSourceLocationContract))]
   public interface IIncludedSourceLocation : IPrimarySourceLocation {
 
     /// <summary>
@@ -664,98 +291,10 @@ namespace Microsoft.Cci {
     int OriginalStartLine { get; }
   }
 
-  #region IIncludedSourceLocation contract binding
-  [ContractClassFor(typeof(IIncludedSourceLocation))]
-  abstract class IIncludedSourceLocationContract : IIncludedSourceLocation {
-    #region IIncludedSourceLocation Members
-
-    public int OriginalEndLine {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string OriginalSourceDocumentName {
-      get {
-        Contract.Ensures(Contract.Result<string>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public int OriginalStartLine {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IPrimarySourceLocation Members
-
-    public int EndColumn {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int EndLine {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IPrimarySourceDocument PrimarySourceDocument {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int StartColumn {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int StartLine {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ISourceLocation Members
-
-    public bool Contains(ISourceLocation location) {
-      throw new NotImplementedException();
-    }
-
-    public int CopyTo(int offset, char[] destination, int destinationOffset, int length) {
-      throw new NotImplementedException();
-    }
-
-    public int EndIndex {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int Length {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ISourceDocument SourceDocument {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string Source {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int StartIndex {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ILocation Members
-
-    public IDocument Document {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
 
   /// <summary>
   /// An object that represents a source document corresponding to a user accessible entity such as file.
   /// </summary>
-  [ContractClass(typeof(IPrimarySourceDocumentContract))]
   public interface IPrimarySourceDocument : ISourceDocument {
 
     /// <summary>
@@ -803,105 +342,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region IPrimarySourceDocument contract binding
-  [ContractClassFor(typeof(IPrimarySourceDocument))]
-  abstract class IPrimarySourceDocumentContract : IPrimarySourceDocument {
-    #region IPrimarySourceDocument Members
-
-    public Guid DocumentType {
-      get { throw new NotImplementedException(); }
-    }
-
-    public Guid Language {
-      get { throw new NotImplementedException(); }
-    }
-
-    public Guid LanguageVendor {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IPrimarySourceLocation PrimarySourceLocation {
-      get {
-        Contract.Ensures(Contract.Result<IPrimarySourceLocation>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public IPrimarySourceLocation GetPrimarySourceLocation(int position, int length) {
-      Contract.Requires(0 <= position && (position < this.Length || position == 0));
-      Contract.Requires(0 <= length);
-      Contract.Requires(length <= this.Length);
-      Contract.Requires(position+length <= this.Length);
-      Contract.Ensures(Contract.Result<IPrimarySourceLocation>() != null);
-      Contract.Ensures(Contract.Result<IPrimarySourceLocation>().SourceDocument == this);
-      Contract.Ensures(Contract.Result<IPrimarySourceLocation>().StartIndex == position);
-      Contract.Ensures(Contract.Result<IPrimarySourceLocation>().Length == length);
-      throw new NotImplementedException();
-    }
-
-    public void ToLineColumn(int position, out int line, out int column) {
-      Contract.Requires(position >= 0);
-      Contract.Requires(position <= this.Length);
-      Contract.Ensures(Contract.ValueAtReturn<int>(out line) >= 1 && Contract.ValueAtReturn<int>(out column) >= 1);      
-      throw new NotImplementedException();
-    }
-
-    #endregion
-
-    #region ISourceDocument Members
-
-    public int CopyTo(int position, char[] destination, int destinationOffset, int length) {
-      throw new NotImplementedException();
-    }
-
-    public ISourceLocation GetCorrespondingSourceLocation(ISourceLocation sourceLocationInPreviousVersionOfDocument) {
-      throw new NotImplementedException();
-    }
-
-    public ISourceLocation GetSourceLocation(int position, int length) {
-      throw new NotImplementedException();
-    }
-
-    public string GetText() {
-      throw new NotImplementedException();
-    }
-
-    public bool IsUpdatedVersionOf(ISourceDocument sourceDocument) {
-      throw new NotImplementedException();
-    }
-
-    public int Length {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string SourceLanguage {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ISourceLocation SourceLocation {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region IDocument Members
-
-    public string Location {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IName Name {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// A range of source text that corresponds to an identifiable entity.
   /// </summary>
-  [ContractClass(typeof(IPrimarySourceLocationContract))]
   public interface IPrimarySourceLocation : ISourceLocation {
     /// <summary>
     /// The last column in the last line of the range.
@@ -946,94 +389,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region IPrimarySourceLocation contract binding
-  [ContractClassFor(typeof(IPrimarySourceLocation))]
-  abstract class IPrimarySourceLocationContract : IPrimarySourceLocation {
-    #region IPrimarySourceLocation Members
-
-    public int EndColumn {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public int EndLine {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        throw new NotImplementedException();
-      }
-    }
-
-    public IPrimarySourceDocument PrimarySourceDocument {
-      get {
-        Contract.Ensures(Contract.Result<IPrimarySourceDocument>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public int StartColumn {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        throw new NotImplementedException();
-      }
-    }
-
-    public int StartLine {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        throw new NotImplementedException();
-      }
-    }
-
-    #endregion
-
-    #region ISourceLocation Members
-
-    public bool Contains(ISourceLocation location) {
-      throw new NotImplementedException();
-    }
-
-    public int CopyTo(int offset, char[] destination, int destinationOffset, int length) {
-      throw new NotImplementedException();
-    }
-
-    public int EndIndex {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int Length {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ISourceDocument SourceDocument {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string Source {
-      get { throw new NotImplementedException(); }
-    }
-
-    public int StartIndex {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-
-    #region ILocation Members
-
-    public IDocument Document {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// An object that represents a source document, such as a text file containing C# source code.
   /// </summary>
-  [ContractClass(typeof(ISourceDocumentContract))]
   public interface ISourceDocument : IDocument {
 
     /// <summary>
@@ -1067,7 +425,7 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Obtains a source location instance that corresponds to the substring of the document specified by the given start position and length.
     /// </summary>
-    [Pure]
+    //^ [Pure]
     ISourceLocation GetSourceLocation(int position, int length);
     //^ requires 0 <= position && (position < this.Length || position == 0);
     //^ requires 0 <= length;
@@ -1087,7 +445,7 @@ namespace Microsoft.Cci {
     /// Returns true if this source document has been created by editing the given source document (or an updated
     /// version of the given source document).
     /// </summary>
-    [Pure]
+    //^ [Confined]
     bool IsUpdatedVersionOf(ISourceDocument sourceDocument);
 
     /// <summary>
@@ -1110,97 +468,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region ISourceDocument contract binding
-  [ContractClassFor(typeof(ISourceDocument))]
-  abstract class ISourceDocumentContract : ISourceDocument {
-    #region ISourceDocument Members
-
-    public int CopyTo(int position, char[] destination, int destinationOffset, int length) {
-      Contract.Requires(destination != null);
-      Contract.Requires(0 <= position);
-      Contract.Requires(0 <= length);
-      //Contract.Requires(0 <= position+length);
-      Contract.Requires(position <= this.Length);
-      Contract.Requires(0 <= destinationOffset);
-      //Contract.Requires(0 <= destinationOffset+length);
-      Contract.Requires(destinationOffset+length <= destination.Length);
-      Contract.Ensures(0 <= Contract.Result<int>());
-      Contract.Ensures(Contract.Result<int>() <= length);
-      Contract.Ensures(position+Contract.Result<int>() <= this.Length);
-      throw new NotImplementedException();
-    }
-
-    public ISourceLocation GetCorrespondingSourceLocation(ISourceLocation sourceLocationInPreviousVersionOfDocument) {
-      Contract.Requires(sourceLocationInPreviousVersionOfDocument != null);
-      Contract.Requires(this.IsUpdatedVersionOf(sourceLocationInPreviousVersionOfDocument.SourceDocument));
-      Contract.Ensures(Contract.Result<ISourceLocation>() != null);
-      throw new NotImplementedException();
-    }
-
-    public ISourceLocation GetSourceLocation(int position, int length) {
-      //Contract.Requires(0 <= position && (position < this.Length || position == 0));
-      Contract.Requires(0 <= length);
-      Contract.Requires(length <= this.Length);
-      Contract.Requires(position+length <= this.Length);
-      Contract.Ensures(Contract.Result<ISourceLocation>() != null);
-      Contract.Ensures(Contract.Result<ISourceLocation>().SourceDocument == this);
-      Contract.Ensures(Contract.Result<ISourceLocation>().StartIndex == position);
-      Contract.Ensures(Contract.Result<ISourceLocation>().Length == length);
-      throw new NotImplementedException();
-    }
-
-    public string GetText() {
-      Contract.Ensures(Contract.Result<string>() != null);
-      Contract.Ensures(Contract.Result<string>().Length == this.Length);
-      throw new NotImplementedException();
-    }
-
-    public bool IsUpdatedVersionOf(ISourceDocument sourceDocument) {
-      Contract.Requires(sourceDocument != null);
-      throw new NotImplementedException();
-    }
-
-    public int Length {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public string SourceLanguage {
-      get {
-        Contract.Ensures(Contract.Result<string>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public ISourceLocation SourceLocation {
-      get {
-        Contract.Ensures(Contract.Result<ISourceLocation>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-
-    #region IDocument Members
-
-    public string Location {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IName Name {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// An object that describes an edit to a source file.
   /// </summary>
-  [ContractClass(typeof(ISourceDocumentEditContract))]
   public interface ISourceDocumentEdit {
 
     /// <summary>
@@ -1218,34 +488,9 @@ namespace Microsoft.Cci {
 
   }
 
-  #region ISourceDocumentEdit contract binding
-  [ContractClassFor(typeof(ISourceDocumentEdit))]
-  abstract class ISourceDocumentEditContract : ISourceDocumentEdit {
-    #region ISourceDocumentEdit Members
-
-    public ISourceLocation SourceLocationBeforeEdit {
-      get {
-        Contract.Ensures(Contract.Result<ISourceLocation>() != null);
-        throw new NotImplementedException();
-      }
-    }
-
-    public ISourceDocument SourceDocumentAfterEdit {
-      get {
-        Contract.Ensures(Contract.Result<ISourceDocument>() != null);
-        Contract.Ensures(Contract.Result<ISourceDocument>().IsUpdatedVersionOf(this.SourceLocationBeforeEdit.SourceDocument));
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// Error information relating to a portion of a source document.
   /// </summary>
-  [ContractClass(typeof(ISourceErrorMessageContract))]
   public interface ISourceErrorMessage : IErrorMessage {
 
     /// <summary>
@@ -1265,71 +510,14 @@ namespace Microsoft.Cci {
 
   }
 
-  #region ISourceErrorMessage contract binding
-  [ContractClassFor(typeof(ISourceErrorMessage))]
-  abstract class ISourceErrorMessageContract : ISourceErrorMessage {
-    #region ISourceErrorMessage Members
-
-    public ISourceLocation SourceLocation {
-      get {
-        Contract.Ensures(Contract.Result<ISourceLocation>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public ISourceErrorMessage MakeShallowCopy(ISourceDocument targetDocument) {
-      Contract.Requires(targetDocument != null);
-      Contract.Requires(targetDocument == this.SourceLocation.SourceDocument || targetDocument.IsUpdatedVersionOf(this.SourceLocation.SourceDocument));
-      Contract.Ensures(Contract.Result<ISourceErrorMessage>() != null);
-      Contract.Ensures(!(targetDocument == this.SourceLocation.SourceDocument) || Contract.Result<ISourceErrorMessage>() == this);
-      throw new NotImplementedException();
-    }
-
-    #endregion
-
-    #region IErrorMessage Members
-
-    public object ErrorReporter {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string ErrorReporterIdentifier {
-      get { throw new NotImplementedException(); }
-    }
-
-    public long Code {
-      get { throw new NotImplementedException(); }
-    }
-
-    public bool IsWarning {
-      get { throw new NotImplementedException(); }
-    }
-
-    public string Message {
-      get { throw new NotImplementedException(); }
-    }
-
-    public ILocation Location {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IEnumerable<ILocation> RelatedLocations {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
-
   /// <summary>
   /// A range of source text that corresponds to an identifiable entity.
   /// </summary>
-  [ContractClass(typeof(ISourceLocationContract))]
   public interface ISourceLocation : ILocation {
     /// <summary>
     /// True if the source at the given location is completely contained by the source at this location.
     /// </summary>
-    [Pure]
+    //^ [Pure]
     bool Contains(ISourceLocation location);
 
     /// <summary>
@@ -1341,7 +529,7 @@ namespace Microsoft.Cci {
     /// <param name="destination">The destination array. Must have at least destinationOffset+length elements.</param>
     /// <param name="destinationOffset">The starting index where the characters must be copied to in the destination array.</param>
     /// <param name="length">The maximum number of characters to copy.</param>
-    [Pure]
+    //^ [Pure]
     int CopyTo(int offset, char[] destination, int destinationOffset, int length);
     //^ requires 0 <= offset;
     //^ requires 0 <= destinationOffset;
@@ -1395,80 +583,6 @@ namespace Microsoft.Cci {
     }
 
   }
-
-  #region ISourceLocation contract binding
-  [ContractClassFor(typeof(ISourceLocation))]
-  abstract class ISourceLocationContract : ISourceLocation {
-    #region ISourceLocation Members
-
-    public bool Contains(ISourceLocation location) {
-      Contract.Requires(location != null);
-      throw new NotImplementedException();
-    }
-
-    public int CopyTo(int offset, char[] destination, int destinationOffset, int length) {
-      Contract.Requires(destination != null);
-      Contract.Requires(0 <= offset);
-      Contract.Requires(0 <= destinationOffset);
-      Contract.Requires(0 <= length);
-      //Contract.Requires(0 <= offset+length);
-      //Contract.Requires(0 <= destinationOffset+length);
-      Contract.Requires(offset <= this.Length);
-      Contract.Requires(destinationOffset+length <= destination.Length);
-      Contract.Ensures(0 <= Contract.Result<int>() && Contract.Result<int>() <= length && offset+Contract.Result<int>() <= this.Length);
-      Contract.Ensures(!(Contract.Result<int>() < length) || offset+Contract.Result<int>() == this.Length);
-      throw new NotImplementedException();
-    }
-
-    public int EndIndex {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0 && Contract.Result<int>() <= this.SourceDocument.Length);
-        Contract.Ensures(Contract.Result<int>() == this.StartIndex + this.Length);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public int Length {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        Contract.Ensures(this.StartIndex+Contract.Result<int>() <= this.SourceDocument.Length);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public ISourceDocument SourceDocument {
-      get {
-        Contract.Ensures(Contract.Result<ISourceDocument>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public string Source {
-      get {
-        Contract.Ensures(Contract.Result<string>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public int StartIndex {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        //Contract.Ensures(Contract.Result<int>() < this.SourceDocument.Length || Contract.Result<int>() == 0);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-
-    #region ILocation Members
-
-    public IDocument Document {
-      get { throw new NotImplementedException(); }
-    }
-
-    #endregion
-  }
-  #endregion
 
   /// <summary>
   /// An object that can map some kinds of ILocation objects to IPrimarySourceLocation objects. 
@@ -1529,10 +643,10 @@ namespace Microsoft.Cci {
   }
   #endregion
 
+
   /// <summary>
   /// A range of CLR IL operations that comprise a lexical scope, specified as an IL offset and a length.
   /// </summary>
-  [ContractClass(typeof(ILocalScopeContract))]
   public interface ILocalScope {
     /// <summary>
     /// The offset of the first operation in the scope.
@@ -1552,30 +666,6 @@ namespace Microsoft.Cci {
     }
 
   }
-
-  #region ILocalScope contract binding
-  [ContractClassFor(typeof(ILocalScope))]
-  abstract class ILocalScopeContract : ILocalScope {
-    #region ILocalScope Members
-
-    public uint Offset {
-      get { throw new NotImplementedException(); }
-    }
-
-    public uint Length {
-      get { throw new NotImplementedException(); }
-    }
-
-    public IMethodDefinition MethodDefinition {
-      get {
-        Contract.Ensures(Contract.Result<IMethodDefinition>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-  }
-  #endregion
 
   /// <summary>
   /// An object that can provide information about the local scopes of a method.
@@ -1628,7 +718,6 @@ namespace Microsoft.Cci {
     ISynchronizationInformation/*?*/ GetSynchronizationInformation(IMethodBody methodBody);
   }
 
-  #region ILocalScopeProvider contract binding
   [ContractClassFor(typeof(ILocalScopeProvider))]
   abstract class ILocalScopeProviderContract : ILocalScopeProvider {
     public IEnumerable<ILocalScope> GetIteratorScopes(IMethodBody methodBody) {
@@ -1671,7 +760,6 @@ namespace Microsoft.Cci {
       throw new NotImplementedException();
     }
   }
-  #endregion
 
   /// <summary>
   /// An object that describes where synchronization points occur in the IL operations of the "MoveNext" method of the state class of
@@ -1855,6 +943,7 @@ namespace Microsoft.Cci {
   }
   #endregion
 
+
   /// <summary>
   /// Supplies information about edits that have been performed on source documents that form part of compilations that are registered with this environment.
   /// </summary>
@@ -1864,26 +953,16 @@ namespace Microsoft.Cci {
     /// Allocates an object that supplies information about edits that have been performed on source documents that form part of compilations that are registered with this environment.
     /// </summary>
     public SourceEditEventArgs(IEnumerable<ISourceDocumentEdit> edits) {
-      Contract.Requires(edits != null);
       this.edits = edits;
-    }
-
-    [ContractInvariantMethod]
-    private void ObjectInvariant() {
-      Contract.Invariant(this.edits != null);
     }
 
     /// <summary>
     /// A list of edits to source documents that have occurred as a single event.
     /// </summary>
     public IEnumerable<ISourceDocumentEdit> Edits {
-      get {
-        Contract.Ensures(Contract.Result<IEnumerable<ISourceDocumentEdit>>() != null);
-        return this.edits; 
-      }
+      get { return this.edits; }
     }
     readonly IEnumerable<ISourceDocumentEdit> edits;
 
   }
-
 }

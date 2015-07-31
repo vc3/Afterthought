@@ -77,7 +77,6 @@
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\ControlFlowQueries.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\DataFlowInferencer.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\Graph.cs" />
-    <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\HandlerInferencer.cs" />
     <Compile Include="Microsoft.CCI\ControlAndDataFlowGraph\TypeInferencer.cs" />
     <Compile Include="Microsoft.CCI\ILGenerator\ILGenerator.cs" />
     <Compile Include="Microsoft.CCI\ILGenerator\ILRewriter.cs" />
@@ -85,7 +84,6 @@
     <Compile Include="Microsoft.CCI\MetadataHelper\AttributeHelper.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\CommandLineOptions.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\Core.cs" />
-    <Compile Include="Microsoft.CCI\MetadataHelper\ExpressionHelper.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\GlobalAssemblyCache.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\MemberHelper.cs" />
     <Compile Include="Microsoft.CCI\MetadataHelper\Members.cs" />
@@ -178,13 +176,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="Microsoft.CCI\MetadataModel\Core.cd" />
-    <None Include="Microsoft.CCI\MetadataModel\Members.cd" />
-    <None Include="Microsoft.CCI\MetadataModel\Namespaces.cd" />
-    <None Include="Microsoft.CCI\MetadataModel\Templates.cd" />
-    <None Include="Microsoft.CCI\MetadataModel\Types.cd" />
-    <None Include="Microsoft.CCI\MetadataModel\Units.cd" />
-    <None Include="Microsoft.CCI\Microsoft.Contracts\InterimKey.snk" />
     <None Include="NuGet\Afterthought.nuspec">
       <SubType>Designer</SubType>
     </None>

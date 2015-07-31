@@ -29,7 +29,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
   /// Represents a metadata entity. This has an associated Token Value...
   /// This is used in maintaining type spec cache.
   /// </summary>
-  internal abstract class MetadataObject : IReference, IMetadataObjectWithToken, ITokenDecoder {
+  internal abstract class MetadataObject : IReference, IMetadataObjectWithToken {
 
     internal PEFileToObjectModel PEFileToObjectModel;
 
@@ -83,15 +83,6 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     #endregion
-
-    #region ITokenDecoder Members
-
-    public object GetObjectForToken(uint token) {
-      return this.PEFileToObjectModel.GetReferenceForToken(this, token);
-    }
-
-    #endregion
-
   }
 
   /// <summary>
@@ -429,8 +420,8 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get { return (this.Cor20Flags & COR20Flags.StrongNameSigned) == COR20Flags.StrongNameSigned; }
     }
 
-    bool IModule.Prefers32bits {
-      get { return (this.Cor20Flags & (COR20Flags.Bit32Required|COR20Flags.Prefers32bits)) == (COR20Flags.Bit32Required|COR20Flags.Prefers32bits); }
+    bool IModule.NativeEntryPoint {
+      get { return (this.Cor20Flags & COR20Flags.NativeEntryPoint) == COR20Flags.NativeEntryPoint; }
     }
 
     ModuleKind IModule.Kind {
@@ -478,7 +469,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     }
 
     bool IModule.Requires32bits {
-      get { return (this.Cor20Flags & (COR20Flags.Bit32Required|COR20Flags.Prefers32bits)) == COR20Flags.Bit32Required; }
+      get { return (this.Cor20Flags & COR20Flags.Bit32Required) == COR20Flags.Bit32Required; }
     }
 
     bool IModule.Requires64bits {
@@ -539,18 +530,6 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     IEnumerable<INamedTypeDefinition> IModule.GetAllTypes() {
       return this.PEFileToObjectModel.GetAllTypes();
-    }
-
-    IEnumerable<IGenericMethodInstanceReference> IModule.GetGenericMethodInstances() {
-      return Enumerable<IGenericMethodInstanceReference>.Empty;
-    }
-
-    IEnumerable<ITypeReference> IModule.GetStructuralTypeInstances() {
-      return Enumerable<ITypeReference>.Empty;
-    }
-
-    IEnumerable<ITypeMemberReference> IModule.GetStructuralTypeInstanceMembers() {
-      return Enumerable<ITypeMemberReference>.Empty;
     }
 
     IEnumerable<ITypeMemberReference> IModule.GetTypeMemberReferences() {
@@ -1854,6 +1833,8 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       get {
         unsafe {
           var size = this.sectionHeaders[this.index].SizeOfRawData;
+          var virtSize = this.sectionHeaders[this.index].VirtualSize;
+          if (virtSize < size) size = virtSize;
           MemoryBlock block =
             new MemoryBlock(
               this.peFileToObjectModel.PEFileReader.BinaryDocumentMemoryBlock.Pointer + this.sectionHeaders[this.index].OffsetToRawData + 0, size);
@@ -1955,7 +1936,7 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
     #endregion
   }
 
-  internal abstract class MethodDefinition : TypeMember, IMethodDefinition {
+  internal abstract class MethodDefinition : TypeMember, IMethodDefinition, ITokenDecoder {
     internal readonly uint MethodDefRowId;
     internal MethodFlags MethodFlags;
     internal MethodImplFlags MethodImplFlags;
@@ -2339,6 +2320,13 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
 
     #endregion
 
+    #region ITokenDecoder Members
+
+    public object GetObjectForToken(uint token) {
+      return this.PEFileToObjectModel.GetReferenceForToken(this, token);
+    }
+
+    #endregion
   }
 
   internal class NonGenericMethod : MethodDefinition {
@@ -3256,17 +3244,13 @@ namespace Microsoft.Cci.MetadataReader.ObjectModelImplementation {
       }
     }
 
-    /// <summary>
-    /// The method being referred to.
-    /// </summary>
-    public IMethodDefinition ResolvedMethod {
+    public virtual IMethodDefinition ResolvedMethod {
       get {
-        if (this.resolvedMethod == null)
-          this.resolvedMethod = MemberHelper.ResolveMethod(this);
-        return this.resolvedMethod;
+        ITypeReference/*?*/moduleTypeRef = this.OwningTypeReference;
+        if (moduleTypeRef == null) return Dummy.MethodDefinition;
+        return TypeHelper.GetMethod(moduleTypeRef.ResolvedType, this, true);
       }
     }
-    IMethodDefinition/*?*/ resolvedMethod;
 
     public ushort ParameterCount {
       get {

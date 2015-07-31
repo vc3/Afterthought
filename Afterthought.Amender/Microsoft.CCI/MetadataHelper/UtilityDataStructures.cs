@@ -171,10 +171,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
         uint hash2 = HashHelper.HashInt2(key);
         uint tableIndex = hash1 & mask;
         while (keyValueTable[tableIndex].Value != null) {
-          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == value) {
-            keyValueTable[tableIndex].Value = value;
+          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == value)
             return;
-          }
           tableIndex = (tableIndex + hash2) & mask;
         }
         keyValueTable[tableIndex].Key = key;
@@ -479,8 +477,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
   /// </summary>
   /// <typeparam name="InternalT"></typeparam>
   /// <typeparam name="Key"></typeparam>
-  public sealed class MultiHashtable<Key, InternalT>
-    where Key : class
+  public sealed class MultiHashtable<Key, InternalT> 
+    where Key : class 
     where InternalT : class {
 
     struct KeyValuePair {
@@ -552,10 +550,8 @@ namespace Microsoft.Cci.UtilityDataStructures {
         uint hash2 = HashHelper.HashInt2(hash);
         uint tableIndex = hash1 & mask;
         while (keyValueTable[tableIndex].Value != null) {
-          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == value) {
-            keyValueTable[tableIndex].Value = value;
+          if (keyValueTable[tableIndex].Key == key && keyValueTable[tableIndex].Value == value)
             return;
-          }
           tableIndex = (tableIndex + hash2) & mask;
         }
         keyValueTable[tableIndex].Key = key;
@@ -1028,14 +1024,13 @@ namespace Microsoft.Cci.UtilityDataStructures {
         var hash = (uint)key.GetHashCode();
         uint hash1 = HashHelper.HashInt1(hash);
         uint tableIndex = hash1 & mask;
-        Key tableKey = keyValueTable[tableIndex].key;
-        if (object.ReferenceEquals(tableKey, key))
-          return keyValueTable[tableIndex].value != dummyObject;
+        if (object.ReferenceEquals(keyValueTable[tableIndex].key, key) && keyValueTable[tableIndex].value != dummyObject)
+          return true;
         uint hash2 = HashHelper.HashInt2(hash);
         tableIndex = (tableIndex + hash2) & mask;
-        while ((tableKey = keyValueTable[tableIndex].key) != null) {
-          if (object.ReferenceEquals(tableKey, key))
-            return keyValueTable[tableIndex].value != dummyObject;
+        while (object.ReferenceEquals(keyValueTable[tableIndex].key, key)) {
+          if (keyValueTable[tableIndex].value != dummyObject)
+            return true;
           tableIndex = (tableIndex + hash2) & mask;
         }
         return false;
@@ -1080,19 +1075,11 @@ namespace Microsoft.Cci.UtilityDataStructures {
           uint tableIndex = hash1 & mask;
           Key tableKey = keyValueTable[tableIndex].key;
           if (tableKey == null) return default(Value);
-          if (object.ReferenceEquals(tableKey, key)) {
-            var value = keyValueTable[tableIndex].value;
-            if (value == dummyObject) value = default(Value);
-            return value;
-          }
+          if (object.ReferenceEquals(tableKey, key)) return keyValueTable[tableIndex].value;
           uint hash2 = HashHelper.HashInt2(hash);
           tableIndex = (tableIndex + hash2) & mask;
           while ((tableKey = keyValueTable[tableIndex].key) != null) {
-            if (object.ReferenceEquals(tableKey, key)) {
-              var value = keyValueTable[tableIndex].value;
-              if (value == dummyObject) value = default(Value);
-              return value;
-            }
+            if (object.ReferenceEquals(tableKey, key)) return keyValueTable[tableIndex].value;
             tableIndex = (tableIndex + hash2) & mask;
           }
           return default(Value);
@@ -1431,16 +1418,11 @@ namespace Microsoft.Cci.UtilityDataStructures {
 
       public DebugView(HashtableForUintValues<Key> hashTable) {
         var numEntries = hashTable.Count;
-        var sortedList = new SortedList<Key, uint>();
         this.entries = new KeyValuePair[numEntries];
         var len = hashTable.keyValueTable.Length;
-        for (int i = 0; i < len; i++) {
-          if (hashTable.keyValueTable[i].value > 0)
-            sortedList.Add(hashTable.keyValueTable[i].key, hashTable.keyValueTable[i].value);
-        }
         var j = 0;
-        foreach (var entry in sortedList) {
-          this.entries[j++] = new KeyValuePair() { key = entry.Key, value = entry.Value };
+        for (int i = 0; i < len; i++) {
+          this.entries[j++] = hashTable.keyValueTable[i];
         }
       }
 
@@ -1454,9 +1436,6 @@ namespace Microsoft.Cci.UtilityDataStructures {
   /// Hashtable that can hold only single non null value per uint key.
   /// </summary>
   /// <typeparam name="InternalT"></typeparam>
-#if !__MonoCS__
-  [DebuggerTypeProxy(typeof(Hashtable<>.DebugView))]
-#endif
   public sealed class Hashtable<InternalT> where InternalT : class {
     /// <summary>
     /// 
@@ -1767,25 +1746,6 @@ namespace Microsoft.Cci.UtilityDataStructures {
         return new ValuesEnumerable(this);
       }
     }
-
-    internal class DebugView {
-
-      public DebugView(Hashtable<InternalT> hashTable) {
-        var numEntries = hashTable.Count;
-        this.entries = new KeyValuePair[numEntries];
-        var len = hashTable.keyValueTable.Length;
-        var j = 0;
-        for (int i = 0; i < len; i++) {
-          if (hashTable.keyValueTable[i].Value != null)
-            this.entries[j++] = hashTable.keyValueTable[i];
-        }
-        Array.Sort(this.entries, (x, y) => (int)x.Key - (int)y.Key);
-      }
-
-      [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-      public KeyValuePair[] entries;
-
-    }
   }
 
   /// <summary>
@@ -2043,22 +2003,10 @@ namespace Microsoft.Cci.UtilityDataStructures {
   /// <summary>
   /// Hashtable that can hold only single uint value per uint key.
   /// </summary>
-#if !__MonoCS__
-  [DebuggerTypeProxy(typeof(Hashtable.DebugView))]
-#endif
   public sealed class Hashtable {
-    /// <summary>
-    /// 
-    /// </summary>
-    public struct KeyValuePair {
-      /// <summary>
-      /// 
-      /// </summary>
-      public uint Key;
-      /// <summary>
-      /// 
-      /// </summary>
-      public uint Value;
+    struct KeyValuePair {
+      internal uint Key;
+      internal uint Value;
     }
     KeyValuePair[] keyValueTable;
     uint size; //always a power of two
@@ -2124,7 +2072,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
         uint tableIndex = hash1 & mask;
         while (keyValueTable[tableIndex].Value != 0) {
           if (keyValueTable[tableIndex].Key == key) {
-            keyValueTable[tableIndex].Value = value;
+            Debug.Assert(keyValueTable[tableIndex].Value == value);
             return;
           }
           tableIndex = (tableIndex + hash2) & mask;
@@ -2208,9 +2156,6 @@ namespace Microsoft.Cci.UtilityDataStructures {
           }
           return 0;
         }
-      }
-      set {
-        this.Add(key, value);
       }
     }
 
@@ -2317,26 +2262,6 @@ namespace Microsoft.Cci.UtilityDataStructures {
         return new ValuesEnumerable(this);
       }
     }
-
-    internal class DebugView {
-
-      public DebugView(Hashtable hashTable) {
-        var numEntries = hashTable.Count;
-        this.entries = new KeyValuePair[numEntries*2];
-        var len = hashTable.keyValueTable.Length;
-        var j = 0;
-        for (int i = 0; i < len; i++) {
-          if (hashTable.keyValueTable[i].Value != 0)
-            this.entries[j++] = hashTable.keyValueTable[i];
-        }
-        Array.Sort(this.entries, (x, y) => (int)x.Key - (int)y.Key);
-      }
-
-      [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-      public KeyValuePair[] entries;
-
-    }
-
   }
 
   /// <summary>
@@ -2505,21 +2430,6 @@ namespace Microsoft.Cci.UtilityDataStructures {
       }
     }
 
-    /// <summary>
-    /// Removes all entries from the table.
-    /// </summary>
-    public void Clear() {
-      if (this.count == 0) return;
-      var table = this.keysValueTable;
-      int len = table.Length;
-      for (int i = 0; i < len; ++i) {
-        table[i].Key1 = 0;
-        table[i].Key2 = 0;
-        table[i].Value = null;
-      }
-      this.count = 0;
-    }
-
     void Expand() {
       Key1Key2ValueTriple[] oldKeysValueTable = this.keysValueTable;
       this.keysValueTable = new Key1Key2ValueTriple[this.size*2];
@@ -2534,12 +2444,13 @@ namespace Microsoft.Cci.UtilityDataStructures {
         uint key2 = oldKeysValueTable[i].Key2;
         T value = oldKeysValueTable[i].Value;
         if (value != null) {
-          this.AddInternal(key1, key2, value);
+          bool ret = this.AddInternal(key1, key2, value);
+          Debug.Assert(ret);
         }
       }
     }
 
-    void AddInternal(uint key1, uint key2, T value) {
+    bool AddInternal(uint key1, uint key2, T value) {
       unchecked {
         var keysValueTable = this.keysValueTable;
         uint hash1 = HashHelper.HashDoubleInt1(key1, key2);
@@ -2548,8 +2459,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
         uint tableIndex = hash1 & mask;
         while (keysValueTable[tableIndex].Value != null) {
           if (keysValueTable[tableIndex].Key1 == key1 && keysValueTable[tableIndex].Key2 == key2) {
-            keysValueTable[tableIndex].Value = value;
-            return;
+            return false;
           }
           tableIndex = (tableIndex + hash2) & mask;
         }
@@ -2557,18 +2467,18 @@ namespace Microsoft.Cci.UtilityDataStructures {
         keysValueTable[tableIndex].Key2 = key2;
         keysValueTable[tableIndex].Value = value;
         this.count++;
-        return;
+        return true;
       }
     }
 
     /// <summary>
     /// Add element to the DoubleHashtable
     /// </summary>
-    public void Add(uint key1, uint key2, T value) {
+    public bool Add(uint key1, uint key2, T value) {
       if (this.count >= this.resizeCount) {
         this.Expand();
       }
-      this.AddInternal(key1, key2, value);
+      return this.AddInternal(key1, key2, value);
     }
 
     /// <summary>
@@ -2641,7 +2551,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
       var n = setToClone.elements.Length;
       this.elements = new object[n];
       for (int i = 0; i < n; i++)
-        this.elements[i] = setToClone.elements[i];
+        this.elements[i] = setToClone.elements[i];     
     }
 
     /// <summary>
@@ -2869,9 +2779,6 @@ namespace Microsoft.Cci.UtilityDataStructures {
   /// <summary>
   /// A hash table used to keep track of a set of non zero uint values, providing methods to add values to the set and to determine if an value is a member of the set.
   /// </summary>
-#if !__MonoCS__
-  [DebuggerTypeProxy(typeof(SetOfUints.DebugView))]
-#endif
   public sealed class SetOfUints {
     uint[] elements;
     uint size;
@@ -3123,85 +3030,16 @@ namespace Microsoft.Cci.UtilityDataStructures {
         return new ValuesEnumerable(this);
       }
     }
-
-    internal class DebugView {
-
-      public DebugView(SetOfUints setOfUints) {
-        var numEntries = setOfUints.Count;
-        this.elements = new uint[numEntries];
-        var len = setOfUints.elements.Length;
-        var j = 0;
-        for (int i = 0; i < len; i++) {
-          var elem = setOfUints.elements[i];
-          if (elem != 0 && elem != uint.MaxValue)
-            this.elements[j++] = elem;
-        }
-        Array.Sort(this.elements, (x, y) => (int)x - (int)y);
-      }
-
-      [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-      readonly public uint[] elements;
-
-    }
-
   }
-
-  /// <summary>
-  /// A list with a count and a readonly indexer. No other functionality is provided.
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  [ContractClass(typeof(ISimpleReadonlyListContract<>))]
-  public interface ISimpleReadonlyList<out T> {
-    /// <summary>
-    /// The number of elements in this list.
-    /// </summary>
-    int Count {
-      get;
-    }
-
-    /// <summary>
-    /// The i'th element of this list.
-    /// </summary>
-    T this[int i] {
-      get;
-    }
-
-  }
-
-  #region ISimpleReadonlyList contract binding
-  [ContractClassFor(typeof(ISimpleReadonlyList<>))]
-  abstract class ISimpleReadonlyListContract<T> : ISimpleReadonlyList<T> {
-    #region ISimpleReadonlyList<T> Members
-
-    public int Count {
-      get {
-        Contract.Ensures(Contract.Result<int>() >= 0);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    public T this[int i] {
-      get {
-        Contract.Requires(i >= 0);
-        Contract.Requires(i < this.Count);
-        Contract.Ensures(Contract.Result<T>() != null);
-        throw new NotImplementedException(); 
-      }
-    }
-
-    #endregion
-  }
-  #endregion
-
 
   /// <summary>
   /// A list of elements represented as a sublist of a master list. Use this to avoid allocating lots of little list objects.
   /// </summary>
   [ContractVerification(true)]
 #if !__MonoCS__
-  [DebuggerTypeProxy(typeof(Sublist<>.DebugView))]
+  [DebuggerTypeProxy(typeof(Sublist<>.SublistView))]
 #endif
-  public struct Sublist<T> : ISimpleReadonlyList<T> {
+  public struct Sublist<T> {
 
     /// <summary>
     /// A list of elements represented as a sublist of a master list. Use this to avoid allocating lots of little list objects.
@@ -3222,9 +3060,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
       this.count = count;
     }
 
-    readonly List<T>/*?*/ masterList;
-    readonly int offset;
-    readonly int count;
+    List<T>/*?*/ masterList;
+    int offset;
+    int count;
 
     [ContractInvariantMethod]
     private void ObjectInvariant() {
@@ -3238,9 +3076,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
     }
 
 
-    internal class DebugView {
+    internal class SublistView {
 
-      public DebugView(Sublist<T> list) {
+      public SublistView(Sublist<T> list) {
         var numEntries = list.Count;
         this.elements = new T[numEntries];
         for (int i = 0; i < numEntries; i++) {
@@ -3249,7 +3087,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
       }
 
       [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-      readonly public T[] elements;
+      public T[] elements;
 
     }
 
@@ -3258,6 +3096,7 @@ namespace Microsoft.Cci.UtilityDataStructures {
     /// </summary>
     public int Count {
       get {
+        Contract.Ensures(Contract.Result<int>() >= 0);
         return this.count;
       }
     }
@@ -3298,6 +3137,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
     public T this[int i] {
       [ContractVerification(false)]
       get {
+        Contract.Requires(i >= 0);
+        Contract.Requires(i < this.Count);
+        Contract.Ensures(Contract.Result<T>() != null);
         Contract.Assume(this.masterList[this.offset+i] != null);
         return this.masterList[this.offset+i];
       }
@@ -3343,9 +3185,9 @@ namespace Microsoft.Cci.UtilityDataStructures {
         this.last = last;
       }
 
-      readonly List<T>/*?*/ masterList;
+      List<T>/*?*/ masterList;
       int first;
-      readonly int last;
+      int last;
 
       [ContractInvariantMethod]
       private void ObjectInvariant() {
@@ -3399,1071 +3241,5 @@ namespace Microsoft.Cci.UtilityDataStructures {
 
   }
 
-  /// <summary>
-  /// Functional List Extension methods
-  /// </summary>
-  [ContractVerification(true)]
-  public static class FList
-  {
-    /// <summary>
-    /// Returns a new list representing the appended lists
-    /// </summary>
-    [Pure]
-    public static FList<T>/*?*/ Append<T>(this FList<T>/*?*/ l1, FList<T>/*?*/ l2)
-    {
-      Contract.Ensures((l1 == null || l2 == null) || Contract.Result<FList<T>>() != null);
-      Contract.Ensures(l1 != null || Contract.Result<FList<T>>() == l2);
-      Contract.Ensures(l2 != null || Contract.Result<FList<T>>() == l1);
 
-      if (l1 == null) return l2;
-
-      if (l2 == null) return l1;
-
-      return l1.Tail.Append(l2).Cons(l1.Head);
-    }
-
-    /// <summary>
-    /// Gives the length of the list
-    /// </summary>
-    [Pure]
-    [ContractVerification(false)]
-    public static int Length<T>(this FList<T>/*?*/ l)
-    {
-      Contract.Ensures(Contract.Result<int>() >= 0);
-      Contract.Ensures(Contract.Result<int>() >= 1 || l == null);
-      Contract.Ensures(Contract.Result<int>() <= 0 || l != null);
-      Contract.Ensures(Contract.Result<int>() <= 1 || l.Tail != null);
-
-      return FList<T>.Length(l);
-    }
-
-    /// <summary>
-    /// Construct a new list by consing the element to the head of tail list
-    /// </summary>
-    [Pure]
-    public static FList<T> Cons<T>(this FList<T>/*?*/ rest, T elem)
-    {
-      Contract.Ensures(Contract.Result<FList<T>>() != null);
-
-      return FList<T>.Cons(elem, rest);
-    }
-
-    /// <summary>
-    /// Constructs a new list that represents the reversed original list
-    /// </summary>
-    [Pure]
-    public static FList<T>/*?*/ Reverse<T>(this FList<T>/*?*/ list)
-    {
-      Contract.Ensures(list == null || Contract.Result<FList<T>>() != null);
-
-      return FList<T>.Reverse(list);
-    }
-
-    /// <summary>
-    /// Constructs a new list that represents the reversed original list with the applied conversion
-    /// </summary>
-    [Pure]
-    public static FList<R>/*?*/ Reverse<T, R>(this FList<T>/*?*/ list, Func<T, R> converter)
-    {
-      Contract.Ensures(list == null || Contract.Result<FList<R>>() != null);
-
-      return FList<T>.Reverse(list, converter);
-    }
-
-    /// <summary>
-    /// Return a list that only contains elements satisfying predicate in the same order 
-    /// </summary>
-    /// <param name="list">List from which to filter</param>
-    /// <param name="predicate">Predicate to be satisfied to be in result</param>
-    [Pure]
-    public static FList<T> Filter<T>(this FList<T> list, Predicate<T> predicate)
-    {
-      Contract.Requires(predicate != null);
-
-      if (list == null) return null;
-      var tail = Filter(list.Tail, predicate);
-      if (!predicate(list.Head)) return tail;
-      if (tail == list.Tail) return list;
-      return tail.Cons(list.Head);
-    }
-
-    /// <summary>
-    /// Applies action to each element in list
-    /// </summary>
-    /// <param name="list">List iterated over</param>
-    /// <param name="action">Action called on each element</param>
-    public static void Apply<T>(this FList<T>/*?*/ list, Action<T> action)
-    {
-      FList<T>.Apply(list, action);
-    }
-
-    /// <summary>
-    /// Enumerable over a functional list
-    /// </summary>
-    [Pure]
-    public static IEnumerable<T> GetEnumerable<T>(this FList<T>/*?*/ list)
-    {
-      Contract.Ensures(Contract.Result<IEnumerable<T>>() != null);
-
-      return FList<T>.PrivateGetEnumerable(list);
-    }
-
-    /// <summary>
-    /// Is the list empty
-    /// </summary>
-    [Pure]
-    public static bool IsEmpty<T>(this FList<T> list)
-    {
-      Contract.Ensures(Contract.Result<bool>() == (list == null));
-      return list == null;
-    }
-
-
-    /// <summary>
-    /// Returns last element of the non-empty list
-    /// </summary>
-    [Pure]
-    public static T Last<T>(this FList<T> list)
-    {
-      Contract.Requires(!list.IsEmpty());
-      if (list.Tail == null)
-      {
-        return list.Head;
-      }
-      return Last(list.Tail);
-    }
-
-    /// <summary>
-    /// Returns second to the last element in a list of at least 2 elements.
-    /// </summary>
-    [Pure]
-    // Needed when looking at access paths
-    public static T ButLast<T>(this FList<T> list)
-    {
-      Contract.Requires(!list.IsEmpty());
-      Contract.Requires(list.Tail != null);
-      return ButLastInternal(list.Tail, list.Head);
-    }
-
-    [Pure]
-    private static T ButLastInternal<T>(this FList<T> list, T butLast)
-    {
-      Contract.Requires(list != null);
-
-      if (list.Tail == null)
-        return butLast;
-      return ButLastInternal(list.Tail, list.Head);
-    }
-
-    /// <summary>
-    /// Coerce the list elements from S to T
-    /// </summary>
-    [Pure]
-    public static FList<T> Coerce<S, T>(this FList<S> list) where S : T
-    {
-      return list.Map(orig => (T)orig);
-    }
-
-    /// <summary>
-    /// True if the list contains the value
-    /// </summary>
-    [Pure]
-    public static bool Contains<T>(this FList<T> list, T value) where T : IEquatable<T>
-    {
-      for (; list != null; list = list.Tail)
-      {
-        if (list.Head.Equals(value)) return true;
-      }
-      return false;
-    }
-
-    /// <summary>
-    /// Return a list containing just that value
-    /// </summary>
-    [Pure]
-    public static FList<T> Singleton<T>(this T elem)
-    {
-      Contract.Ensures(Contract.Result<FList<T>>() != null);
-
-      return Cons(elem, null);
-    }
-
-    /// <summary>
-    /// Add the value to the head of the list and return this new list
-    /// </summary>
-    [Pure]
-    public static FList<T> Cons<T>(T elem, FList<T> tail)
-    {
-      Contract.Ensures(Contract.Result<FList<T>>() != null);
-
-      return tail.Cons(elem);
-    }
-
-    /// <summary>
-    /// Given a list of A's and a list of B's, pair up each A with each B via the mapper to produce a C and return this C list
-    /// </summary>
-    /// <param name="alist">List of A's</param>
-    /// <param name="blist">List of B's</param>
-    /// <param name="mapper">function combining one A and one B into a C</param>
-    /// <param name="accumulator">Is the tail of the returned list.</param>
-    /// <returns></returns>
-    [Pure]
-    public static FList<C> Product<A, B, C>(FList<A> alist, FList<B> blist, Func<A, B, C> mapper, FList<C> accumulator = null)
-    {
-      Contract.Requires(mapper != null);
-
-      var alist2 = alist;
-      while (alist2 != null)
-      {
-        var blist2 = blist;
-        while (blist2 != null)
-        {
-          accumulator = accumulator.Cons(mapper(alist2.Head, blist2.Head));
-          blist2 = blist2.Tail;
-        }
-        alist2 = alist2.Tail;
-      }
-      return accumulator;
-    }
-
-    /// <summary>
-    /// Produces all tuples of A's, one from each list in the argument lists and passes it to the combine function
-    /// whose results are accumulated and returned in the final list.
-    /// If the combine function is the identity, it will produce the product of the original lists.
-    /// </summary>
-    [Pure]
-    public static FList<B> Product<A, B>(this FList<FList<A>> lists, Func<FList<A>, B> combine, FList<B> accumulator = null)
-    {
-      if (lists == null) return accumulator;
-      var first = lists.Head;
-      if (lists.Tail == null) { return first.Map(e => combine(Singleton(e)), accumulator); }
-      while (first != null)
-      {
-        var subProducts = Product(lists.Tail, l => l);
-        Contract.Assume(first != null, "for some reason first gets havoced after product");
-        accumulator = subProducts.Map(rest => combine(rest.Cons(first.Head)), accumulator);
-        first = first.Tail;
-      }
-      return accumulator;
-    }
-
-    /// <summary>
-    /// Produces a list by mapping the mapper over an enumerable. The elements in the list are in the same order as
-    /// in the enumerable
-    /// </summary>
-    [Pure]
-    public static FList<B> Map<A, B>(this IEnumerable<A> enumerable, Func<A, B> mapper)
-    {
-      Contract.Requires(enumerable != null);
-      Contract.Requires(mapper != null);
-
-      FList<B> result = null;
-      foreach (var a in enumerable)
-      {
-        result = result.Cons(mapper(a));
-      }
-      return result.Reverse();
-    }
-
-    /// <summary>
-    /// Transforms a T list into an S list using the converter
-    /// </summary>
-    [Pure]
-    public static FList<S>/*?*/ Map<T, S>(this FList<T>/*?*/ list, Converter<T, S> converter, FList<S> accumulator = null)
-    {
-      Contract.Requires(converter != null);
-
-      if (list == null) return accumulator;
-      FList<S>/*?*/ tail = list.Tail.Map(converter, accumulator);
-      return tail.Cons(converter(list.Head));
-    }
-
-    /// <summary>
-    /// Produce an array containing the elements of the list in the same order
-    /// </summary>
-    [Pure]
-    public static T[] ToArray<T>(this FList<T> list)
-    {
-      Contract.Ensures(Contract.Result<T[]>() != null);
-
-      var result = new T[list.Length()];
-      var i = 0;
-      while (list != null)
-      {
-        Contract.Assume(i < result.Length, "need to relate list length with iteration");
-        result[i++] = list.Head;
-        list = list.Tail;
-      }
-      return result;
-    }
-
-    /// <summary>
-    /// Return the longest common tail of the two lists, possibly null if nothing is in common.
-    /// Uses pointer equality to determine that the tails are equal.
-    /// </summary>
-    public static FList<T> LongestCommonTail<T>(this FList<T> l1, FList<T> l2)
-    {
-      if (l1 == l2) return l1;
-      if (l1 == null || l2 == null) return null;
-      if (l1.Length() > l2.Length())
-      {
-        return LongestCommonTail(l1.Tail, l2);
-      }
-      else if (l1.Length() < l2.Length())
-      {
-        return LongestCommonTail(l1, l2.Tail);
-      }
-      else return LongestCommonTail(l1.Tail, l2.Tail);
-    }
-  }
-
-  /// <summary>
-  /// Functional lists. null represents the empty list.
-  /// </summary>
-  [Serializable]
-  public class FList<T>
-  {
-
-    #region Privates
-    private T elem;
-
-    private FList<T>/*?*/ tail;
-
-    private int count;
-    #endregion
-
-    /// <summary>
-    /// Produces a new list consisting of the element at the head and the list at the tail
-    /// </summary>
-    public static FList<T> Cons(T elem, FList<T> tail)
-    {
-      Contract.Ensures(Contract.Result<FList<T>>() != null);
-
-      return new FList<T>(elem, tail);
-    }
-
-    FList(T elem, FList<T>/*?*/ tail)
-    {
-      this.elem = elem;
-      this.tail = tail;
-      this.count = Length(tail) + 1;
-    }
-
-    /// <summary>
-    /// The head element of the list
-    /// </summary>
-    public T Head { get { return this.elem; } }
-
-    /// <summary>
-    /// The tail of the list
-    /// </summary>
-    public FList<T>/*?*/ Tail
-    {
-      get { return this.tail; }
-    }
-
-    /// <summary>
-    /// Reusable Empty list representation
-    /// </summary>
-    public const FList<T>/*?*/ Empty = null;
-
-    /// <summary>
-    /// Constructs a new list that represents the reversed original list
-    /// </summary>
-    public static FList<T>/*?*/ Reverse(FList<T>/*?*/ list)
-    {
-      Contract.Ensures(Contract.Result<FList<T>>() != null || list == null);
-
-      if (list == null || list.Tail == null) return list;
-
-      FList<T>/*?*/ tail = null;
-
-      while (list != null)
-      {
-        tail = tail.Cons(list.elem);
-        list = list.tail;
-      }
-      return tail;
-    }
-
-    /// <summary>
-    /// Constructs a new list that represents the reversed original list
-    /// </summary>
-    public static FList<R>/*?*/ Reverse<R>(FList<T>/*?*/ list, Func<T, R> converter)
-    {
-      Contract.Ensures(Contract.Result<FList<R>>() != null || list == null);
-
-      if (list == null) return null;
-
-      FList<R>/*?*/ result = null;
-
-      while (list != null)
-      {
-        result = result.Cons(converter(list.elem));
-        list = list.tail;
-      }
-      return result;
-    }
-
-
-    internal static IEnumerable<T> PrivateGetEnumerable(FList<T>/*?*/ list)
-    {
-      Contract.Ensures(Contract.Result<IEnumerable<T>>() != null);
-
-      FList<T>/*?*/ current = list;
-      while (current != null)
-      {
-        T next = current.Head;
-        current = current.Tail;
-        yield return next;
-      }
-      yield break;
-    }
-
-
-
-    /// <summary>
-    /// Query the list for the presence of an element
-    /// </summary>
-    public static bool Contains(FList<T>/*?*/ l, T/*!*/ o)
-    {
-      if (l == null) return false;
-
-      if (o is IEquatable<T>) { if (((IEquatable<T>)o).Equals(l.elem)) return true; }
-      else if (o.Equals(l.elem)) return true;
-
-      return Contains(l.tail, o);
-    }
-
-
-    /// <summary>
-    /// Applies action to each element in list
-    /// </summary>
-    /// <param name="list">List iterated over</param>
-    /// <param name="action">Action called on each element</param>
-    public static void Apply(FList<T>/*?*/ list, Action<T> action)
-    {
-      while (list != null)
-      {
-        action(list.Head);
-        list = list.Tail;
-      }
-    }
-
-
-    /// <summary>
-    /// Given two sorted lists, compute their intersection
-    /// </summary>
-    /// <param name="l1">sorted list</param>
-    /// <param name="l2">sorted list</param>
-    /// <returns>sorted intersection</returns>
-    public static FList<T>/*?*/ Intersect(FList<T>/*?*/ l1, FList<T>/*?*/ l2)
-    {
-      if (l1 == null || l2 == null) return null;
-
-      int comp = System.Collections.Comparer.Default.Compare(l1.Head, l2.Head);
-      if (comp < 0)
-      {
-        return Intersect(l1.Tail, l2);
-      }
-      if (comp > 0)
-      {
-        return Intersect(l1, l2.Tail);
-      }
-      // equal
-      return Intersect(l1.Tail, l2.Tail).Cons(l1.Head);
-    }
-
-    /// <summary>
-    /// Returns a new list that contains the elements of the argument list in increasing order
-    /// </summary>
-    public static FList<T>/*?*/ Sort(FList<T>/*?*/ l)
-    {
-      return Sort(l, null);
-    }
-
-    private static FList<T>/*?*/ Sort(FList<T>/*?*/ l, FList<T>/*?*/ tail)
-    {
-      // quicksort
-      if (l == null) return tail;
-
-      T pivot = l.Head;
-
-      FList<T>/*?*/ less;
-      FList<T>/*?*/ more;
-      Partition(l.Tail, pivot, out less, out more);
-
-      return Sort(less, Sort(more, tail).Cons(pivot));
-    }
-
-    private static void Partition(FList<T>/*?*/ l, T pivot, out FList<T>/*?*/ less, out FList<T>/*?*/ more)
-    {
-      less = null;
-      more = null;
-      if (l == null)
-      {
-        return;
-      }
-      foreach (T value in l.GetEnumerable())
-      {
-        if (System.Collections.Comparer.Default.Compare(value, pivot) <= 0)
-        {
-          less = less.Cons(value);
-        }
-        else
-        {
-          more = more.Cons(value);
-        }
-      }
-    }
-    /// <summary>
-    /// Gives the length of the list
-    /// </summary>
-    [Pure]
-    public static int Length(FList<T>/*?*/ l)
-    {
-      Contract.Ensures(Contract.Result<int>() >= 0);
-
-      if (l == null) { return 0; }
-      else return l.count;
-    }
-
-    /// <summary>
-    /// Generates a string representing the list
-    /// </summary>
-    /// <returns></returns>
-    //^ [Confined]
-    public override string ToString()
-    {
-      var sb = new System.Text.StringBuilder();
-
-      this.BuildString(sb);
-      return sb.ToString();
-    }
-
-    /// <summary>
-    /// Adds a string representation of the list to the StringBuilder
-    /// </summary>
-    public void BuildString(System.Text.StringBuilder sb)
-    {
-      string elemStr = this.elem == null ? "<null>" : this.elem.ToString();
-      if (this.tail != null)
-      {
-        sb.AppendFormat("{0},", elemStr);
-        this.tail.BuildString(sb);
-      }
-      else
-      {
-        sb.Append(elemStr);
-      }
-    }
-
-
-  }
-
-  /// <summary>
-  /// A comparer for objects implementing IInternedKey
-  /// </summary>
-  public class InternedComparer<T> : IEqualityComparer<T>
-    where T : IInternedKey
-  {
-    /// <summary>
-    /// A comparer for objects implementing IInternedKey
-    /// </summary>
-    public static readonly InternedComparer<T> Default = new InternedComparer<T>();
-
-    #region IEqualityComparer<T> Members
-
-    bool IEqualityComparer<T>.Equals(T x, T y)
-    {
-      return x.InternedKey == y.InternedKey;
-    }
-
-    int IEqualityComparer<T>.GetHashCode(T obj)
-    {
-      return (int)obj.InternedKey;
-    }
-
-    #endregion
-  }
-
-  /// <summary>
-  /// A set datastructure for objects implementing IInternedKey
-  /// </summary>
-  public class InternedSet<T> : HashSet<T>
-    where T:IInternedKey
-  {
-
-    /// <summary>
-    /// Create an empty set
-    /// </summary>
-    public InternedSet()
-      : base(InternedComparer<T>.Default)
-    {
-    }
-  }
-
-  /// <summary>
-  /// A table whose keys are objects implementing IInternedKey
-  /// </summary>
-  public class InternedTable<K, V> : Dictionary<K, V>
-    where K : IInternedKey
-  {
-    /// <summary>
-    /// Create atable whose keys are objects implementing IInternedKey
-    /// </summary>
-    public InternedTable()
-      : base(InternedComparer<K>.Default)
-    {
-    }
-  }
-
-  /// <summary>
-  /// A functional map from K to V. Requires function from K to int.
-  /// </summary>
-  public class FMap<K, V> : IEnumerable<KeyValuePair<K,V>>
-  {
-    /// <summary>
-    /// Create an empty map.
-    /// </summary>
-    /// <param name="converter"></param>
-    public FMap(Func<K, int> converter)
-    {
-      this.converter = converter;
-    }
-
-    private FIntMap<V> content;
-    private FIntMap<K> keys;
-    private Func<K, int> converter;
-
-    /// <summary>
-    /// Produces a new map from the old map with the given key value mapping inserted. Does not change original map.
-    /// </summary>
-    /// <param name="key"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    public FMap<K, V> Insert(K key, V value)
-    {
-      Contract.Ensures(Contract.Result<FMap<K, V>>() != null);
-
-      var kval = this.converter(key);
-      return new FMap<K, V>(this.converter) { content = this.content.Insert(kval, value), keys = this.keys.Insert(kval, key) };
-    }
-
-    /// <summary>
-    /// Lookup the key in the map and return the value if found.
-    /// </summary>
-    public bool TryGetValue(K key, out V value)
-    {
-      return this.content.TryGetValue(this.converter(key), out value);
-    }
-
-    #region IEnumerable<KeyValuePair<K,V>> Members
-
-    /// <summary>
-    /// Return list of key value pairs ordered by increasing key number
-    /// </summary>
-    /// <returns></returns>
-    public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
-    {
-      List<KeyValuePair<K, V>> acc = new List<KeyValuePair<K, V>>();
-      this.keys.Apply((i, k) => acc.Add(new KeyValuePair<K, V>(k, this.content[i])));
-      return acc.GetEnumerator();
-    }
-
-    #endregion
-
-    #region IEnumerable Members
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-    {
-      return this.GetEnumerator();
-    }
-
-    #endregion
-  }
-
-  /// <summary>
-  /// Extensions for functional map datastructure
-  /// </summary>
-  public static class FMap
-  {
-    /// <summary>
-    /// Insert the key value into the map. Returns the new map without modifying existing map.
-    /// 
-    /// Null is the empty map
-    /// </summary>
-    public static FIntMap<T> Insert<T>(this FIntMap<T> map, int key, T value)
-    {
-      bool pushUp;
-      return Insert(map, key, value, out pushUp);
-    }
-
-    /// <summary>
-    /// Returns true if the given key is in the map.
-    /// </summary>
-    public static bool Contains<T>(this FIntMap<T> map, int key)
-    {
-      if (map == null) { return false; }
-      if (key < map.key1) return map.Less.Contains(key);
-      if (key == map.key1) { return true; }
-      if (!map.IsThreeNode) return map.More.Contains(key);
-      if (key < map.key2) return map.Mid.Contains(key);
-      if (key == map.key2) { return true; }
-      return map.More.Contains(key);
-    }
-
-    /// <summary>
-    /// Depth of map tree
-    /// </summary>
-    public static int Depth<T>(this FIntMap<T> map)
-    {
-      if (map == null) return 0;
-      var less = map.Less.Depth();
-      var more = map.More.Depth();
-      var mid = map.Mid.Depth();
-      return 1 + Math.Max(less, Math.Max(mid, more));
-    }
-
-    /// <summary>
-    /// Number of elements in map
-    /// </summary>
-    public static int Count<T>(this FIntMap<T> map)
-    {
-      if (map == null) return 0;
-      var local = map.IsThreeNode ? 2 : 1;
-      var less = map.Less.Count();
-      var mid = map.Mid.Count();
-      var more = map.More.Count();
-      return local + less + mid + more;
-    }
-
-    /// <summary>
-    /// Lookup a key in the map. Returns false if not in the map, otherwise retrieves the value associated with the key.
-    /// </summary>
-    public static bool TryGetValue<T>(this FIntMap<T> map, int key, out T value)
-    {
-      if (map == null) { value = default(T); return false; }
-      if (key < map.key1) return map.Less.TryGetValue(key, out value);
-      if (key == map.key1) { value = map.value1; return true; }
-      if (!map.IsThreeNode) return map.More.TryGetValue(key, out value);
-      if (key < map.key2) return map.Mid.TryGetValue(key, out value);
-      if (key == map.key2) { value = map.value2; return true; }
-      return map.More.TryGetValue(key, out value);
-    }
-
-    /// <summary>
-    /// Apply given function over all elements of the map in increasing key order
-    /// </summary>
-    public static void Apply<T>(this FIntMap<T> map, Action<int, T> todo)
-    {
-      if (map == null) { return; }
-      map.Less.Apply(todo);
-      todo(map.key1, map.value1);
-      if (map.IsThreeNode)
-      {
-        map.Mid.Apply(todo);
-        todo(map.key2, map.value2);
-      }
-      map.More.Apply(todo);
-    }
-
-    internal static FIntMap<T> Insert<T>(this FIntMap<T> map, int key, T value, out bool pushUp)
-    {
-      if (map == null)
-      {
-        pushUp = true;
-        return new FIntMap<T>(key, value);
-      }
-      if (map.key1 == key)
-      {
-        pushUp = false;
-        var result = map.Clone();
-        result.value1 = value;
-        return result;
-      }
-      if (map.IsThreeNode && map.key2 == key)
-      {
-        pushUp = false;
-        var result = map.Clone();
-        result.value2 = value;
-        return result;
-      }
-      bool localPushUp;
-      FIntMap<T> toInsert;
-      if (key < map.key1)
-      {
-        toInsert = Insert(map.Less, key, value, out localPushUp);
-        if (!localPushUp)
-        {
-          pushUp = false;
-          var result = map.Clone();
-          result.Less = toInsert;
-          return result;
-        }
-      }
-      else
-      {
-        if (!map.IsThreeNode || key > map.key2)
-        {
-          toInsert = Insert(map.More, key, value, out localPushUp);
-          if (!localPushUp)
-          {
-            pushUp = false;
-            var result = map.Clone();
-            result.More = toInsert;
-            return result;
-          }
-        }
-        else // mid insert
-        {
-          toInsert = Insert(map.Mid, key, value, out localPushUp);
-          if (!localPushUp)
-          {
-            pushUp = false;
-            var result = map.Clone();
-            result.Mid = toInsert;
-            return result;
-          }
-        }
-      }
-      return Insert(map, toInsert, out pushUp);
-    }
-
-    private static FIntMap<T> Insert<T>(FIntMap<T> node, FIntMap<T> toInsert, out bool pushUp)
-    {
-      pushUp = node.IsThreeNode;
-      if (!pushUp)
-      {
-        if (toInsert.key1 < node.key1)
-        {
-          return new FIntMap<T>(toInsert.key1, toInsert.value1, node.key1, node.value1,
-              toInsert.Less,
-              toInsert.More,
-              node.More
-          );
-        }
-        else
-        {
-          return new FIntMap<T>(node.key1, node.value1, toInsert.key1, toInsert.value1,
-              node.Less,
-              toInsert.Less,
-              toInsert.More
-          );
-        }
-      }
-      else return Split(node, toInsert);
-    }
-
-    /// <summary>
-    /// Knowing that the node needs to be split create the new nodes
-    /// </summary>
-    /// <param name="node">Node to split</param>
-    /// <param name="toInsert">Is a 1 node</param>
-    private static FIntMap<T> Split<T>(FIntMap<T> node, FIntMap<T> toInsert)
-    {
-      if (toInsert.key1 < node.key1)
-      {
-        var left = toInsert;
-        var right = new FIntMap<T>(node.key2, node.value2, node.Mid, node.More);
-        return new FIntMap<T>(node.key1, node.value1, left, right);
-      }
-      if (toInsert.key1 < node.key2)
-      {
-        var left = new FIntMap<T>(node.key1, node.value1, node.Less, toInsert.Less);
-        var right = new FIntMap<T>(node.key2, node.value2, toInsert.More, node.More);
-        return new FIntMap<T>(toInsert.key1, toInsert.value1, left, right);
-      }
-      else
-      {
-        var left = new FIntMap<T>(node.key1, node.value1, node.Less, node.Mid);
-        var right = toInsert;
-        return new FIntMap<T>(node.key2, node.value2, left, right);
-      }
-    }
-
-    /// <summary>
-    /// Print the map data structure to console out (for debugging)
-    /// </summary>
-    public static void Print<T>(this FIntMap<T> node, string prefix)
-    {
-      if (node == null)
-      {
-        Console.WriteLine("{0}null", prefix);
-      }
-      else
-      {
-        if (!node.IsThreeNode)
-        {
-          Console.WriteLine("{0}{1} -> '{2}'", prefix, node.key1, node.value1);
-        }
-        else
-        {
-          Console.WriteLine("{0}{1} -> '{2}', {3} -> '{4}'", prefix, node.key1, node.value1, node.key2, node.value2);
-        }
-        var newprefix = prefix + "  ";
-        Console.WriteLine("{0}Left:", prefix);
-        node.Less.Print(newprefix);
-        Console.WriteLine("{0}Mid:", prefix);
-        node.Mid.Print(newprefix);
-        Console.WriteLine("{0}More:", prefix);
-        node.More.Print(newprefix);
-      }
-    }
-  }
-
-
-  /// <summary>
-  /// Functional Int key map Type. Null is the empty map. All methods are extension methods.
-  /// </summary>
-  public class FIntMap<T>
-  {
-    internal int key1;
-    internal T value1;
-    internal int key2;
-    internal T value2;
-    internal FIntMap<T> Less;
-    private FIntMap<T> mid;
-    internal FIntMap<T> More;
-
-    internal FIntMap() { }
-
-    internal FIntMap(int key, T value)
-    {
-      this.key1 = key;
-      this.value1 = value;
-    }
-
-    internal FIntMap(int key, T value, FIntMap<T> less, FIntMap<T> more)
-    {
-      this.key1 = key;
-      this.value1 = value;
-      this.Less = less;
-      this.More = more;
-    }
-
-    internal FIntMap<T> Clone()
-    {
-      var result = (FIntMap<T>)this.MemberwiseClone();
-      if (result.mid == this) { result.mid = result; }
-      return result;
-    }
-
-    internal FIntMap(int key1, T value1, int key2, T value2)
-    {
-      this.key1 = key1;
-      this.value1 = value1;
-      this.key2 = key2;
-      this.value2 = value2;
-      // mark this as a two value leaf:
-      this.mid = this;
-    }
-
-    internal FIntMap(int key1, T value1, int key2, T value2, FIntMap<T> less, FIntMap<T> mid, FIntMap<T> more)
-    {
-      this.key1 = key1;
-      this.value1 = value1;
-      this.key2 = key2;
-      this.value2 = value2;
-      // mark this as a two value leaf:
-      this.mid = this;
-      this.Less = less;
-      this.More = more;
-      if (mid != null) { this.mid = mid; }
-    }
-
-    internal bool IsThreeNode { get { return mid != null; } }
-
-    internal FIntMap<T> Mid
-    {
-      get
-      {
-        if (this.mid == this) return null;
-        return this.mid;
-      }
-
-      set
-      {
-        this.mid = value;
-      }
-    }
-
-    /// <summary>
-    /// If key is known to be in the map, one can use this to look up the value. Throws exception otherwise.
-    /// </summary>
-    public T this[int key]
-    {
-      get
-      {
-        T result;
-        if (this.TryGetValue(key, out result)) return result;
-        throw new KeyNotFoundException();
-      }
-    }
-
-  }
-
-  /// <summary>
-  /// Functional set
-  /// </summary>
-  /// <typeparam name="K"></typeparam>
-  public class FSet<K> : IEnumerable<K>
-  {
-    /// <summary>
-    /// Create an empty set.
-    /// </summary>
-    /// <param name="converter"></param>
-    public FSet(Func<K, int> converter)
-    {
-      this.converter = converter;
-    }
-
-    private FIntMap<K> keys;
-    private Func<K, int> converter;
-
-    /// <summary>
-    /// Produces a new set from the old set with the given key inserted. Does not change original set.
-    /// </summary>
-    public FSet<K> Add(K key)
-    {
-      Contract.Ensures(Contract.Result<FSet<K>>() != null);
-
-      var kval = this.converter(key);
-      return new FSet<K>(this.converter) { keys = this.keys.Insert(kval, key) };
-    }
-
-    /// <summary>
-    /// Return true if the key is in the set
-    /// </summary>
-    public bool Contains(K key)
-    {
-      K dummy;
-      return this.keys.TryGetValue(this.converter(key), out dummy);
-    }
-
-    #region IEnumerable<K> Members
-
-    /// <summary>
-    /// Return list of key value pairs ordered by increasing key number
-    /// </summary>
-    /// <returns></returns>
-    public IEnumerator<K> GetEnumerator()
-    {
-      List<K> acc = new List<K>();
-      this.keys.Apply((i, k) => acc.Add(k));
-      return acc.GetEnumerator();
-    }
-
-    #endregion
-
-    #region IEnumerable Members
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-    {
-      return this.GetEnumerator();
-    }
-
-    #endregion
-
-  }
 }

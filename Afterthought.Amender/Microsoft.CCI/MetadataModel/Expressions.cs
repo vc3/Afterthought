@@ -113,7 +113,7 @@ namespace Microsoft.Cci {
 
     public IEnumerable<ulong> Sizes {
       get {
-        Contract.Ensures(Contract.Result<IEnumerable<ulong>>() != null);
+        Contract.Ensures(Contract.Result<IEnumerable<IMetadataExpression>>() != null);
         throw new NotImplementedException();
       }
     }

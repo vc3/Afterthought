@@ -29,7 +29,6 @@ namespace Microsoft.Cci {
     /// An empty enumerable of element type T.
     /// </summary>
     public static IEnumerable<T> Empty {
-      [ContractVerification(false)] //ensures unproven: Contract.ForAll(Contract.Result<IEnumerable<T>>(), x => x != null)
       get {
         Contract.Ensures(Contract.Result<IEnumerable<T>>() != null);
         Contract.Ensures(Contract.ForAll(Contract.Result<IEnumerable<T>>(), x => x != null));
@@ -191,16 +190,10 @@ namespace Microsoft.Cci {
     sealed class ReaonlyOnlyArrayWrapper<T> : ICollection<T> {
 
       internal ReaonlyOnlyArrayWrapper(T[] array) {
-        Contract.Requires(array != null);
         this.array = array;
       }
 
       T[] array;
-
-      [ContractInvariantMethod]
-      private void ObjectInvariant() {
-        Contract.Invariant(this.array != null);
-      }
 
       public IEnumerator<T> GetEnumerator() {
         return new Enumerator(this.array);
@@ -213,8 +206,6 @@ namespace Microsoft.Cci {
       struct Enumerator : IEnumerator<T> {
 
         internal Enumerator(T[] array) {
-          Contract.Requires(array != null);
-
           this.array = array;
           this.index = -1;
         }
@@ -222,15 +213,9 @@ namespace Microsoft.Cci {
         T[] array;
         int index;
 
-        [ContractInvariantMethod]
-        private void ObjectInvariant() {
-          Contract.Invariant(this.array != null);
-        }
-
         #region IEnumerator<T> Members
 
         public T Current {
-          [ContractVerification(false)] 
           get { return this.array[this.index]; }
         }
 
@@ -270,14 +255,12 @@ namespace Microsoft.Cci {
         throw new InvalidOperationException();
       }
 
-      [ContractVerification(false)] //ensures unproven: !Contract.Result<bool>() || this.Count > 0
       public bool Contains(T item) {
         foreach (var elem in this.array) if (elem.Equals(item)) return true;
         return false;
       }
 
       public void CopyTo(T[] array, int arrayIndex) {
-        Contract.Assume(this.array.Length+arrayIndex <= array.Length);
         for (int i = 0, n = this.array.Length; i < n; i++)
           array[i+arrayIndex] = this.array[i];
       }
@@ -302,8 +285,6 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <returns></returns>
     public static IEnumerable<T> GetSingletonEnumerable<T>(T t) {
-      Contract.Ensures(Contract.Result<IEnumerable<T>>() != null);
-
       yield return t;
     }
 
@@ -311,7 +292,7 @@ namespace Microsoft.Cci {
     /// Returns an enumerable that acts like cast on enumeration.
     /// </summary>
     /// <returns></returns>
-    [ContractVerification(false)] //ensures unproven: Contract.ForAll(Contract.Result<IEnumerable<TargetType>>(), x => x != null)
+    [ContractVerification(false)]
     public static IEnumerable<TargetType> GetConversionEnumerable<SourceType, TargetType>(IEnumerable<SourceType> sourceEnumeration) where SourceType : TargetType {
       Contract.Requires(sourceEnumeration != null);
       Contract.Requires(Contract.ForAll(sourceEnumeration, x => x != null));
@@ -326,14 +307,14 @@ namespace Microsoft.Cci {
     /// <summary>
     /// Given an enumerable <paramref name="sourceEnumeration"/> the elements of which is of type <typeparamref name="SourceType"/> and a convertion 
     /// method <paramref name="convert"/> that computes a value of type <typeparamref name="TargetType"/> from a value of type <typeparamref name="SourceType"/>,
-    /// return an enumerable of <typeparamref name="TargetType"/> elements. Basically, map over enumerables. 
+    /// return an enumerable of <typeparamref name="TargetType"/> elements. Basically, map over enuemrables. 
     /// </summary>
     /// <typeparam name="SourceType"></typeparam>
     /// <typeparam name="TargetType"></typeparam>
     /// <param name="sourceEnumeration"></param>
     /// <param name="convert"></param>
     /// <returns></returns>
-    public static IEnumerable<TargetType> GetConversionEnumerable<SourceType, TargetType>(IEnumerable<SourceType> sourceEnumeration, Func<SourceType, TargetType> convert) {
+    public static IEnumerable<TargetType> GetConversionEnumerable<SourceType, TargetType>(IEnumerable<SourceType> sourceEnumeration, Converter<SourceType, TargetType> convert) {
       foreach (SourceType s in sourceEnumeration) {
         yield return convert(s);
       }
@@ -1083,6 +1064,9 @@ namespace Microsoft.Cci {
     /// The method is only available to fully trusted code since it allows the caller to cause new objects to be added to the cache.
     /// </summary>
     [Pure]
+#if !COMPACTFX
+    [System.Security.Permissions.SecurityPermission(global::System.Security.Permissions.SecurityAction.LinkDemand)]
+#endif
     IName GetNameFor(string name);
     //^ ensures result.Value == name;
 

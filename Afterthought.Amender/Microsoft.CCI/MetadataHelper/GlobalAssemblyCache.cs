@@ -29,8 +29,6 @@ namespace Microsoft.Cci {
     private static bool FusionLoaded;
 #endif
 
-    //TODO: when loading Fusion, just enumerate the GAC and keep a static copy of the GAC. Release the assembly enumerator as soon as possible.
-
     /// <summary>
     /// Determines whether the GAC contains the specified code base URI.
     /// </summary>

@@ -88,17 +88,17 @@ namespace Microsoft.Cci.Analysis {
     /// lead to the second block only via the first block.
     /// </summary>
     public bool Dominates(BasicBlock block1, BasicBlock block2) {
-        Contract.Requires(block1 != null);
-        Contract.Requires(block2 != null);
+      Contract.Requires(block1 != null);
+      Contract.Requires(block2 != null);
 
-        if (block1 == block2) return true;
-        var block2dominator = ImmediateDominator(block2);
-        while (true) {
-            if (block1 == block2dominator) return true;
-            if (block2 == block2dominator) return false;
-            block2 = block2dominator;
-            block2dominator = ImmediateDominator(block2);
-        }
+      if (block1 == block2) return true;
+      var block2dominator = ImmediateDominator(block2);
+      while (true) {
+        if (block1 == block2dominator) return true;
+        if (block2 == block2dominator) return false;
+        block2 = block2dominator;
+        block2dominator = ImmediateDominator(block2);
+      }
     }
 
     /// <summary>
@@ -151,10 +151,8 @@ namespace Microsoft.Cci.Analysis {
           var pred = predecessorEdges[block.firstPredecessorEdge+i];
           Contract.Assume(pred != null);
           var a = pred;
-          while (true) {
-            if (a == block.immediateDominator) break; //Any node that dominates node a will also dominate node block and hence block will not be in its dominance frontier.
+          while (a != block.immediateDominator) {
             frontierFor.Add(a.Offset, block);
-            if (a == a.immediateDominator) break; //Since there are multiple roots, block can be its own immediate dominator while still having predecessors.
             a = (BasicBlock)a.immediateDominator;
             Contract.Assume(a != null);
           }
@@ -173,18 +171,12 @@ namespace Microsoft.Cci.Analysis {
 
     private void SetupImmediateDominators() {
       Contract.Ensures(this.immediateDominatorsAreInitialized);
-      //Note this is an adaptation of the algorithm in Cooper, Keith D.; Harvey, Timothy J.; and Kennedy, Ken (2001). A Simple, Fast Dominance Algorithm
-      //The big difference is that we deal with multiple roots at the same time.
 
       if (this.postOrder == null)
         this.SetupTraversalOrders();
       var postOrder = this.postOrder;
       if (this.predecessorEdges == null)
         this.SetupPredecessorEdges();
-      foreach (var rootBlock in this.cfg.RootBlocks) {
-        Contract.Assume(rootBlock != null);
-        rootBlock.immediateDominator = rootBlock;
-      }
       var predecessorEdges = this.predecessorEdges;
       var n = postOrder.Length;
       var changed = true;
@@ -193,38 +185,26 @@ namespace Microsoft.Cci.Analysis {
         for (int i = n-1; i >= 0; i--) { //We iterate in reverse post order so that a block always has its immediateDominator field filled in before we get to any of its successors.
           var b = postOrder[i];
           Contract.Assume(b != null);
-          if (b.immediateDominator == b) continue;
           if (b.predeccessorCount == 0) {
             b.immediateDominator = b;
             continue; 
           }
           Contract.Assume(b.firstPredecessorEdge >= 0);
           Contract.Assume(b.firstPredecessorEdge < predecessorEdges.Count);
-          var predecessors = new HashSet<BasicBlock>();
-          for (int j = 0, m = b.predeccessorCount; j < m; j++) {
-              predecessors.Add(predecessorEdges[b.firstPredecessorEdge + j]);
-          }
-          // newIDom <- first (processed) predecessor of b
-          BasicBlock newIDom = null;
-          foreach (var p in predecessors) {
-            if (p.immediateDominator != null) {
-              newIDom = p;
-              break;
-            }
-	      }
+          var newIDom = predecessorEdges[b.firstPredecessorEdge];
           Contract.Assume(newIDom != null);
-          predecessors.Remove(newIDom);
-          foreach (var predecessor in predecessors) {
+          for (int j = 1, m = b.predeccessorCount; j < m; j++) {
+            Contract.Assume(b.firstPredecessorEdge+j < predecessorEdges.Count);
+            var predecessor = predecessorEdges[b.firstPredecessorEdge+j];
             Contract.Assume(predecessor != null);
             if (predecessor.immediateDominator != null) {
               var intersection = Intersect(predecessor, newIDom);
               if (intersection != null) {
-                newIDom = intersection;
+                if (intersection.postOrderNumber > newIDom.postOrderNumber)
+                  newIDom = intersection;
               } else {
-                //This can happen when predecessor and newIDom are only reachable via distinct roots.
-                //We now have two distinct paths from a root to b. This means b is its own dominator.
-                b.immediateDominator = newIDom = b;
-                break;
+                if (predecessor.postOrderNumber > newIDom.postOrderNumber)
+                  newIDom = predecessor;
               }
             }
           }
@@ -243,15 +223,11 @@ namespace Microsoft.Cci.Analysis {
 
       while (block1 != block2) {
         while (block1.postOrderNumber < block2.postOrderNumber) {
-          var block1dominator = block1.immediateDominator;
-          if (block1dominator == block1) return null; //block2 is its own dominator, which means it has no predecessors
-          block1 = (BasicBlock)block1dominator; //The block with the smaller post order number cannot be a predecessor of the other block.
+          block1 = (BasicBlock)block1.immediateDominator; //The block with the smaller post order number cannot be a predecessor of the other block.
           if (block1 == null) return null;
         }
         while (block2.postOrderNumber < block1.postOrderNumber) {
-          var block2dominator = block2.immediateDominator;
-          if (block2dominator == block2) return null; //block2 is its own dominator, which means it has no predecessors
-          block2 = (BasicBlock)block2dominator; //The block with the smaller post order number cannot be a predecessor of the other block.
+          block2 = (BasicBlock)block2.immediateDominator; //The block with the smaller post order number cannot be a predecessor of the other block.
           if (block2 == null) return null;
         }
       }
@@ -292,15 +268,6 @@ namespace Microsoft.Cci.Analysis {
       foreach (var rootBlock in cfg.RootBlocks) {
         Contract.Assume(rootBlock != null);
         this.SetupTraversalOrders(rootBlock, alreadyTraversed, ref preorderCounter, ref postorderCounter);
-      }
-      Contract.Assume(preorderCounter == postorderCounter);
-      if (preorderCounter != n) {      
-        //Add unreachable blocks to traversal order, treating them as if they were roots.
-        foreach (var block in cfg.AllBlocks) {
-          Contract.Assume(block != null);
-          if (alreadyTraversed.Contains(block)) continue;
-          this.SetupTraversalOrders(block, alreadyTraversed, ref preorderCounter, ref postorderCounter);
-        }
       }
       Contract.Assume(this.postOrder != null);
       Contract.Assume(this.preOrder != null);

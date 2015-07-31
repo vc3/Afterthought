@@ -49,10 +49,11 @@ namespace Microsoft.Cci {
     /// <param name="searchInGAC">
     /// Whether the GAC (Global Assembly Cache) should be searched when resolving references.
     /// </param>
-    protected MetadataHostEnvironment(INameTable nameTable, IInternFactory factory, byte pointerSize, IEnumerable<string>/*?*/ searchPaths, bool searchInGAC) {
+    protected MetadataHostEnvironment(INameTable nameTable, IInternFactory factory, byte pointerSize, IEnumerable<string>/*?*/ searchPaths, bool searchInGAC)
+      //^ requires pointerSize == 0 || pointerSize == 4 || pointerSize == 8;
+    {
       Contract.Requires(nameTable != null);
       Contract.Requires(factory != null);
-      Contract.Requires(pointerSize == 0 || pointerSize == 4 || pointerSize == 8);
 
       this.nameTable = nameTable;
       this.internFactory = factory;
@@ -128,7 +129,7 @@ namespace Microsoft.Cci {
         return this.coreIdentities; 
       }
     }
-    readonly SetOfObjects coreIdentities = new SetOfObjects();
+    SetOfObjects coreIdentities = new SetOfObjects();
 
     /// <summary>
     /// Returns the identity of the assembly containing the Microsoft.Contracts.Contract, by asking
@@ -306,7 +307,7 @@ namespace Microsoft.Cci {
     public IInternFactory InternFactory {
       get { return this.internFactory; }
     }
-    readonly IInternFactory internFactory;
+    IInternFactory internFactory;
 
     /// <summary>
     /// The assembly that matches the given reference, or a dummy assembly if no matching assembly can be found.
@@ -791,7 +792,7 @@ namespace Microsoft.Cci {
     /// </returns>
     public IBinaryDocumentMemoryBlock OpenBinaryDocument(IBinaryDocument sourceDocument) {
       Contract.Requires(sourceDocument != null);
-      // MaF: too strong a contract here Contract.Ensures(Contract.Result<IBinaryDocumentMemoryBlock>() != null);
+      Contract.Ensures(Contract.Result<IBinaryDocumentMemoryBlock>() != null);
       throw new NotImplementedException();
     }
 
@@ -1072,8 +1073,9 @@ namespace Microsoft.Cci {
     /// Whether the GAC (Global Assembly Cache) should be searched when resolving references.
     /// </param>
     protected MetadataReaderHost(INameTable nameTable, IInternFactory factory, byte pointerSize, IEnumerable<string> searchPaths, bool searchInGAC)
-      : base(nameTable, factory, pointerSize, searchPaths, searchInGAC) {
-      Contract.Requires(pointerSize == 0 || pointerSize == 4 || pointerSize == 8);
+      : base(nameTable, factory, pointerSize, searchPaths, searchInGAC)
+      //^ requires pointerSize == 0 || pointerSize == 4 || pointerSize == 8;
+    {
     }
 
     /// <summary>

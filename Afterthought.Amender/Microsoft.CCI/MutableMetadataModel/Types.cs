@@ -96,13 +96,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       throw new InvalidOperationException();
     }
 
-    /// <summary>
-    /// The number of generic parameters. Zero if the type is not generic.
-    /// </summary>
-    public ushort GenericParameterCount {
-      get { return this.AliasedType.GenericParameterCount; }
-    }
-
     //^ [Pure]
     /// <summary>
     /// Returns the list of members with the given name that also satisfy the given predicate.
@@ -169,13 +162,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
     List<IAliasMember>/*?*/ members;
 
-    /// <summary>
-    /// The name of the aliased type.
-    /// </summary>
-    public IName Name {
-      get { return this.AliasedType.Name; }
-    }
-
     #region IAliasForType
 
     IEnumerable<IAliasMember> IAliasForType.Members {
@@ -234,8 +220,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public ArrayTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.elementType = Dummy.TypeReference;
     }
 
@@ -425,8 +409,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public FunctionPointerTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.callingConvention = (CallingConvention)0;
       this.type = Dummy.TypeReference;
     }
@@ -641,8 +623,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public GenericMethodParameterReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.definingMethod = Dummy.MethodReference;
       this.name = Dummy.Name;
       this.index = 0;
@@ -954,8 +934,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public GenericTypeInstanceReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.genericType = Dummy.NamedTypeReference;
     }
 
@@ -1142,8 +1120,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public GenericTypeParameterReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.definingType = Dummy.TypeReference;
       this.name = Dummy.Name;
       this.index = 0;
@@ -1359,8 +1335,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public MatrixTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.rank = 1;
     }
 
@@ -1528,6 +1502,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public NamespaceAliasForType() {
       this.containingNamespace = Dummy.NamespaceDefinition;
       this.isPublic = false;
+      this.name = Dummy.Name;
     }
 
 
@@ -1544,6 +1519,7 @@ namespace Microsoft.Cci.MutableCodeModel {
       ((ICopyFrom<IAliasForType>)this).Copy(namespaceAliasForType, internFactory);
       this.containingNamespace = namespaceAliasForType.ContainingNamespace;
       this.isPublic = namespaceAliasForType.IsPublic;
+      this.name = namespaceAliasForType.Name;
     }
 
     /// <summary>
@@ -1574,16 +1550,22 @@ namespace Microsoft.Cci.MutableCodeModel {
     bool isPublic;
 
 
+    /// <summary>
+    /// The name of the entity.
+    /// </summary>
+    /// <value></value>
+    public IName Name {
+      get { return this.name; }
+      set { this.name = value; }
+    }
+    IName name;
+
     INamespaceDefinition IContainerMember<INamespaceDefinition>.Container {
       get { return this.ContainingNamespace; }
     }
 
     IScope<INamespaceMember> IScopeMember<IScope<INamespaceMember>>.ContainingScope {
       get { return this.ContainingNamespace; }
-    }
-
-    IName IContainerMember<INamespaceDefinition>.Name {
-      get { return this.AliasedType.Name; }
     }
 
   }
@@ -1857,7 +1839,7 @@ namespace Microsoft.Cci.MutableCodeModel {
           if (nsTypeDef.GenericParameterCount == this.GenericParameterCount) return nsTypeDef;
         } else {
           var nsAlias = member as INamespaceAliasForType;
-          if (nsAlias != null && nsAlias.GenericParameterCount == this.GenericParameterCount) this.aliasForType = nsAlias;
+          if (nsAlias != null && nsAlias.AliasedType.GenericParameterCount == this.GenericParameterCount) this.aliasForType = nsAlias;
         }
       }
       if (this.aliasForType != null) {
@@ -1939,6 +1921,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public NestedAliasForType() {
       this.containingAlias = Dummy.AliasForType;
+      this.name = Dummy.Name;
       this.visibility = TypeMemberVisibility.Default;
     }
 
@@ -1954,6 +1937,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     public void Copy(INestedAliasForType nestedAliasForType, IInternFactory internFactory) {
       ((ICopyFrom<IAliasForType>)this).Copy(nestedAliasForType, internFactory);
       this.containingAlias = nestedAliasForType.ContainingAlias;
+      this.name = nestedAliasForType.Name;
       this.visibility = nestedAliasForType.Visibility;
     }
 
@@ -1975,6 +1959,16 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
 
     /// <summary>
+    /// The name of the entity.
+    /// </summary>
+    /// <value></value>
+    public IName Name {
+      get { return this.name; }
+      set { this.name = value; }
+    }
+    IName name;
+
+    /// <summary>
     /// Indicates if the member is public or confined to its containing type, derived types and/or declaring assembly.
     /// </summary>
     /// <value></value>
@@ -1993,10 +1987,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       get { return this.ContainingAlias; }
     }
 
-    IName IContainerMember<IAliasForType>.Name {
-      get { return this.AliasedType.Name; }
-    }
-
   }
 
   /// <summary>
@@ -2009,7 +1999,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// </summary>
     public NestedTypeDefinition() {
       this.containingTypeDefinition = Dummy.TypeDefinition;
-      this.doesNotInheritGenericParameters = false;
     }
 
     /// <summary>
@@ -2024,7 +2013,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     public void Copy(INestedTypeDefinition nestedTypeDefinition, IInternFactory internFactory) {
       ((ICopyFrom<INamedTypeDefinition>)this).Copy(nestedTypeDefinition, internFactory);
       this.containingTypeDefinition = nestedTypeDefinition.ContainingTypeDefinition;
-      this.doesNotInheritGenericParameters = nestedTypeDefinition.DoesNotInheritGenericParameters;
       this.Visibility = nestedTypeDefinition.Visibility;
     }
 
@@ -2037,15 +2025,6 @@ namespace Microsoft.Cci.MutableCodeModel {
       set { this.containingTypeDefinition = value; }
     }
     ITypeDefinition containingTypeDefinition;
-
-    /// <summary>
-    /// If true, the type does not inherit generic parameters from its containing type.
-    /// </summary>
-    public bool DoesNotInheritGenericParameters {
-      get { return this.doesNotInheritGenericParameters; }
-      set { this.doesNotInheritGenericParameters = value; }
-    }
-    bool doesNotInheritGenericParameters;
 
     /// <summary>
     /// Indicates if the member is public or confined to its containing type, derived types and/or declaring assembly.
@@ -2322,7 +2301,6 @@ namespace Microsoft.Cci.MutableCodeModel {
                 var neAlias = alias as INestedAliasForType;
                 if (neAlias == null) continue;
                 if (neAlias.Name.UniqueKey != this.Name.UniqueKey) continue;
-                if (neAlias.GenericParameterCount != this.GenericParameterCount) continue;
                 if (neAlias.ContainingAlias != this.ContainingType.AliasForType) continue;
                 this.aliasForType = neAlias;
                 break;
@@ -2396,8 +2374,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public PointerTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.targetType = Dummy.TypeReference;
       this.TypeCode = PrimitiveTypeCode.Pointer;
     }
@@ -2482,20 +2458,12 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public SpecializedNestedTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.unspecializedVersion = Dummy.NestedTypeDefinition;
-      Contract.Assume(!(this.unspecializedVersion.ContainingType is ISpecializedNestedTypeReference));
-      Contract.Assume(!(this.unspecializedVersion.ContainingType is IGenericTypeInstanceReference));
-      Contract.Assume(!(this.unspecializedVersion is ISpecializedNestedTypeReference));
     }
 
     [ContractInvariantMethod]
     void ObjectInvariant() {
       Contract.Invariant(this.unspecializedVersion != null);
-      Contract.Invariant(!(this.unspecializedVersion.ContainingType is ISpecializedNestedTypeReference));
-      Contract.Invariant(!(this.unspecializedVersion.ContainingType is IGenericTypeInstanceReference));
-      Contract.Invariant(!(this.unspecializedVersion is ISpecializedNestedTypeReference));
     }
 
     /// <summary>
@@ -2530,20 +2498,10 @@ namespace Microsoft.Cci.MutableCodeModel {
       set {
         Contract.Requires(value != null);
         Contract.Requires(!this.IsFrozen);
-        Contract.Requires(!(value.ContainingType is ISpecializedNestedTypeReference));
-        Contract.Requires(!(value.ContainingType is IGenericTypeInstanceReference));
-        Contract.Requires(!(value is ISpecializedNestedTypeReference));
         this.unspecializedVersion = value;
       }
     }
     INestedTypeReference unspecializedVersion;
-
-    /// <summary>
-    /// A specialized type reference should always defer to its unspecialized version for whether it is a value type or not: that can't change.
-    /// </summary>
-    public new bool IsValueType {
-      get { return this.unspecializedVersion.IsValueType; }
-    }
 
   }
 
@@ -2944,7 +2902,13 @@ namespace Microsoft.Cci.MutableCodeModel {
           containingTypeReference = this.GetSpecializedType((INamedTypeDefinition)nestedType.ContainingTypeDefinition);
           if (containingTypeReference == nestedType.ContainingTypeDefinition) return typeDef;
         }
-        return new Immutable.SpecializedNestedTypeReference(nestedType, containingTypeReference, this.InternFactory);
+        return new SpecializedNestedTypeReference() {
+          ContainingType = containingTypeReference,
+          InternFactory = this.InternFactory,
+          Name = nestedType.Name,
+          PlatformType = this.PlatformType,
+          UnspecializedVersion = nestedType,
+        };
       }
       return typeDef;
     }
@@ -3544,8 +3508,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public ModifiedTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
       this.customModifiers = new List<ICustomModifier>(1);
       this.unmodifiedType = Dummy.TypeReference;
     }
@@ -3938,8 +3900,6 @@ namespace Microsoft.Cci.MutableCodeModel {
     /// or once the InternedKey of a reference has been computed, no further initialization is permitted.
     /// </summary>
     public VectorTypeReference() {
-      Contract.Ensures(!this.IsFrozen);
-
     }
 
     /// <summary>

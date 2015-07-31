@@ -42,7 +42,6 @@ namespace Microsoft.Cci.Analysis {
     Queue<BasicBlock> blocksToVisit;
     SetOfObjects blocksAlreadyVisited;
     IInternFactory internFactory;
-    bool codeIsUnreachable;
 
     [ContractInvariantMethod]
     private void ObjectInvariant() {
@@ -64,7 +63,7 @@ namespace Microsoft.Cci.Analysis {
       //If this is a dummy body, do nothing.
       if (cfg.AllBlocks.Count == 1 && cfg.AllBlocks[0] != null && cfg.AllBlocks[0].Instructions.Count <= 1) return;
 
-      var stack = new Stack<Instruction>(cfg.MethodBody.MaxStack);
+      var stack = new Stack<Instruction>(cfg.MethodBody.MaxStack, new List<Instruction>(0));
       var numberOfBlocks = cfg.BlockFor.Count;
       var blocksToVisit = new Queue<BasicBlock>((int)numberOfBlocks);
       var blocksAlreadyVisited = new SetOfObjects(numberOfBlocks);
@@ -75,9 +74,7 @@ namespace Microsoft.Cci.Analysis {
         while (blocksToVisit.Count != 0)
           inferencer.DequeueBlockAndFillInItsTypes();
       }
-
       //At this point, all reachable code blocks have had their types inferred. Now look for unreachable blocks.
-      inferencer.codeIsUnreachable = true;
       foreach (var block in cfg.AllBlocks) {
         if (blocksAlreadyVisited.Contains(block)) continue;
         blocksToVisit.Enqueue(block);
@@ -249,12 +246,7 @@ namespace Microsoft.Cci.Analysis {
           break;
         case OperationCode.Box:
           this.stack.Pop();
-          var typeInBox = instruction.Operation.Value as ITypeReference;
-          Contract.Assume(typeInBox != null);
-          if (typeInBox.ResolvedType.IsReferenceType)
-            instruction.Type = typeInBox.ResolvedType; //This typically happens when typeInBox is a type parameter.
-          else
-            instruction.Type = this.platformType.SystemObject;
+          instruction.Type = this.platformType.SystemObject;
           this.stack.Push(instruction);
           break;
         case OperationCode.Brfalse:
@@ -282,9 +274,7 @@ namespace Microsoft.Cci.Analysis {
         case OperationCode.Callvirt:
           var signature = instruction.Operation.Value as ISignature;
           Contract.Assume(signature != null); //This is an informally specified property of the Metadata model.
-          var methodRef = signature as IMethodReference;
-          uint numArguments = IteratorHelper.EnumerableCount(signature.Parameters);
-          if (methodRef != null && methodRef.AcceptsExtraArguments) numArguments += IteratorHelper.EnumerableCount(methodRef.ExtraParameters);
+          var numArguments = IteratorHelper.EnumerableCount(signature.Parameters);
           for (var i = numArguments; i > 0; i--)
             this.stack.Pop();
           if (!signature.IsStatic)
@@ -296,8 +286,7 @@ namespace Microsoft.Cci.Analysis {
         case OperationCode.Calli:
           var funcPointer = instruction.Operation.Value as IFunctionPointerTypeReference;
           Contract.Assume(funcPointer != null); //This is an informally specified property of the Metadata model.
-          var fp = this.stack.Pop(); //The function pointer
-          fp.Type = funcPointer;
+          this.stack.Pop(); //The function pointer
           numArguments = IteratorHelper.EnumerableCount(funcPointer.Parameters);
           for (var i = numArguments; i > 0; i--)
             this.stack.Pop();
@@ -312,8 +301,6 @@ namespace Microsoft.Cci.Analysis {
           this.stack.Pop();
           Contract.Assume(instruction.Operation.Value is ITypeReference); //This is an informally specified property of the Metadata model.
           instruction.Type = (ITypeReference)instruction.Operation.Value;
-          if (instruction.Type.ResolvedType.IsValueType || instruction.Type is IGenericParameterReference)
-            instruction.Type = this.platformType.SystemObject;
           this.stack.Push(instruction);
           break;
         case OperationCode.Ceq:
@@ -464,12 +451,7 @@ namespace Microsoft.Cci.Analysis {
         case OperationCode.Ldarg_S:
           var parameter = instruction.Operation.Value as IParameterDefinition;
           if (parameter == null) { //this arg
-            var containingType = this.cfg.MethodBody.MethodDefinition.ContainingTypeDefinition;
-            var namedType = containingType as INamedTypeDefinition;
-            if (namedType != null && namedType.IsGeneric)
-              instruction.Type = namedType.InstanceType;
-            else
-              instruction.Type = containingType;
+            instruction.Type = this.cfg.MethodBody.MethodDefinition.ContainingType;
             if (instruction.Type.IsValueType)
               instruction.Type = ManagedPointerType.GetManagedPointerType(instruction.Type, this.internFactory);
           } else {
@@ -733,7 +715,6 @@ namespace Microsoft.Cci.Analysis {
           this.stack.Push(instruction);
           break;
         case OperationCode.Ret:
-          if (this.codeIsUnreachable && this.stack.Top < 0) break;
           if (this.cfg.MethodBody.MethodDefinition.Type.TypeCode != PrimitiveTypeCode.Void)
             instruction.Operand1 = this.stack.Pop();
           instruction.Type = this.platformType.SystemVoid;
@@ -1004,8 +985,6 @@ namespace Microsoft.Cci.Analysis {
             case PrimitiveTypeCode.IntPtr:
             case PrimitiveTypeCode.UIntPtr:
               return leftOperand.Type;
-            case PrimitiveTypeCode.NotPrimitive:
-              return leftOperand.Type; //assume rh type is an enum.
             default:
               Contract.Assume(false);
               return Dummy.TypeReference;
