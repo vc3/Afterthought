@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Afterthought", "Afterthought\Afterthought.csproj", "{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}"
 EndProject
@@ -65,56 +65,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Afterthought.Amender", "Afterthought.Amender\Afterthought.Amender.csproj", "{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}"
 EndProject
 Global
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 13
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = http://vc3-cae-tfs-01.vc3.com:8080/tfs/defaultcollection
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = Afterthought.UnitTest.Target\\Afterthought.UnitTest.Target.csproj
-		SccProjectName1 = Afterthought.UnitTest.Target
-		SccLocalPath1 = Afterthought.UnitTest.Target
-		SccProjectUniqueName2 = Afterthought.UnitTest\\Afterthought.UnitTest.csproj
-		SccProjectName2 = Afterthought.UnitTest
-		SccLocalPath2 = Afterthought.UnitTest
-		SccProjectUniqueName3 = Afterthought\\Afterthought.csproj
-		SccProjectName3 = Afterthought
-		SccLocalPath3 = Afterthought
-		SccProjectUniqueName4 = Examples\\EntityFramework\\EntityFramework\\EntityFramework.csproj
-		SccProjectTopLevelParentUniqueName4 = Afterthought.sln
-		SccProjectName4 = Examples/EntityFramework/EntityFramework
-		SccLocalPath4 = Examples\\EntityFramework\\EntityFramework
-		SccProjectUniqueName5 = Examples\\Logging\\Logging.Amender\\Logging.Amender.csproj
-		SccProjectTopLevelParentUniqueName5 = Afterthought.sln
-		SccProjectName5 = Examples/Logging/Logging.Amender
-		SccLocalPath5 = Examples\\Logging\\Logging.Amender
-		SccProjectUniqueName6 = Examples\\Logging\\Logging.UnitTest.Target\\Logging.UnitTest.Target.csproj
-		SccProjectTopLevelParentUniqueName6 = Afterthought.sln
-		SccProjectName6 = Examples/Logging/Logging.UnitTest.Target
-		SccLocalPath6 = Examples\\Logging\\Logging.UnitTest.Target
-		SccProjectUniqueName7 = Examples\\Logging\\Logging.UnitTest\\Logging.UnitTest.csproj
-		SccProjectTopLevelParentUniqueName7 = Afterthought.sln
-		SccProjectName7 = Examples/Logging/Logging.UnitTest
-		SccLocalPath7 = Examples\\Logging\\Logging.UnitTest
-		SccProjectUniqueName8 = Examples\\Logging\\Logging\\Logging.csproj
-		SccProjectTopLevelParentUniqueName8 = Afterthought.sln
-		SccProjectName8 = Examples/Logging/Logging
-		SccLocalPath8 = Examples\\Logging\\Logging
-		SccProjectUniqueName9 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest.Target\\NotifyPropertyChanged.UnitTest.Target.csproj
-		SccProjectTopLevelParentUniqueName9 = Afterthought.sln
-		SccProjectName9 = Examples/NotifyPropertyChanged/NotifyPropertyChanged.UnitTest.Target
-		SccLocalPath9 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest.Target
-		SccProjectUniqueName10 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest\\NotifyPropertyChanged.UnitTest.csproj
-		SccProjectTopLevelParentUniqueName10 = Afterthought.sln
-		SccProjectName10 = Examples/NotifyPropertyChanged/NotifyPropertyChanged.UnitTest
-		SccLocalPath10 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest
-		SccProjectUniqueName11 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged\\NotifyPropertyChanged.csproj
-		SccProjectTopLevelParentUniqueName11 = Afterthought.sln
-		SccProjectName11 = Examples/NotifyPropertyChanged/NotifyPropertyChanged
-		SccLocalPath11 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged
-		SccProjectUniqueName12 = Afterthought.Amender\\Afterthought.Amender.csproj
-		SccProjectName12 = Afterthought.Amender
-		SccLocalPath12 = Afterthought.Amender
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CompilerOnly|Any CPU = CompilerOnly|Any CPU
 		CompilerOnly|Mixed Platforms = CompilerOnly|Mixed Platforms
@@ -182,7 +132,8 @@ Global
 		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.NotifyPropertyChanged|Win32.ActiveCfg = Release|x86
 		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.NotifyPropertyChanged|x86.ActiveCfg = Release|x86
 		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.NotifyPropertyChanged|x86.Build.0 = Release|x86
-		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.Release|Any CPU.ActiveCfg = Release|x86
+		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.Release|Mixed Platforms.ActiveCfg = Release|x86
 		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.Release|Mixed Platforms.Build.0 = Release|x86
 		{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}.Release|Win32.ActiveCfg = Release|x86
@@ -644,7 +595,8 @@ Global
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.NotifyPropertyChanged|Win32.ActiveCfg = NotifyPropertyChanged|x86
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.NotifyPropertyChanged|x86.ActiveCfg = NotifyPropertyChanged|x86
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.NotifyPropertyChanged|x86.Build.0 = NotifyPropertyChanged|x86
-		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.Release|Any CPU.ActiveCfg = Release|x86
+		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.Release|Mixed Platforms.ActiveCfg = Release|x86
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.Release|Mixed Platforms.Build.0 = Release|x86
 		{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}.Release|Win32.ActiveCfg = Release|x86
@@ -655,16 +607,66 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0DD0DE4A-10AC-4A3F-A3C6-4C96B902D819} = {B709D2A5-9303-401B-AF1B-0313C050FBC5}
-		{CE2C2FFD-7195-4F8B-911A-42445EBAFFB9} = {B709D2A5-9303-401B-AF1B-0313C050FBC5}
-		{6AC26EC8-2CA8-431C-89F2-954A2DD6B4D4} = {B709D2A5-9303-401B-AF1B-0313C050FBC5}
 		{DCF621B2-47A4-490A-897D-C3593E2FB9C1} = {0DD0DE4A-10AC-4A3F-A3C6-4C96B902D819}
+		{0DD0DE4A-10AC-4A3F-A3C6-4C96B902D819} = {B709D2A5-9303-401B-AF1B-0313C050FBC5}
 		{E8818AD9-D332-4B6D-B33F-0C0B942647A0} = {0DD0DE4A-10AC-4A3F-A3C6-4C96B902D819}
 		{AE704B90-7AC9-4567-B9BC-EB2C60EFD8AF} = {0DD0DE4A-10AC-4A3F-A3C6-4C96B902D819}
 		{980DEA7F-BE8A-4287-ACF1-1494602BBB8B} = {0DD0DE4A-10AC-4A3F-A3C6-4C96B902D819}
+		{CE2C2FFD-7195-4F8B-911A-42445EBAFFB9} = {B709D2A5-9303-401B-AF1B-0313C050FBC5}
 		{91D3E48E-0CFC-4F86-8B1C-456428095B1C} = {CE2C2FFD-7195-4F8B-911A-42445EBAFFB9}
 		{C17FACB4-07E2-43F9-BFFE-7891F65928CF} = {CE2C2FFD-7195-4F8B-911A-42445EBAFFB9}
 		{CB0A7510-EEB3-4402-9EEE-A04E16B20D3D} = {CE2C2FFD-7195-4F8B-911A-42445EBAFFB9}
+		{6AC26EC8-2CA8-431C-89F2-954A2DD6B4D4} = {B709D2A5-9303-401B-AF1B-0313C050FBC5}
 		{C934A124-5208-4BF9-A1F0-B514287AD541} = {6AC26EC8-2CA8-431C-89F2-954A2DD6B4D4}
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 13
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://tfs.vc3.com:8080/tfs/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Afterthought.UnitTest.Target\\Afterthought.UnitTest.Target.csproj
+		SccProjectName1 = Afterthought.UnitTest.Target
+		SccLocalPath1 = Afterthought.UnitTest.Target
+		SccProjectUniqueName2 = Afterthought.UnitTest\\Afterthought.UnitTest.csproj
+		SccProjectName2 = Afterthought.UnitTest
+		SccLocalPath2 = Afterthought.UnitTest
+		SccProjectUniqueName3 = Afterthought\\Afterthought.csproj
+		SccProjectName3 = Afterthought
+		SccLocalPath3 = Afterthought
+		SccProjectUniqueName4 = Examples\\EntityFramework\\EntityFramework\\EntityFramework.csproj
+		SccProjectTopLevelParentUniqueName4 = Afterthought.sln
+		SccProjectName4 = Examples/EntityFramework/EntityFramework
+		SccLocalPath4 = Examples\\EntityFramework\\EntityFramework
+		SccProjectUniqueName5 = Examples\\Logging\\Logging.Amender\\Logging.Amender.csproj
+		SccProjectTopLevelParentUniqueName5 = Afterthought.sln
+		SccProjectName5 = Examples/Logging/Logging.Amender
+		SccLocalPath5 = Examples\\Logging\\Logging.Amender
+		SccProjectUniqueName6 = Examples\\Logging\\Logging.UnitTest.Target\\Logging.UnitTest.Target.csproj
+		SccProjectTopLevelParentUniqueName6 = Afterthought.sln
+		SccProjectName6 = Examples/Logging/Logging.UnitTest.Target
+		SccLocalPath6 = Examples\\Logging\\Logging.UnitTest.Target
+		SccProjectUniqueName7 = Examples\\Logging\\Logging.UnitTest\\Logging.UnitTest.csproj
+		SccProjectTopLevelParentUniqueName7 = Afterthought.sln
+		SccProjectName7 = Examples/Logging/Logging.UnitTest
+		SccLocalPath7 = Examples\\Logging\\Logging.UnitTest
+		SccProjectUniqueName8 = Examples\\Logging\\Logging\\Logging.csproj
+		SccProjectTopLevelParentUniqueName8 = Afterthought.sln
+		SccProjectName8 = Examples/Logging/Logging
+		SccLocalPath8 = Examples\\Logging\\Logging
+		SccProjectUniqueName9 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest.Target\\NotifyPropertyChanged.UnitTest.Target.csproj
+		SccProjectTopLevelParentUniqueName9 = Afterthought.sln
+		SccProjectName9 = Examples/NotifyPropertyChanged/NotifyPropertyChanged.UnitTest.Target
+		SccLocalPath9 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest.Target
+		SccProjectUniqueName10 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest\\NotifyPropertyChanged.UnitTest.csproj
+		SccProjectTopLevelParentUniqueName10 = Afterthought.sln
+		SccProjectName10 = Examples/NotifyPropertyChanged/NotifyPropertyChanged.UnitTest
+		SccLocalPath10 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged.UnitTest
+		SccProjectUniqueName11 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged\\NotifyPropertyChanged.csproj
+		SccProjectTopLevelParentUniqueName11 = Afterthought.sln
+		SccProjectName11 = Examples/NotifyPropertyChanged/NotifyPropertyChanged
+		SccLocalPath11 = Examples\\NotifyPropertyChanged\\NotifyPropertyChanged
+		SccProjectUniqueName12 = Afterthought.Amender\\Afterthought.Amender.csproj
+		SccProjectName12 = Afterthought.Amender
+		SccLocalPath12 = Afterthought.Amender
 	EndGlobalSection
 EndGlobal
