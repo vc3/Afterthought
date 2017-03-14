@@ -18,9 +18,9 @@ using System.Collections;
 
 namespace Afterthought
 {
-	#region Amendment<TType, TAmended>.Constructor
+	#region Amendment<TAmended>.Constructor
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -314,9 +314,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1>
+	#region Amendment<TAmended>.Constructor<P1>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -610,9 +610,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2>
+	#region Amendment<TAmended>.Constructor<P1, P2>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -906,9 +906,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -1202,9 +1202,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -1498,9 +1498,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4, P5>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4, P5>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -1794,9 +1794,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4, P5, P6>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4, P5, P6>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -2090,9 +2090,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -2386,9 +2386,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7, P8>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7, P8>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -2682,9 +2682,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7, P8, P9>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7, P8, P9>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
@@ -2978,9 +2978,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>
+	#region Amendment<TAmended>.Constructor<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.

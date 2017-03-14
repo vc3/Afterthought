@@ -44,9 +44,9 @@ namespace Afterthought
 			typeParamsWithResult = "<TResult>";
 
 #>
-	#region Amendment<TType, TAmended>.Method<#= typeParams #>
+	#region Amendment<TAmended>.Method<#= typeParams #>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -440,7 +440,7 @@ namespace Afterthought
 
 			public Method<#= typeParams #> Override<#= typeParams #>(string name)
 			{
-				return Add(new Method<#= typeParams #>(name) { OverrideMethod = GetOverrideMethod(name<#= typeSet #>) });
+				return Add(new Method<#= typeParams #>(name) { OverrideMethod = GetOverrideMethod(type, name<#= typeSet #>) });
 			}
 		}
 	}
