@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace Afterthought
 {
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		#region EventList
 

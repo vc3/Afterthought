@@ -44,6 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GenericAmendmentAttribute.cs" />
+    <Compile Include="GenericCalculator.cs" />
+    <Compile Include="GenericTestAmendment.cs" />
+    <Compile Include="IHaveExecutableMethod.cs" />
     <Compile Include="ILog.cs" />
     <Compile Include="IMath.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,6 +67,9 @@
   <PropertyGroup>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/release/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
+    <PostBuildEvent>$(SolutionDir)Afterthought.Amender/bin/$(ConfigurationName)/Afterthought.Amender.exe "$(TargetPath)"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>del /f /q "$(ProjectDir)\$(OutDir)"</PreBuildEvent>
   </PropertyGroup>
 </Project>

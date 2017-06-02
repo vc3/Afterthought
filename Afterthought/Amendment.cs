@@ -43,18 +43,18 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>
+	#region Amendment<TAmended>
 
-	public partial class Amendment<TType, TAmended> : Amendment, ITypeAmendment
+	public partial class Amendment<TAmended> : Amendment, ITypeAmendment
 	{
 		List<Type> interfaces = new List<Type>();
+	    private readonly Type amendingType;
 
 		#region Constructors
 
-		public Amendment()
+		public Amendment(Type amendingType)
 		{
-			// Get the type of the current amendment
-			Type amendmentType = typeof(Amendment<,>).MakeGenericType(Type, AmendedType);
+		    this.amendingType = amendingType;
 
 			// Attributes
 			this.Attributes = new AttributeList();
@@ -63,17 +63,17 @@ namespace Afterthought
 			this.Fields = new FieldList();
 			foreach (var fieldInfo in Type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
 			{
-				Type fieldAmendmentType = amendmentType.GetNestedType("Field`1").MakeGenericType(Type, AmendedType, fieldInfo.FieldType);
+				Type fieldAmendmentType = typeof(Amendment<>).GetNestedType("Field`1").MakeGenericType(AmendedType, fieldInfo.FieldType);
 				Field field = (Field)fieldAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(FieldInfo) }, null).Invoke(new object[] { fieldInfo });
 				Fields.Add(field);
 			}
 
 			// Constructors
 			this.Constructors = new ConstructorList();
-			foreach (ConstructorInfo constructor in typeof(TType).GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+			foreach (ConstructorInfo constructor in Type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 			{
-				Type[] parameters = GetType().BaseType.GetGenericArguments().Concat(constructor.GetParameters().Select(p => p.ParameterType)).ToArray();
-				var type = GetType().BaseType.GetNestedTypes().Where(t => t.BaseType.Name == "Constructor" && t.GetGenericArguments().Length == parameters.Length).FirstOrDefault();
+				Type[] parameters = new [] { AmendedType }.Concat(constructor.GetParameters().Select(p => p.ParameterType)).ToArray();
+				var type = typeof(Amendment<>).GetNestedTypes().Where(t => t.BaseType.Name == "Constructor" && t.GetGenericArguments().Length == parameters.Length).FirstOrDefault();
 				if (type != null)
 					this.Constructors.Add((Amendment.Constructor)type.MakeGenericType(parameters).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(ConstructorInfo) }, null).Invoke(new object[] { constructor }));
 				else
@@ -84,18 +84,18 @@ namespace Afterthought
 			this.Properties = new PropertyList();
 			foreach (var propertyInfo in Type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
 			{
-				Type propertyAmendmentType = amendmentType.GetNestedType("Property`1").MakeGenericType(Type, AmendedType, propertyInfo.PropertyType);
+				Type propertyAmendmentType = typeof(Amendment<>).GetNestedType("Property`1").MakeGenericType(AmendedType, propertyInfo.PropertyType);
 				Property property = (Property)propertyAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(PropertyInfo) }, null).Invoke(new object[] { propertyInfo });
 				Properties.Add(property);
 			}
 
 			// Methods
-			this.Methods = new MethodList();
-			foreach (MethodInfo method in typeof(TType).GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+			this.Methods = new MethodList(Type);
+			foreach (MethodInfo method in Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
 				.Where(m => !m.IsConstructor && !(m.IsSpecialName && m.IsHideBySig && (m.Name.StartsWith("get_") || m.Name.StartsWith("set_")))))
 			{
-				Type[] parameters = GetType().BaseType.GetGenericArguments().Concat(method.GetParameters().Select(p => p.ParameterType)).ToArray();
-				var type = GetType().BaseType.GetNestedTypes().Where(t => t.BaseType.Name == "Method" && t.GetGenericArguments().Length == parameters.Length).FirstOrDefault();
+				Type[] parameters = new [] { AmendedType }.Concat(method.GetParameters().Select(p => p.ParameterType)).ToArray();
+				var type = typeof(Amendment<>).GetNestedTypes().Where(t => t.BaseType.Name == "Method" && t.GetGenericArguments().Length == parameters.Length).FirstOrDefault();
 				if (type != null && !parameters.Any(p => p.IsByRef) && !method.IsGenericMethodDefinition)
 					this.Methods.Add((Amendment.Method)type.MakeGenericType(parameters).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(MethodInfo) }, null).Invoke(new object[] { method }));
 				else
@@ -106,7 +106,7 @@ namespace Afterthought
 			this.Events = new EventList();
 			foreach (var eventInfo in Type.GetEvents(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
 			{
-				Type eventAmendmentType = amendmentType.GetNestedType("Event`1").MakeGenericType(Type, AmendedType, eventInfo.EventHandlerType);
+                Type eventAmendmentType = typeof(Amendment<>).GetNestedType("Event`1").MakeGenericType(AmendedType, eventInfo.EventHandlerType);
 				Event @event = (Event)eventAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(EventInfo) }, null).Invoke(new object[] { eventInfo });
 				Events.Add(@event);
 			}
@@ -118,10 +118,10 @@ namespace Afterthought
 
 		public override Type Type
 		{
-			get
-			{
-				return typeof(TType);
-			}
+		    get
+		    {
+		        return amendingType;
+		    }
 		}
 
 		public override Type AmendedType
@@ -290,4 +290,15 @@ namespace Afterthought
 	}
 
 	#endregion
+
+    #region Amendment<TType, TAmended>
+
+    public class Amendment<TType, TAmended>: Amendment<TAmended>
+    {
+        public Amendment(): base(typeof (TType))
+        {
+        }
+    }
+
+    #endregion
 }

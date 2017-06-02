@@ -63,9 +63,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Field<F>
+	#region Amendment<TAmended>.Field<F>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		public class Field<TField> : Field
 		{

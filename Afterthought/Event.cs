@@ -102,8 +102,8 @@ namespace Afterthought
 			/// <returns></returns>
 			public static Event Create(Type instanceType, Type eventType, string name)
 			{
-				Type amendmentType = typeof(Amendment<,>).MakeGenericType(instanceType, instanceType);
-				Type eventAmendmentType = amendmentType.GetNestedType("Event`1").MakeGenericType(instanceType, instanceType, eventType);
+				Type amendmentType = typeof(Amendment<>).MakeGenericType(instanceType);
+				Type eventAmendmentType = amendmentType.GetNestedType("Event`1").MakeGenericType(instanceType, eventType);
 				return (Event)eventAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string) }, null).Invoke(new object[] { name });
 			}
 
@@ -128,9 +128,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Event<TEvent>
+	#region Amendment<TAmended>.Event<TEvent>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		public class Event<TEvent> : Event
 		{

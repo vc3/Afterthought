@@ -44,9 +44,9 @@ namespace Afterthought
 			typeParamsWithResult = "<TResult>";
 
 #>
-	#region Amendment<TType, TAmended>.Constructor<#= typeParams #>
+	#region Amendment<TAmended>.Constructor<#= typeParams #>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing constructor on a type.
