@@ -110,8 +110,8 @@ namespace Afterthought
 			/// <returns></returns>
 			public static Property Create(Type instanceType, Type propertyType, string name)
 			{
-				Type amendmentType = typeof(Amendment<,>).MakeGenericType(instanceType, instanceType);
-				Type propertyAmendmentType = amendmentType.GetNestedType("Property`1").MakeGenericType(instanceType, instanceType, propertyType);
+				Type amendmentType = typeof(Amendment<>).MakeGenericType(instanceType);
+				Type propertyAmendmentType = amendmentType.GetNestedType("Property`1").MakeGenericType(instanceType, propertyType);
 				return (Property)propertyAmendmentType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(string) }, null).Invoke(new object[] { name });
 			}
 
@@ -136,9 +136,9 @@ namespace Afterthought
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Property<TProperty>
+	#region Amendment<TAmended>.Property<TProperty>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		public class Property<TProperty> : Property
 		{

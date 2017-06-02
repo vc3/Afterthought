@@ -8,30 +8,32 @@ using System.Reflection;
 
 namespace Afterthought
 {
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		#region MethodList
 
 		public partial class MethodList : MethodEnumeration
 		{
-			IList<Amendment.Method> methods;
+		    private readonly Type type;
+		    IList<Amendment.Method> methods;
 
-			internal MethodList()
+			internal MethodList(Type type)
 				: base(new List<Amendment.Method>())
 			{
-				this.methods = (IList<Amendment.Method>)base.methods;
+			    this.type = type;
+			    this.methods = (IList<Amendment.Method>)base.methods;
 			}
 
-			internal TMethod Add<TMethod>(TMethod method)
+		    internal TMethod Add<TMethod>(TMethod method)
 				where TMethod : Amendment.Method
 			{
 				methods.Add(method);
 				return method;
 			}
 
-			static MethodInfo GetOverrideMethod(string name, params Type[] parameterTypes)
+			static MethodInfo GetOverrideMethod(Type type, string name, params Type[] parameterTypes)
 			{
-				return typeof(TType).GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parameterTypes, null);
+				return type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parameterTypes, null);
 			}
 
 			public Method Raise(Event @event, string name)

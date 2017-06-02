@@ -18,9 +18,9 @@ using System.Collections;
 
 namespace Afterthought
 {
-	#region Amendment<TType, TAmended>.Method
+	#region Amendment<TAmended>.Method
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -414,16 +414,16 @@ namespace Afterthought
 
 			public Method Override(string name)
 			{
-				return Add(new Method(name) { OverrideMethod = GetOverrideMethod(name) });
+				return Add(new Method(name) { OverrideMethod = GetOverrideMethod(type, name) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1>
+	#region Amendment<TAmended>.Method<P1>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -817,16 +817,16 @@ namespace Afterthought
 
 			public Method<P1> Override<P1>(string name)
 			{
-				return Add(new Method<P1>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1)) });
+				return Add(new Method<P1>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2>
+	#region Amendment<TAmended>.Method<P1, P2>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -1220,16 +1220,16 @@ namespace Afterthought
 
 			public Method<P1, P2> Override<P1, P2>(string name)
 			{
-				return Add(new Method<P1, P2>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2)) });
+				return Add(new Method<P1, P2>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3>
+	#region Amendment<TAmended>.Method<P1, P2, P3>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -1623,16 +1623,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3> Override<P1, P2, P3>(string name)
 			{
-				return Add(new Method<P1, P2, P3>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3)) });
+				return Add(new Method<P1, P2, P3>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -2026,16 +2026,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4> Override<P1, P2, P3, P4>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4)) });
+				return Add(new Method<P1, P2, P3, P4>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4, P5>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4, P5>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -2429,16 +2429,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4, P5> Override<P1, P2, P3, P4, P5>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4, P5>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5)) });
+				return Add(new Method<P1, P2, P3, P4, P5>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4, P5, P6>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4, P5, P6>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -2832,16 +2832,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4, P5, P6> Override<P1, P2, P3, P4, P5, P6>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4, P5, P6>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6)) });
+				return Add(new Method<P1, P2, P3, P4, P5, P6>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4, P5, P6, P7>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4, P5, P6, P7>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -3235,16 +3235,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4, P5, P6, P7> Override<P1, P2, P3, P4, P5, P6, P7>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4, P5, P6, P7>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7)) });
+				return Add(new Method<P1, P2, P3, P4, P5, P6, P7>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4, P5, P6, P7, P8>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4, P5, P6, P7, P8>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -3638,16 +3638,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4, P5, P6, P7, P8> Override<P1, P2, P3, P4, P5, P6, P7, P8>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4, P5, P6, P7, P8>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7), typeof(P8)) });
+				return Add(new Method<P1, P2, P3, P4, P5, P6, P7, P8>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7), typeof(P8)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4, P5, P6, P7, P8, P9>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4, P5, P6, P7, P8, P9>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -4041,16 +4041,16 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4, P5, P6, P7, P8, P9> Override<P1, P2, P3, P4, P5, P6, P7, P8, P9>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4, P5, P6, P7, P8, P9>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7), typeof(P8), typeof(P9)) });
+				return Add(new Method<P1, P2, P3, P4, P5, P6, P7, P8, P9>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7), typeof(P8), typeof(P9)) });
 			}
 		}
 	}
 
 	#endregion
 
-	#region Amendment<TType, TAmended>.Method<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>
+	#region Amendment<TAmended>.Method<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>
 
-	public partial class Amendment<TType, TAmended> : Amendment
+	public partial class Amendment<TAmended> : Amendment
 	{
 		/// <summary>
 		/// Represents an amendment for a new or existing method on a type.
@@ -4444,7 +4444,7 @@ namespace Afterthought
 
 			public Method<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> Override<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(string name)
 			{
-				return Add(new Method<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(name) { OverrideMethod = GetOverrideMethod(name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7), typeof(P8), typeof(P9), typeof(P10)) });
+				return Add(new Method<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(name) { OverrideMethod = GetOverrideMethod(type, name, typeof(P1), typeof(P2), typeof(P3), typeof(P4), typeof(P5), typeof(P6), typeof(P7), typeof(P8), typeof(P9), typeof(P10)) });
 			}
 		}
 	}

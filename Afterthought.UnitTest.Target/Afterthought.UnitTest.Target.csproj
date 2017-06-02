@@ -44,6 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GenericAmendmentAttribute.cs" />
+    <Compile Include="GenericCalculator.cs" />
+    <Compile Include="GenericTestAmendment.cs" />
+    <Compile Include="IHaveExecutableMethod.cs" />
     <Compile Include="ILog.cs" />
     <Compile Include="IMath.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
