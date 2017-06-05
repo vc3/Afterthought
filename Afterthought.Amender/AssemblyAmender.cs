@@ -1213,9 +1213,17 @@ namespace Afterthought.Amender
 							il.Emit(OperationCode.Ldloc, currentValue);
 						}
 
-						// Call AfterGet delegate
+                        // Call AfterGet delegate
 						if (propertyAmendment.AfterGet != null)
-							il.Emit(OperationCode.Call, ResolvePropertyDelegate(propertyDef, propertyAmendment.AfterGet).Instance);
+                        {
+                            if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.AfterGet))
+                                il.Emit(OperationCode.Box, propertyDef.Type);
+
+                            il.Emit(OperationCode.Call, ResolvePropertyDelegate(propertyDef, propertyAmendment.AfterGet).Instance);
+
+                            if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.AfterGet))
+                                il.Emit(OperationCode.Unbox_Any, propertyDef.Type);
+                        }
 					}
 
 					// Emit the rest of the original method if not amending after get
@@ -1311,11 +1319,20 @@ namespace Afterthought.Amender
 						else
 							il.Emit(OperationCode.Ldarg_1);
 
+                        if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.BeforeSet))
+                            il.Emit(OperationCode.Box, propertyDef.Type);
+
 						// Load value argument pointer
 						il.Emit(OperationCode.Ldarg_1);
 
+                        if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.BeforeSet))
+                            il.Emit(OperationCode.Box, propertyDef.Type);
+
 						// Call BeforeSet delegate
 						il.Emit(OperationCode.Call, beforeSet.Instance);
+
+                        if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.BeforeSet))
+                            il.Emit(OperationCode.Unbox_Any, propertyDef.Type);
 
 						// Store the result as the new value for the setter
 						il.Emit(OperationCode.Starg, methodBody.MethodDefinition.Parameters.First());
@@ -1341,8 +1358,14 @@ namespace Afterthought.Amender
 						else
 							il.Emit(OperationCode.Ldarg_1);
 
+                        if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.AfterSet))
+                            il.Emit(OperationCode.Box, propertyDef.Type);
+
 						// Load value argument onto stack
 						il.Emit(OperationCode.Ldarg_1);
+
+                        if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.AfterSet))
+                            il.Emit(OperationCode.Box, propertyDef.Type);
 
 						// Optionally get the new property value if used
 						if (afterSet.ReferencesArgument(4))
@@ -1355,6 +1378,9 @@ namespace Afterthought.Amender
 						}
 						else
 							il.Emit(OperationCode.Ldarg_1);
+
+                        if (IsValueTypePropertyWithNonGenericDelegate(propertyDef, propertyAmendment.AfterSet))
+                            il.Emit(OperationCode.Box, propertyDef.Type);
 
 						// Call AfterSet delegate
 						il.Emit(OperationCode.Call, afterSet.Instance);
@@ -2508,6 +2534,18 @@ namespace Afterthought.Amender
 			// Return backing field name consistent with C# compiler conventions
 			return "<" + property.Name + ">k__BackingField";
 		}
+
+	    /// <summary>
+	    /// Determines whether the property is of ValueType while the delegate receiving its value has corresponding agruments declared as objects
+	    /// (the second argument is some property value in AfterGet, BeforeSet and AfterSet amenders)
+	    /// </summary>
+	    /// <param name="propertyDef"></param>
+	    /// <param name="onPropertyDelegate"></param>
+	    /// <returns></returns>
+        private static bool IsValueTypePropertyWithNonGenericDelegate(IPropertyDefinition propertyDef, System.Reflection.MethodInfo onPropertyDelegate)
+	    {
+	        return propertyDef.Type.IsValueType && onPropertyDelegate.GetParameters().Exists<object>(2);
+	    }
 	}
 
 	internal class GenericMethod

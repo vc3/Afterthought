@@ -345,5 +345,19 @@ namespace Afterthought.UnitTest.Target
 		}
 
 		public event EventHandler Calculate;
+
+	    public object ValueTypePropertyAfterGetValue = 0;
+	    public object ValueTypePropertyBeforeSetOldValue = 0;
+	    public object ValueTypePropertyBeforeSetValue = 0;
+	    public object ValueTypePropertyAfterSetOldValue = 0;
+	    public object ValueTypePropertyAfterSetValue = 0;
+	    public object ValueTypePropertyAfterSetNewValue = 0;
+	    public int _valueTypeProperty;
+
+	    public int ValueTypeProperty
+	    {
+	        get { return _valueTypeProperty; }
+	        set { _valueTypeProperty = value + 1; }
+	    }
 	}
 }
