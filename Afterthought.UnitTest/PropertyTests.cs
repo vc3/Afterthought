@@ -308,5 +308,28 @@ namespace Afterthought.UnitTest
 		public void BeforeSetWithOriginalAndNewValue()
 		{
 		}
+
+	    /// <summary>
+	    /// Tests amending code to pass ValueType property value to the nongeneric
+	    /// AfterGet, BeforeSet and AfterSet delegates with object parameters (with boxing)
+	    /// </summary>
+	    [TestMethod]
+	    public void AfterAndBeforeValueTypePropertyGetAndSetAmendedThroughNotTypedDelegate()
+	    {
+	        Calculator._valueTypeProperty = 5;
+
+	        Calculator.ValueTypeProperty.ToString();
+
+            Assert.AreEqual(Calculator.ValueTypePropertyAfterGetValue, 5);
+
+	        Calculator.ValueTypeProperty = 10;
+
+	        Assert.AreEqual(Calculator.ValueTypePropertyBeforeSetOldValue, 5);
+	        Assert.AreEqual(Calculator.ValueTypePropertyBeforeSetValue, 10);
+
+	        Assert.AreEqual(Calculator.ValueTypePropertyAfterSetOldValue, 5);
+	        Assert.AreEqual(Calculator.ValueTypePropertyAfterSetValue, 10);
+	        Assert.AreEqual(Calculator.ValueTypePropertyAfterSetNewValue, 11);
+	    }
 	}
 }

@@ -281,6 +281,23 @@ namespace Afterthought.UnitTest.Target
 				.OfType<string>()
 				.LazyInitialize((instance, propertyName) => "r" + new Random().Next());
 
+		    Properties
+		        .Named("ValueTypeProperty")
+		        .AfterGet((instance, propertyName, value) =>
+                    instance.ValueTypePropertyAfterGetValue = value)
+		        .BeforeSet((instance, propertyName, oldValue, value) =>
+		        {
+		            instance.ValueTypePropertyBeforeSetOldValue = oldValue;
+		            instance.ValueTypePropertyBeforeSetValue = value;
+		            return value;
+		        })
+		        .AfterSet((instance, propertyName, oldValue, value, newValue) =>
+		        {
+		            instance.ValueTypePropertyAfterSetOldValue = oldValue;
+		            instance.ValueTypePropertyAfterSetValue = value;
+		            instance.ValueTypePropertyAfterSetNewValue = newValue;
+		        });
+
 			#endregion
 
 			#region Interfaces
