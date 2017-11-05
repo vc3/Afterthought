@@ -350,6 +350,7 @@ namespace Afterthought.Amender
 				ImplementedMethod = implemented,
 				ImplementingMethod = implementing
 			});
+			
 		}
 
 		/// <summary>
@@ -961,6 +962,16 @@ namespace Afterthought.Amender
 				LocalDefinition context = null;
 				if (constructorAmendment.Before != null)
 				{
+					var indexOfFirstNew = 0;
+					foreach (var op in il.Operations)
+					{						
+						if (op.OperationCode == OperationCode.Call )
+							break;
+						indexOfFirstNew++;
+					}
+					il.EmitOperations(indexOfFirstNew+1);
+						
+					
 					CallMethodDelegate(methodBody, constructorAmendment.Before, true, il, null, MethodDelegateType.Before, null, null);
 
 					// Track the result of context-based method amendments
@@ -1375,8 +1386,31 @@ namespace Afterthought.Amender
 		/// <param name="methodBody"></param>
 		void AmendMethod(IMethodAmendment methodAmendment, MethodBody methodBody)
 		{
+
+			/**
+			 * The method implementation is as follows
+			 * Try for finally block if exists
+			 * Try for catch block if exists
+			 * catch block if exists
+			 * Finally block if exits
+			 * 
+			 * */
+
+			bool hasReturnValue = !TypeHelper.TypesAreEquivalent(methodBody.MethodDefinition.Type, host.PlatformType.SystemVoid);
+			bool isRetLastStatement =methodBody.Operations!= null && methodBody.Operations.Count() > 0 && methodBody.Operations.Last().OperationCode == OperationCode.Ret;
 			// Create an IL generator to amend the operations
 			var il = new ILAmender(host, methodBody);
+			// Implementation
+			Action implement = () =>
+			{
+				ImplementMethod(methodAmendment, methodBody, il);
+			};
+
+			/**
+			 * The entities under modifications are the methodBody,  Operations variable in the amender.
+			 * The emit method is adding operations to the method operations.
+			 * */
+			
 
 			// Before Method
 			LocalDefinition context = null;
@@ -1397,94 +1431,14 @@ namespace Afterthought.Amender
 
 			// Optionally start try catch finally block
 			if (methodAmendment.Finally != null)
-				il.BeginTryBody();
-			if (methodAmendment.Catch != null)
-				il.BeginTryBody();
-
-			// Implementation
-			Action implement = () =>
 			{
-				// Emit the implementation if specified
-				if (methodAmendment.Implementation != null)
-				{
-					// Clear the original method body
-					il.Operations.Clear();
-					CallMethodDelegate(methodBody, methodAmendment.Implementation, false, il, null, MethodDelegateType.Implement, null, null);
-				}
-
-				// Emit a call to the base method if overriding and an implementation was not specified
-				else if (methodAmendment.Overrides != null)
-				{
-					// Load this pointer onto stack
-					il.Emit(OperationCode.Ldarg_0);
-
-					// Load method arguments onto the stack
-					foreach (var arg in methodBody.MethodDefinition.Parameters)
-						il.Emit(OperationCode.Ldarg_S, arg);
-
-					// Call the base method
-					il.Emit(OperationCode.Call, ResolveMethod(ResolveType(methodAmendment.Overrides.DeclaringType), methodAmendment.Overrides));
-				}
-
-				// Emit calls to raise the specified event
-				else if (methodAmendment.Raises != null)
-				{
-					// Get the event raise arguments
-					var invokeMethod = methodAmendment.Raises.Type.GetMethod("Invoke");
-					var thisFirstParam = invokeMethod.GetParameters()[0].ParameterType == typeof(object);
-					var eventArgsSecondParam = invokeMethod.GetParameters()[1].ParameterType == typeof(EventArgs);
-					var args = invokeMethod.GetParameters()
-						.SkipWhile((p, i) => (i == 0 && thisFirstParam) || (i == 1 && eventArgsSecondParam))
-						.Select(p => p.ParameterType).ToArray();
-					var backingField = GetCurrentType().Fields.Single(f => f.Name.Value == methodAmendment.Raises.Name);
-
-					// Load this pointer onto stack
-					il.Emit(OperationCode.Ldarg_0);
-
-					// Load event handler backing field onto stack
-					il.Emit(OperationCode.Ldfld, backingField);
-
-					// Load null onto stack
-					il.Emit(OperationCode.Ldnull);
-
-					// See if the field is null
-					il.Emit(OperationCode.Ceq);
-
-					// Create a branching label
-					var ifRaise = new ILGeneratorLabel();
-					il.Emit(OperationCode.Brtrue_S, ifRaise);
-
-					// Load this pointer onto stack
-					il.Emit(OperationCode.Ldarg_0);
-
-					// Load event handler backing field onto stack
-					il.Emit(OperationCode.Ldfld, backingField);
-
-					// Load this pointer onto stack if required
-					if (thisFirstParam)
-						il.Emit(OperationCode.Ldarg_0);
-
-					// Create event args if required
-					if (eventArgsSecondParam)
-						il.Emit(OperationCode.Newobj, ResolveConstructor(ResolveType(typeof(EventArgs)), typeof(EventArgs).GetConstructor(Type.EmptyTypes)));
-
-					// Load all method arguments
-					foreach (var arg in methodBody.MethodDefinition.Parameters)
-						il.Emit(OperationCode.Ldarg_S, arg);
-
-					// Invoke the delegate
-					il.Emit(OperationCode.Callvirt, ResolveMethod(ResolveType(invokeMethod.DeclaringType), invokeMethod));
-
-					// Finish the raise conditional block
-					il.MarkLabel(ifRaise);
-					il.Emit(OperationCode.Nop);
-				}
-
-				// Emit the original method operations if the method implementation was not overriden
-				if (methodAmendment.MethodInfo != null && methodAmendment.Implementation == null)
-					il.EmitUntilReturn();
-			};
-
+				il.BeginTryBody();
+			}
+			if (methodAmendment.Catch != null)
+			{
+				il.BeginTryBody();				
+			}
+						
 			// Implement
 			if (methodAmendment.After == null || methodAmendment.After.ReturnType == typeof(void))
 			{
@@ -1498,8 +1452,14 @@ namespace Afterthought.Amender
 				il.GoToEndOfOperations();
 
 				CallMethodDelegate(methodBody, methodAmendment.After, false, il, implement, MethodDelegateType.After, context, null);
+				//if (methodAmendment.Catch == null && methodAmendment.Finally == null)
+				//{					
+				//	il.Emit(OperationCode.Ret);					
+				//}
+				//else
+				//{
 
-				il.Emit(OperationCode.Ret);
+				//}
 			}
 
 			// Emit the remaining operations
@@ -1508,7 +1468,7 @@ namespace Afterthought.Amender
 			// Catch/Finally
 			if (methodAmendment.Catch != null || methodAmendment.Finally != null)
 			{
-				bool hasReturnValue = !TypeHelper.TypesAreEquivalent(methodBody.MethodDefinition.Type, host.PlatformType.SystemVoid);
+				
 				ILocalDefinition result = null;
 
 				// Store the result before starting the catch/finally blocks
@@ -1516,10 +1476,11 @@ namespace Afterthought.Amender
 				{
 					result = new LocalDefinition() { Name = host.NameTable.GetNameFor("_result_"), Type = methodBody.MethodDefinition.Type };
 					if (methodBody.LocalVariables == null)
-						methodBody.LocalVariables = new List<ILocalDefinition>(); 
+						methodBody.LocalVariables = new List<ILocalDefinition>();
 					methodBody.LocalVariables.Add(result);
 					il.Emit(OperationCode.Stloc, result);
 				}
+				
 
 				// Skip to the return statement
 				var exit = new ILGeneratorLabel();
@@ -1581,6 +1542,182 @@ namespace Afterthought.Amender
 
 				// Load the result
 				if (hasReturnValue)
+				{
+					il.Emit(OperationCode.Ldloc, result);
+				}
+				
+			}
+
+			// Emit a return for new/overriden methods
+			if (methodAmendment.Implementation != null || methodAmendment.Overrides != null || methodAmendment.Raises != null
+				|| methodAmendment.Catch != null || methodAmendment.Finally != null)
+			{
+				il.Emit(OperationCode.Ret);
+			}
+			//if the catch or finally block is implemented, the method body will change, and even if it doesn't have a ret cmd it should have now
+			// for methods that doesn't have a return type, it is normal that they don't have ret
+			// some methods end with throw statement instead of ret
+			else if (methodAmendment.Catch != null || methodAmendment.Finally != null)
+			{
+				if (!isRetLastStatement)
+				{
+					il.Emit(OperationCode.Ret);
+				}
+			}
+			if (il.Operations.Count == 0 || (il.Operations.Count > 0 && il.Operations.Last().OperationCode != OperationCode.Ret))
+			{
+				il.Emit(OperationCode.Ret);
+			}
+			else
+			{
+			}
+
+			// Update the method body
+			il.UpdateMethodBody(6);
+		}
+
+
+		void AmendMethod2(IMethodAmendment methodAmendment, MethodBody methodBody)
+		{
+			bool hasReturnValue = !TypeHelper.TypesAreEquivalent(methodBody.MethodDefinition.Type, host.PlatformType.SystemVoid);
+			// Create an IL generator to amend the operations
+			var il = new ILAmender(host, methodBody);
+			// Implementation
+			Action implement = () =>
+			{
+				ImplementMethod(methodAmendment, methodBody, il);
+			};
+
+			// Before Method
+			LocalDefinition context = null;
+			if (methodAmendment.Before != null)
+			{
+				CallMethodDelegate(methodBody, methodAmendment.Before, true, il, null, MethodDelegateType.Before, null, null);
+
+				// Track the result of context-based method amendments
+				if (methodAmendment.Before.ReturnType != typeof(void))
+				{
+					context = new LocalDefinition() { Name = host.NameTable.GetNameFor("_ctx_"), Type = ResolveType(methodAmendment.Before.ReturnType) };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>();
+					methodBody.LocalVariables.Add(context);
+					il.Emit(OperationCode.Stloc, context);
+				}
+			}
+
+			// Optionally start try catch finally block
+			if (methodAmendment.Finally != null)
+			{
+				il.BeginTryBody();
+			}
+			if (methodAmendment.Catch != null)
+			{
+				il.BeginTryBody();
+			}
+
+			// Implement
+			if (methodAmendment.After == null || methodAmendment.After.ReturnType == typeof(void))
+			{
+				implement();
+				implement = null;
+			}
+
+			// After Method
+			if (methodAmendment.After != null)
+			{
+				il.GoToEndOfOperations();
+
+				CallMethodDelegate(methodBody, methodAmendment.After, false, il, implement, MethodDelegateType.After, context, null);
+				if (methodAmendment.Catch == null && methodAmendment.Finally == null)
+				{
+					il.Emit(OperationCode.Ret);
+				}
+				else
+				{
+
+				}
+			}
+
+			// Emit the remaining operations
+			il.EmitUntilReturn();
+
+			// Catch/Finally
+			if (methodAmendment.Catch != null || methodAmendment.Finally != null)
+			{
+
+				ILocalDefinition result = null;
+
+				// Store the result before starting the catch/finally blocks
+				if (hasReturnValue)
+				{
+					result = new LocalDefinition() { Name = host.NameTable.GetNameFor("_result_"), Type = methodBody.MethodDefinition.Type };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>();
+					methodBody.LocalVariables.Add(result);
+					il.Emit(OperationCode.Stloc, result);
+				}
+
+
+				// Skip to the return statement
+				var exit = new ILGeneratorLabel();
+				il.Emit(OperationCode.Leave_S, exit);
+
+				// Catch
+				if (methodAmendment.Catch != null)
+				{
+					// Determine the type of delegate
+					var delegateType = MethodDelegateType.Catch;
+					if (context != null)
+						delegateType |= MethodDelegateType.WithContext;
+					ResolveMethodDelegate(methodBody.MethodDefinition.ContainingType, methodAmendment.Catch, methodBody.MethodDefinition, ref delegateType);
+
+					// Determine the type of exception being caught
+					var exceptionType = ResolveType(methodAmendment.Catch.GetParameters()[(delegateType.HasFlag(MethodDelegateType.ArraySyntax) ? 1 : 0) + (context != null ? 2 : 1)].ParameterType);
+
+					// Start the catch block
+					il.BeginCatchBlock(exceptionType);
+
+					// Store exception in local variable
+					var exception = new LocalDefinition() { Name = host.NameTable.GetNameFor("_exception_"), Type = exceptionType };
+					if (methodBody.LocalVariables == null)
+						methodBody.LocalVariables = new List<ILocalDefinition>();
+					methodBody.LocalVariables.Add(exception);
+					il.Emit(OperationCode.Stloc, exception);
+
+					// Call the catch delegate
+					CallMethodDelegate(methodBody, methodAmendment.Catch, false, il, null, MethodDelegateType.Catch, context, exception);
+
+					// Store the new result if the method has a return value
+					if (hasReturnValue)
+						il.Emit(OperationCode.Stloc, result);
+
+					// Exit the catch block
+					il.Emit(OperationCode.Leave_S, exit);
+
+					// End nested try block if necessary
+					if (methodAmendment.Finally != null)
+						il.EndTryBody();
+				}
+
+				// Finally
+				if (methodAmendment.Finally != null)
+				{
+					// Start the finally block
+					il.BeginFinallyBlock();
+
+					// Call the finally delegate
+					CallMethodDelegate(methodBody, methodAmendment.Finally, false, il, null, MethodDelegateType.Finally, context, null);
+
+					// End the finally block
+					il.Emit(OperationCode.Endfinally);
+				}
+
+				// End the try clause
+				il.MarkLabel(exit);
+				il.EndTryBody();
+
+				// Load the result
+				if (hasReturnValue)
 					il.Emit(OperationCode.Ldloc, result);
 			}
 
@@ -1590,6 +1727,89 @@ namespace Afterthought.Amender
 
 			// Update the method body
 			il.UpdateMethodBody(6);
+		}
+
+		private void ImplementMethod(IMethodAmendment methodAmendment, MethodBody methodBody, ILAmender il)
+		{
+			// Emit the implementation if specified
+			if (methodAmendment.Implementation != null)
+			{
+				// Clear the original method body
+				il.Operations.Clear();
+				CallMethodDelegate(methodBody, methodAmendment.Implementation, false, il, null, MethodDelegateType.Implement, null, null);
+			}
+
+			// Emit a call to the base method if overriding and an implementation was not specified
+			else if (methodAmendment.Overrides != null)
+			{
+				// Load this pointer onto stack
+				il.Emit(OperationCode.Ldarg_0);
+
+				// Load method arguments onto the stack
+				foreach (var arg in methodBody.MethodDefinition.Parameters)
+					il.Emit(OperationCode.Ldarg_S, arg);
+
+				// Call the base method
+				il.Emit(OperationCode.Call, ResolveMethod(ResolveType(methodAmendment.Overrides.DeclaringType), methodAmendment.Overrides));
+			}
+
+			// Emit calls to raise the specified event
+			else if (methodAmendment.Raises != null)
+			{
+				// Get the event raise arguments
+				var invokeMethod = methodAmendment.Raises.Type.GetMethod("Invoke");
+				var thisFirstParam = invokeMethod.GetParameters()[0].ParameterType == typeof(object);
+				var eventArgsSecondParam = invokeMethod.GetParameters()[1].ParameterType == typeof(EventArgs);
+				var args = invokeMethod.GetParameters()
+					.SkipWhile((p, i) => (i == 0 && thisFirstParam) || (i == 1 && eventArgsSecondParam))
+					.Select(p => p.ParameterType).ToArray();
+				var backingField = GetCurrentType().Fields.Single(f => f.Name.Value == methodAmendment.Raises.Name);
+
+				// Load this pointer onto stack
+				il.Emit(OperationCode.Ldarg_0);
+
+				// Load event handler backing field onto stack
+				il.Emit(OperationCode.Ldfld, backingField);
+
+				// Load null onto stack
+				il.Emit(OperationCode.Ldnull);
+
+				// See if the field is null
+				il.Emit(OperationCode.Ceq);
+
+				// Create a branching label
+				var ifRaise = new ILGeneratorLabel();
+				il.Emit(OperationCode.Brtrue_S, ifRaise);
+
+				// Load this pointer onto stack
+				il.Emit(OperationCode.Ldarg_0);
+
+				// Load event handler backing field onto stack
+				il.Emit(OperationCode.Ldfld, backingField);
+
+				// Load this pointer onto stack if required
+				if (thisFirstParam)
+					il.Emit(OperationCode.Ldarg_0);
+
+				// Create event args if required
+				if (eventArgsSecondParam)
+					il.Emit(OperationCode.Newobj, ResolveConstructor(ResolveType(typeof(EventArgs)), typeof(EventArgs).GetConstructor(Type.EmptyTypes)));
+
+				// Load all method arguments
+				foreach (var arg in methodBody.MethodDefinition.Parameters)
+					il.Emit(OperationCode.Ldarg_S, arg);
+
+				// Invoke the delegate
+				il.Emit(OperationCode.Callvirt, ResolveMethod(ResolveType(invokeMethod.DeclaringType), invokeMethod));
+
+				// Finish the raise conditional block
+				il.MarkLabel(ifRaise);
+				il.Emit(OperationCode.Nop);
+			}
+
+			// Emit the original method operations if the method implementation was not overriden
+			if (methodAmendment.MethodInfo != null && methodAmendment.Implementation == null)
+				il.EmitUntilReturn();
 		}
 
 		/// <summary>
@@ -2080,6 +2300,7 @@ namespace Afterthought.Amender
 			// Generic parameter
 			else if (type.IsGenericParameter)
 			{
+				return null;				
 			}
 
 			// Otherwise, just find the type

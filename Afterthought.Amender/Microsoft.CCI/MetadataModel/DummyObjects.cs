@@ -7837,9 +7837,14 @@ namespace Microsoft.Cci {
 
   [ContractVerification(false)]
   internal sealed class DummyOperation : Dummy, IOperation {
-    #region IOperation Members
 
-    public OperationCode OperationCode {
+		public override string ToString()
+		{
+			return this.OperationCode.ToString();
+		}
+		#region IOperation Members
+
+		public OperationCode OperationCode {
       get { return OperationCode.Nop; }
     }
 
