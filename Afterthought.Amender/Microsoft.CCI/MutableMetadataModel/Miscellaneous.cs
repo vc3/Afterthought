@@ -439,12 +439,7 @@ namespace Microsoft.Cci.MutableCodeModel {
     }
     object value;
 
-		public override string ToString()
-		{
-			return this.OperationCode.ToString();
-		}
-
-	}
+  }
 
   /// <summary>
   /// Exception information of the method body expressed in terms of offsets in CLR IL.
