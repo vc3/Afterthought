@@ -127,7 +127,22 @@ namespace Afterthought.Amender
 		/// </summary>
 		public void EmitUntilReturn()
 		{
-			EmitOperations(operations.Count - 1);
+			
+
+			if (operations.Count == 0)
+			{
+
+			}
+			else if ( operations.Last().OperationCode == OperationCode.Ret)
+			{
+				EmitOperations(operations.Count - 1);
+			}
+			else
+			{
+				EmitOperations(operations.Count );
+				//operations.Add(new Operation() {OperationCode= OperationCode.Ret });
+				
+			}
 		}
 
 		private ILGeneratorLabel GetLabel(IOperation op)

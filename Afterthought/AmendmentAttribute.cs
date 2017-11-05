@@ -36,7 +36,14 @@ namespace Afterthought
 		/// </summary>
 		public virtual IEnumerable<ITypeAmendment> GetAmendments(Type target)
 		{
-			yield return (ITypeAmendment)amendmentType.MakeGenericType(target).GetConstructor(Type.EmptyTypes).Invoke(null);
+			if (amendmentType.IsGenericType)
+			{
+				yield return (ITypeAmendment)amendmentType.MakeGenericType(target).GetConstructor(Type.EmptyTypes).Invoke(null);
+			}
+			else
+			{
+				yield return (ITypeAmendment)amendmentType.GetConstructor(Type.EmptyTypes).Invoke(null);
+			}
 		}
 
 		/// <summary>
