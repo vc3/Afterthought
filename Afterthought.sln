@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+VisualStudioVersion = 15.0.27130.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Afterthought", "Afterthought\Afterthought.csproj", "{0857EBD2-0AE9-4FE2-B9D9-E3D5F924F0F0}"
 EndProject
@@ -63,6 +63,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityFramework", "Examples
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Afterthought.Amender", "Afterthought.Amender\Afterthought.Amender.csproj", "{FF39EADC-9D3C-40EB-A0EA-60C76C560D54}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A010243A-4D02-49C7-BF78-87B6D23BA088} = {A010243A-4D02-49C7-BF78-87B6D23BA088}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExceptionHandler", "ExceptionHandler", "{BC67F272-E9CD-46E8-8321-8691EB9AF206}"
 EndProject

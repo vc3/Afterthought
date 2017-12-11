@@ -1544,13 +1544,14 @@ namespace Afterthought.Amender
 				if (hasReturnValue)
 				{
 					il.Emit(OperationCode.Ldloc, result);
+                    
 				}
 				
 			}
 
 			// Emit a return for new/overriden methods
-			if (methodAmendment.Implementation != null || methodAmendment.Overrides != null || methodAmendment.Raises != null
-				|| methodAmendment.Catch != null || methodAmendment.Finally != null)
+			if (methodAmendment.Implementation != null || methodAmendment.Overrides != null || methodAmendment.Raises != null)
+				//|| methodAmendment.Catch != null || methodAmendment.Finally != null)
 			{
 				il.Emit(OperationCode.Ret);
 			}
@@ -1564,20 +1565,29 @@ namespace Afterthought.Amender
 					il.Emit(OperationCode.Ret);
 				}
 			}
-			if (il.Operations.Count == 0 || (il.Operations.Count > 0 && il.Operations.Last().OperationCode != OperationCode.Ret))
-			{
-				il.Emit(OperationCode.Ret);
-			}
-			else
-			{
-			}
+            //else if (il.EmittedOperations.Count == 0)
+            //{
+            //    il.Emit(OperationCode.Ret);
+            //}
+            //else if ( il.EmittedOperations.Last().OperationCode != OperationCode.Ret)
+            //{
+            //    if (il.EmittedOperations.Last().OperationCode != OperationCode.Ret)
+            //        il.Emit(OperationCode.Ret);
+            //}
+            //else
+            //{
+            //}
 
 			// Update the method body
 			il.UpdateMethodBody(6);
-		}
+
+           
+
+           
+        }
 
 
-		void AmendMethod2(IMethodAmendment methodAmendment, MethodBody methodBody)
+        void AmendMethod2(IMethodAmendment methodAmendment, MethodBody methodBody)
 		{
 			bool hasReturnValue = !TypeHelper.TypesAreEquivalent(methodBody.MethodDefinition.Type, host.PlatformType.SystemVoid);
 			// Create an IL generator to amend the operations
