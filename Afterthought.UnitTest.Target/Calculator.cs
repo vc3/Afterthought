@@ -18,7 +18,7 @@ using System.Diagnostics;
 
 namespace Afterthought.UnitTest.Target
 {
-	[Amendment(typeof(TestAmendment<>))]
+	[Amendment(typeof(TestAmendment))]
 	public class Calculator : ILog
 	{
 		public int holding1 = 0;
@@ -296,7 +296,7 @@ namespace Afterthought.UnitTest.Target
 
 		public int SlowSum2(int[] values)
 		{
-			Stopwatch stopwatch = TestAmendment<Calculator>.BeforeSlowSum2(this, ref values);
+			Stopwatch stopwatch = TestAmendment.BeforeSlowSum2(this, ref values);
 			try
 			{
 				Thread.Sleep(110);
@@ -304,11 +304,11 @@ namespace Afterthought.UnitTest.Target
 			}
 			catch (OverflowException e)
 			{
-				return (int)TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, e, values);
+				return (int)TestAmendment.CatchSlowSum2(this, stopwatch, e, values);
 			}
 			finally
 			{
-				TestAmendment<Calculator>.FinallySlowSum2(this, stopwatch, values);
+				TestAmendment.FinallySlowSum2(this, stopwatch, values);
 			}
 		}
 
@@ -325,7 +325,7 @@ namespace Afterthought.UnitTest.Target
 
 		public void SlowSum4(int[] values)
 		{
-			Stopwatch stopwatch = TestAmendment<Calculator>.BeforeSlowSum2(this, ref values);
+			Stopwatch stopwatch = TestAmendment.BeforeSlowSum2(this, ref values);
 			var bob = true;
 			if (bob)
 			{
@@ -335,11 +335,11 @@ namespace Afterthought.UnitTest.Target
 				}
 				catch (OverflowException e)
 				{
-					TestAmendment<Calculator>.CatchSlowSum2(this, stopwatch, e, values);
+					TestAmendment.CatchSlowSum2(this, stopwatch, e, values);
 				}
 				finally
 				{
-					TestAmendment<Calculator>.FinallySlowSum2(this, stopwatch, values);
+					TestAmendment.FinallySlowSum2(this, stopwatch, values);
 				}
 			}
 		}

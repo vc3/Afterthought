@@ -122,12 +122,32 @@ namespace Afterthought.Amender
 			}
 		}
 
+
+        public List<IOperation> EmittedOperations
+        {
+            get { return base.GetOperations().ToList(); }
+        }
 		/// <summary>
 		/// Emits the remaining operations except the final return operation.
 		/// </summary>
 		public void EmitUntilReturn()
 		{
-			EmitOperations(operations.Count - 1);
+			
+
+			if (operations.Count == 0)
+			{
+
+			}
+			else if ( operations.Last().OperationCode == OperationCode.Ret)
+			{
+				EmitOperations(operations.Count - 1);
+			}
+			else
+			{
+				EmitOperations(operations.Count );
+				//operations.Add(new Operation() {OperationCode= OperationCode.Ret });
+				
+			}
 		}
 
 		private ILGeneratorLabel GetLabel(IOperation op)
@@ -387,7 +407,15 @@ namespace Afterthought.Amender
 			EmitOperations(operations.Count);
 			while (InTryBody)
 				EndTryBody();
-			AdjustBranchSizesToBestFit();
+
+            //This is a brute force solution to the issue of methods with no return operation at end.
+            //YOUNAN
+            if (EmittedOperations.Count > 0 && EmittedOperations.Last().OperationCode != OperationCode.Ret)
+            {
+                Emit(OperationCode.Ret);
+            }
+
+            AdjustBranchSizesToBestFit();
 			methodBody.OperationExceptionInformation = new List<IOperationExceptionInformation>(GetOperationExceptionInformation());
 			methodBody.Operations = new List<IOperation>(GetOperations());
 			methodBody.MaxStack = (ushort)(Math.Max(minStack, (ushort)methodBody.MaxStack) + 1);
